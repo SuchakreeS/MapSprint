@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cartrava followers and following</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&amp;family=Rajdhani:wght@500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Michroma&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{cursor:pointer}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: {{c.bg}}; color: {{c.text}}; font-family: 'Manrope', sans-serif">
+  <div style="position: absolute; left: 0; right: 0; top: 47px; height: 52px; box-sizing: border-box; padding: 0 8px; display: flex; align-items: center; gap: 4px">
+    <a href="ScrProfile.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <h1 style="margin: 0; font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 600">@nok_drives</h1>
+  </div>
+  <div role="tablist" aria-label="Lists" style="position: absolute; left: 16px; right: 16px; top: 103px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 16px; background: {{c.surface2}}">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+      <button type="button" role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+    </sc-for>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; top: 163px; bottom: 84px; overflow-y: auto">
+    <div style="box-sizing: border-box; padding: 4px 16px 24px; display: flex; flex-direction: column">
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+        <div style="min-height: 72px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid {{c.line}}">
+          <a href="ScrOtherProfile.dc.html" style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px">
+            <span style="width: 44px; height: 44px; flex: none; border-radius: 22px; display: flex; align-items: center; justify-content: center; background: {{c.surface2}}; font-family: 'Sora', sans-serif; font-weight: 600">{{r.initial}}</span>
+            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 700">{{r.name}}</span><span style="font-size: 13px; color: {{c.muted}}">@{{r.handle}}</span></span>
+          </a>
+          <sc-if value="{{r.isRequest}}" hint-placeholder-val="{{ false }}">
+            <span style="display: flex; gap: 8px">
+              <button type="button" style="height: 40px; padding: 0 14px; border-radius: 20px; border: none; background: {{c.primary}}; color: {{c.onPrimary}}; font-family: inherit; font-size: 14px; font-weight: 700">Accept</button>
+              <button type="button" aria-label="Decline {{r.name}}" style="width: 40px; height: 40px; border-radius: 20px; border: 1px solid {{c.line}}; background: {{c.surface2}}; color: {{c.text}}; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg></button>
+            </span>
+          </sc-if>
+          <sc-if value="{{r.isPerson}}" hint-placeholder-val="{{ true }}">
+            <span style="{{r.btnStyle}}">{{r.btn}}</span>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0">
+    <dc-import name="KitTabBar" active="profile" mode="{{mode}}" hint-size="390px,84px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 0 };
+  }
+  pal(light) {
+    if (light) return { bg: '#F5F3EE', surface: '#FFFFFF', surface2: '#EEEBE4', line: '#DEDAD0', text: '#0E0E0E', muted: '#5C5850', primary: '#0E0E0E', onPrimary: '#FFC20E' };
+    return { bg: '#0A0A0A', surface: '#141414', surface2: '#1E1E1E', line: '#2C2C2C', text: '#F5F3EE', muted: '#A8A49A', primary: '#FFC20E', onPrimary: '#0A0A0A' };
+  }
+  renderVals() {
+    const light = this.props.mode === 'light';
+    const c = this.pal(light);
+    const t = this.state.tab;
+    const outline = 'height: 40px; padding: 0 14px; border-radius: 20px; display: flex; align-items: center; font-size: 14px; font-weight: 700; background: ' + c.surface2 + '; color: ' + c.text + '; border: 1px solid ' + c.line;
+    const solid = 'height: 40px; padding: 0 14px; border-radius: 20px; display: flex; align-items: center; font-size: 14px; font-weight: 700; background: ' + c.primary + '; color: ' + c.onPrimary;
+    const lists = [
+      [['Mint', 'mint.loops', 'Following'], ['Beam', 'beam.rides', 'Following'], ['Fah', 'fah.cruise', 'Follow back'], ['Ploy', 'ploy_p', 'Following'], ['Kan', 'kan.explores', 'Follow back']],
+      [['Mint', 'mint.loops', 'Following'], ['Beam', 'beam.rides', 'Following'], ['Ploy', 'ploy_p', 'Following'], ['Toey', 'toey_gt', 'Following']],
+      [['Arm', 'arm.night', 'request']]
+    ];
+    const seg = (on) => 'height: 44px; border-radius: 12px; border: none; font-family: inherit; font-size: 14px; font-weight: 700; ' + (on ? 'background: ' + c.surface + '; color: ' + c.text + '; box-shadow: 0 1px 4px rgba(0,0,0,0.2)' : 'background: transparent; color: ' + c.muted);
+    return {
+      c: c,
+      mode: light ? 'light' : 'dark',
+      tabs: ['Followers 48', 'Following 52', 'Requests 1'].map((l, i) => ({ label: l, on: i === t, style: seg(i === t), pick: () => this.setState({ tab: i }) })),
+      rows: lists[t].map((r) => ({
+        name: r[0], handle: r[1], initial: r[0].charAt(0),
+        isRequest: r[2] === 'request', isPerson: r[2] !== 'request',
+        btn: r[2], btnStyle: r[2] === 'Follow back' ? solid : outline
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

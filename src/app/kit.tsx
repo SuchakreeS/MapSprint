@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text } from 'react-native';
 
 import { Button } from '@/components/Button';
+import { PlayGlyph } from '@/components/PlayGlyph';
+import { APP_NAME } from '@/constants/app';
 import { Card } from '@/components/Card';
 import { Header } from '@/components/Header';
 import { Stat } from '@/components/Stat';
@@ -17,7 +19,7 @@ export default function KitPreview() {
   return (
     <ScrollView contentContainerStyle={styles.wrap}>
       <Header title="Header with back" onBack={() => {}} />
-      <Text style={[type.label, { color: c.gold }]}>MAPSPRINT</Text>
+      <Text style={[type.wordmark, { color: c.gold }]}>{APP_NAME.toUpperCase()}</Text>
       <Text style={[type.title, { color: c.text }]}>Title in Sora</Text>
       <Text style={[type.body, { color: c.muted }]}>Body text in Manrope.</Text>
 
@@ -32,8 +34,10 @@ export default function KitPreview() {
         <Switch label="Sound" value={sound} onValueChange={setSound} />
       </Card>
 
-      <Button label="Start drive" onPress={() => {}} />
+      <Button label="Start drive" size="lg" onPress={() => {}} leading={(color) => <PlayGlyph color={color} />} />
+      <Button label="Continue" onPress={() => {}} />
       <Button label="Pause" variant="secondary" onPress={() => {}} />
+      <Button label="Not now" variant="ghost" onPress={() => {}} />
       <Button label="Discard" variant="danger" onPress={() => {}} />
       <Button label="Disabled" disabled onPress={() => setSound(false)} />
     </ScrollView>

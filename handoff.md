@@ -86,8 +86,35 @@ Branch `phase1-ui-kit` (off master). Plan: `docs/superpowers/plans/2026-11-05-fo
 - Gotcha: if typecheck complains a route like "/" is missing, delete `.expo/types/router.d.ts` and start Metro once; the file is generated and was stale.
 - NOT yet checked on phone: signal row updates outdoors, battery tip dismiss persists after restart, sound toggle persists, Start goes to HUD placeholder.
 
+## Design pack (added after 1.4)
+All 29 approved screens are now in `design/`: dark (Onyx) + light (Pearl) PNGs in `design/screens/`, overview
+sheets, exact values in `design/source/*.dc.html`, and `design/README.md` (screen -> plan task -> route index + warnings).
+The old design canvas can't be read from VS Code, so **use this folder**.
+- Tasks 1.1-1.4 were built BEFORE this folder existed ("no mockup" for screen 03). Plan task **1.13** is the alignment pass.
+  Known gaps to check: the design tab bar has **icons** and a raised yellow Record circle (see `design/source/KitTabBar.dc.html`),
+  but the app has text-only tabs; screen 03 and 07 layouts; Button/Card/Stat/Switch/Header sizes vs the source.
+- **Decision for PS (icons):** the design uses simple inline SVG icons (paths are in `design/source/`). Showing them needs
+  `react-native-svg` (one native rebuild), or keep text-only tabs. Earlier ruling was "no icon library"; revisit before 1.13.
+- Screen 03 copy in the design is outdated (says "Allow all the time"); we only request "while using the app".
+- For 1.5 use `design/screens/dark/08-driving-hud.png` and `design/source/Hud2.dc.html` as the visual spec.
+
+## Session 4e (2026-11-05): task 1.13 design alignment pass, code done (uncommitted)
+Compared UI kit, tab bar, screen 03 and 07 with `design/`; PS approved the difference list. Done:
+- Tokens: `radius.notice` 14 and `radius.button` 18; type scale rewritten to the design sizes (title 26 Sora 600, sheetTitle 24, body 15, rowTitle, small, caption 13, button 16/17, `label` = Manrope bold 12 uppercase). Michroma is now `fonts.wordmark` / `type.wordmark` (wordmark only, per design/README.md). `src/constants/app.ts` `APP_NAME` is the one place for the name (also used in the recorder notification text).
+- Button: light mode bug fixed (primary now uses `primary`/`onPrimary`: black with yellow text in Pearl); 56 high (`size="lg"` 60), radius 18; new `ghost` text-only variant; `leading` glyph slot. New `PlayGlyph` and `CloseGlyph` (drawn with Views, no SVG lib).
+- Switch: custom 52x32 with caption (no system switch).
+- Tab bar: Record circle ring now the surface colour, "Record" label added, active tab labels bold. Still text-only tabs, plain dot in the circle (no icons).
+- Location screen (03): design layout (progress bar only when `?step=N&of=6` is passed, art rings, 3 reason rows with a gold dot instead of icons, notice box, Continue + ghost Not now). Copy rewritten: "While using the app" only, no "Allow all the time", no "when the app is closed". **DRAFT privacy wording (SUBTITLE and DISCLOSURE in `location.tsx`) must be reviewed by an Opus session before release (CLAUDE.md / README).**
+- Pre-drive (07): real Mapbox map (reuses the spike setup) behind a bottom sheet, round close button, grouped checklist (GPS signal "Strong/Weak/Searching…", Samsung battery tip row with Hide, car row, "Sound cues and voice" switch), Start drive 60 high with play glyph. Weak-signal confirm dialog kept.
+- Ruling: map backdrop = real Mapbox (option A) because it matches the design and the HUD needs it anyway.
+- Ruling: battery row shows the Samsung Unrestricted tip, not "Battery 64%" (that needs `expo-battery`, a native library; decide with the icons question).
+- Ruling: the "Accuracy about N m" caption was dropped to match the design.
+- Not changed: the design inconsistency on screen 07 light (`surface2` there is `#F5F3EE`); we use the token `#EEEBE4`.
+- Results: typecheck clean, eslint clean, npm test 26/26, no hex outside `src/theme` (only `notificationColor` in recorder.ts, native notification, pre-existing).
+- NOT yet checked on phone: pre-drive map + sheet in dark and light, location screen (normal and blocked states), tab bar, Button/Switch in the Kit preview, light-mode buttons are black with yellow text.
+
 ## Next step
-Check 1.4 on the Samsung, then 1.5 driving HUD (the big one: live speed EMA, stats, Mapbox follow camera, hold-to-finish 800 ms, pause, controls lock > 10 km/h, keep-awake). 1.5 is large: brainstorm and split it first.
+1) PS checks 1.13 on the Samsung and commits. 2) Plan 1.5 driving HUD from `design/screens/{dark,light}/08-driving-hud.png` + `design/source/Hud2.dc.html`: brainstorm + writing-plans, show the plan to PS BEFORE coding. 1.5 is large (live speed EMA, stats, Mapbox follow camera, hold-to-finish 800 ms, pause, controls lock > 10 km/h, keep-awake); wire `startRecording()` there.
 Things learned in the spikes that Phase 1 must include (also added to plan.md as 1.10 and 1.11):
 - Gap log: record every gap > 3 s (time + position) so tunnels/viaducts can be told apart from throttling.
 - "Finish this drive?" prompt: PS forgot to press Stop in run #6 and it recorded for 88 min. Prompt (notification + in-app) after being stopped for a while after a drive.

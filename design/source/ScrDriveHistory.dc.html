@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cartrava drive history</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&amp;family=Rajdhani:wght@500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Michroma&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{cursor:pointer}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: {{c.bg}}; color: {{c.text}}; font-family: 'Manrope', sans-serif">
+  <div style="position: absolute; left: 0; right: 0; top: 47px; height: 52px; box-sizing: border-box; padding: 0 8px; display: flex; align-items: center; gap: 4px">
+    <a href="ScrProfile.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <h1 style="margin: 0; font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 600">Drive history</h1>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; top: 99px; bottom: 84px; overflow-y: auto">
+    <div style="box-sizing: border-box; padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 14px">
+      <div role="tablist" aria-label="Car" style="display: flex; flex-wrap: wrap; gap: 8px">
+        <sc-for list="{{chips}}" as="ch" hint-placeholder-count="3">
+          <button type="button" role="tab" aria-selected="{{ch.on}}" onClick="{{ch.pick}}" style="{{ch.style}}">{{ch.label}}</button>
+        </sc-for>
+      </div>
+      <sc-for list="{{months}}" as="mo" hint-placeholder-count="2">
+        <section style="display: flex; flex-direction: column; gap: 4px">
+          <h2 style="margin: 0; padding: 8px 0; display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: {{c.muted}}"><span>{{mo.name}}</span><span style="font-variant-numeric: tabular-nums">{{mo.sum}}</span></h2>
+          <sc-for list="{{mo.drives}}" as="d" hint-placeholder-count="3">
+            <a href="ScrDriveDetail.dc.html" style="min-height: 76px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid {{c.line}}">
+              <svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true" style="flex: none; border-radius: 12px; background: {{c.surface}}; border: 1px solid {{c.line}}"><path d="M8 28 H48 M28 8 V48" stroke="{{c.bpLine}}" stroke-width="0.8" opacity="0.4"></path><path d="{{d.path}}" fill="none" stroke="{{c.route}}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 15px; font-weight: 700">{{d.title}}</span><span style="font-size: 13px; color: {{c.muted}}">{{d.meta}}</span></span>
+              <span style="font-size: 14px; font-weight: 700; color: {{c.primaryText}}; font-variant-numeric: tabular-nums">+{{d.xp}}</span>
+            </a>
+          </sc-for>
+        </section>
+      </sc-for>
+    </div>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0">
+    <dc-import name="KitTabBar" active="profile" mode="{{mode}}" hint-size="390px,84px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { car: 0 };
+  }
+  pal(light) {
+    if (light) return { bg: '#F5F3EE', surface: '#FFFFFF', line: '#DEDAD0', text: '#0E0E0E', muted: '#5C5850', primaryText: '#0E0E0E', bpLine: '#5C5850', route: '#0E0E0E', chipOn: '#0E0E0E', onChip: '#FFC20E' };
+    return { bg: '#0A0A0A', surface: '#141414', line: '#2C2C2C', text: '#F5F3EE', muted: '#A8A49A', primaryText: '#FFC20E', bpLine: '#A8A49A', route: '#FFC20E', chipOn: '#F5F3EE', onChip: '#0A0A0A' };
+  }
+  renderVals() {
+    const light = this.props.mode === 'light';
+    const c = this.pal(light);
+    const sel = this.state.car;
+    const all = [
+      { m: 'NOVEMBER 2026', car: 1, title: 'Morning loop to Bang Kapi', meta: 'Tue 3 · Daily driver · 18.4 km', xp: '728', path: 'M8 44 L20 44 L20 28 L36 28 L36 12 L48 12' },
+      { m: 'NOVEMBER 2026', car: 1, title: 'Rangsit run for noodles', meta: 'Sun 1 · Daily driver · 26.0 km', xp: '540', path: 'M8 12 L28 12 L28 44 L48 44' },
+      { m: 'OCTOBER 2026', car: 2, title: 'Night drive to Khlong Luang', meta: 'Sat 31 · Weekend car · 34.7 km', xp: '1,105', path: 'M8 28 L24 28 L24 12 L40 12 L40 40 L48 40' },
+      { m: 'OCTOBER 2026', car: 1, title: 'Office commute', meta: 'Fri 30 · Daily driver · 17.6 km', xp: '210', path: 'M8 44 L48 12' },
+      { m: 'OCTOBER 2026', car: 2, title: 'Nonthaburi riverside loop', meta: 'Sun 25 · Weekend car · 29.8 km', xp: '880', path: 'M8 20 L30 20 L30 44 L48 44 L48 28' }
+    ];
+    const list = all.filter((d) => sel === 0 || d.car === sel);
+    const names = ['NOVEMBER 2026', 'OCTOBER 2026'];
+    return {
+      c: c,
+      mode: light ? 'light' : 'dark',
+      chips: ['All cars', 'Daily driver', 'Weekend car'].map((l, i) => ({
+        label: l, on: i === sel,
+        style: 'height: 40px; padding: 0 14px; border-radius: 20px; font-family: inherit; font-size: 14px; font-weight: 700; ' + (i === sel ? 'background: ' + c.chipOn + '; color: ' + c.onChip + '; border: none' : 'background: ' + c.surface + '; color: ' + c.text + '; border: 1px solid ' + c.line),
+        pick: () => this.setState({ car: i })
+      })),
+      months: names.map((n) => {
+        const ds = list.filter((d) => d.m === n);
+        return { name: n, sum: ds.length + (ds.length === 1 ? ' drive' : ' drives'), drives: ds };
+      }).filter((g) => g.drives.length)
+    };
+  }
+}
+</script>
+</body>
+</html>

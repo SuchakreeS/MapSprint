@@ -4,6 +4,8 @@
 // NOT ACCESS_BACKGROUND_LOCATION, so we avoid Google Play's background-location review.
 import * as Location from 'expo-location';
 
+import { APP_NAME } from '@/constants/app';
+
 import { endActiveSession, getActiveSessionId, startSession } from './db';
 import { LOCATION_TASK } from './location-task';
 
@@ -37,7 +39,7 @@ export async function startRecording(): Promise<number> {
     showsBackgroundLocationIndicator: true,
     foregroundService: {
       notificationTitle: 'Recording your drive',
-      notificationBody: 'Mapsprint is recording GPS. Open the app to finish.',
+      notificationBody: `${APP_NAME} is recording GPS. Open the app to finish.`,
       notificationColor: '#FFC20E',
       killServiceOnDestroy: false,
     },

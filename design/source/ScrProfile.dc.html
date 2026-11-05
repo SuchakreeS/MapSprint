@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cartrava my profile</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&amp;family=Rajdhani:wght@500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Michroma&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: {{c.bg}}; color: {{c.text}}; font-family: 'Manrope', sans-serif">
+  <div style="position: absolute; left: 0; right: 0; top: 47px; height: 56px; box-sizing: border-box; padding: 0 8px 0 16px; display: flex; align-items: center; justify-content: space-between">
+    <h1 style="margin: 0; font-family: 'Sora', sans-serif; font-size: 28px; font-weight: 600">Profile</h1>
+    <a href="ScrSettings.dc.html" aria-label="Settings" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></a>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; top: 103px; bottom: 84px; overflow-y: auto">
+    <div style="box-sizing: border-box; padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: 20px; background: {{c.surface}}; border: 1px solid {{c.line}}">
+        <div style="display: flex; align-items: center; gap: 14px">
+          <span style="width: 72px; height: 72px; flex: none; border-radius: 36px; display: flex; align-items: center; justify-content: center; background: {{c.surface2}}; border: 2px solid {{c.gold}}; font-family: 'Sora', sans-serif; font-size: 28px; font-weight: 600">N</span>
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+            <span style="font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 600">Nok</span>
+            <span style="font-size: 14px; color: {{c.muted}}">@nok_drives</span>
+            <span style="display: flex; gap: 14px; font-size: 14px"><a href="ScrFollowers.dc.html" style="height: 28px; display: flex; align-items: center"><span style="font-weight: 700">48</span>&#160;<span style="color: {{c.muted}}">followers</span></a><a href="ScrFollowers.dc.html" style="height: 28px; display: flex; align-items: center"><span style="font-weight: 700">52</span>&#160;<span style="color: {{c.muted}}">following</span></a></span>
+          </span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; justify-content: space-between; align-items: center">
+            <span style="height: 28px; padding: 0 10px; border-radius: 14px; display: flex; align-items: center; background: {{c.accentFill}}; color: {{c.onAccent}}; font-size: 13px; font-weight: 700">Level 8</span>
+            <span style="font-size: 13px; font-weight: 600; color: {{c.muted}}; font-variant-numeric: tabular-nums">2,368 / 2,700 XP</span>
+          </div>
+          <div style="display: flex; gap: 4px" aria-hidden="true">
+            <sc-for list="{{leds}}" as="led" hint-placeholder-count="12"><div style="{{led}}"></div></sc-for>
+          </div>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{stats}}" as="s" hint-placeholder-count="4">
+          <div style="padding: 14px; border-radius: 16px; background: {{c.surface}}; border: 1px solid {{c.line}}; display: flex; flex-direction: column; gap: 4px">
+            <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: {{c.muted}}">{{s.label}}</span>
+            <span style="font-family: 'Rajdhani', sans-serif; font-size: 28px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums">{{s.value}} <span style="font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 600; color: {{c.muted}}">{{s.unit}}</span></span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          <h2 style="margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: {{c.muted}}">BADGES · 6 OF 10</h2>
+          <a href="ScrBadges.dc.html" style="height: 44px; display: flex; align-items: center; font-size: 14px; font-weight: 700">See all</a>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{badges}}" as="b" hint-placeholder-count="4">
+            <a href="ScrBadges.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px; border-radius: 16px; background: {{c.surface}}; border: 1px solid {{c.line}}">
+              <span style="width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: {{c.accentFill}}; color: {{c.onAccent}}; font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700" aria-hidden="true">{{b.mark}}</span>
+              <span style="font-size: 12px; font-weight: 700; text-align: center; line-height: 1.25">{{b.name}}</span>
+            </a>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          <h2 style="margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: {{c.muted}}">RECENT DRIVES</h2>
+          <a href="ScrDriveHistory.dc.html" style="height: 44px; display: flex; align-items: center; font-size: 14px; font-weight: 700">See all</a>
+        </div>
+        <a href="ScrDriveDetail.dc.html" style="min-height: 64px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid {{c.line}}">
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Morning loop to Bang Kapi</span><span style="font-size: 13px; color: {{c.muted}}">Today · 18.4 km · 42.1 km/h avg</span></span>
+          <span style="font-size: 14px; font-weight: 700; color: {{c.primaryText}}">+728 XP</span>
+        </a>
+        <a href="ScrDriveDetail.dc.html" style="min-height: 64px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid {{c.line}}">
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Rangsit run for noodles</span><span style="font-size: 13px; color: {{c.muted}}">Sun 1 Nov · 26.0 km · 47.3 km/h avg</span></span>
+          <span style="font-size: 14px; font-weight: 700; color: {{c.primaryText}}">+540 XP</span>
+        </a>
+      </div>
+      <a href="ScrGarage.dc.html" style="min-height: 60px; padding: 0 16px; display: flex; align-items: center; gap: 12px; border-radius: 16px; background: {{c.surface}}; border: 1px solid {{c.line}}">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{c.gold}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l2-5h10l2 5"></path><rect x="3" y="13" width="18" height="5" rx="1.5"></rect><circle cx="7.5" cy="18.5" r="1.5"></circle><circle cx="16.5" cy="18.5" r="1.5"></circle></svg>
+        <span style="flex: 1; font-size: 15px; font-weight: 700">Garage</span>
+        <span style="font-size: 14px; color: {{c.muted}}">2 cars</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{c.muted}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+      </a>
+    </div>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0">
+    <dc-import name="KitTabBar" active="profile" mode="{{mode}}" hint-size="390px,84px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  pal(light) {
+    if (light) return { bg: '#F5F3EE', surface: '#FFFFFF', surface2: '#EEEBE4', line: '#DEDAD0', text: '#0E0E0E', muted: '#5C5850', primaryText: '#0E0E0E', accentFill: '#FFC20E', onAccent: '#0E0E0E', gold: '#7A5F1E', leds: ['#3A3A3A', '#B58100', '#C62828'] };
+    return { bg: '#0A0A0A', surface: '#141414', surface2: '#1E1E1E', line: '#2C2C2C', text: '#F5F3EE', muted: '#A8A49A', primaryText: '#FFC20E', accentFill: '#FFC20E', onAccent: '#0A0A0A', gold: '#C9B37E', leds: ['#E8E6E1', '#FFC20E', '#FF453A'] };
+  }
+  renderVals() {
+    const light = this.props.mode === 'light';
+    const c = this.pal(light);
+    const leds = [];
+    for (let i = 0; i < 12; i++) {
+      const col = i < 5 ? c.leds[0] : (i < 9 ? c.leds[1] : c.leds[2]);
+      leds.push('flex: 1; height: 8px; border-radius: 2px; background: ' + (i < 3 ? col : c.line));
+    }
+    return {
+      c: c,
+      mode: light ? 'light' : 'dark',
+      leds: leds,
+      stats: [
+        { label: 'TOTAL DISTANCE', value: '1,284', unit: 'km' },
+        { label: 'DRIVES', value: '63', unit: '' },
+        { label: 'CELLS', value: '1,248', unit: '' },
+        { label: 'AVG SMOOTH', value: '86', unit: '/100' }
+      ],
+      badges: [
+        { mark: 'C2', name: 'Cartographer II' },
+        { mark: 'ZD', name: 'Zen Driver' },
+        { mark: 'WE', name: 'Weekend Explorer' },
+        { mark: '100', name: 'Century' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

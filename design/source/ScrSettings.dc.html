@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cartrava settings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&amp;family=Rajdhani:wght@500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Michroma&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{cursor:pointer}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: {{c.bg}}; color: {{c.text}}; font-family: 'Manrope', sans-serif">
+  <div style="position: absolute; left: 0; right: 0; top: 47px; height: 52px; box-sizing: border-box; padding: 0 8px; display: flex; align-items: center; gap: 4px">
+    <a href="ScrProfile.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <h1 style="margin: 0; font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 600">Settings</h1>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; top: 99px; bottom: 84px; overflow-y: auto">
+    <div style="box-sizing: border-box; padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 8px">
+      <h2 style="margin: 0; padding: 8px 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: {{c.muted}}">ACCOUNT</h2>
+      <div style="border-radius: 16px; background: {{c.surface}}; border: 1px solid {{c.line}}">
+        <a href="ScrAccountData.dc.html" style="min-height: 56px; padding: 0 16px; display: flex; align-items: center; gap: 12px"><span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Account and data</span><span style="font-size: 13px; color: {{c.muted}}">Email, password, download or delete</span></span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{c.muted}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg></a>
+      </div>
+      <h2 style="margin: 0; padding: 12px 4px 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: {{c.muted}}">PREFERENCES</h2>
+      <div style="border-radius: 16px; background: {{c.surface}}; border: 1px solid {{c.line}}">
+        <a href="ScrPrivacySettings.dc.html" style="min-height: 56px; padding: 0 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid {{c.line}}"><span style="flex: 1; font-size: 15px; font-weight: 600">Privacy</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{c.muted}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg></a>
+        <a href="ScrRecordingSettings.dc.html" style="min-height: 56px; padding: 0 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid {{c.line}}"><span style="flex: 1; font-size: 15px; font-weight: 600">Recording</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{c.muted}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg></a>
+        <a href="#notifications" style="min-height: 56px; padding: 0 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid {{c.line}}"><span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Notifications</span><span style="font-size: 13px; color: {{c.muted}}">Kudos, comments, follows, badges</span></span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{c.muted}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg></a>
+        <div style="padding: 12px 16px; display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 15px; font-weight: 600">Appearance</span>
+          <div role="radiogroup" aria-label="Appearance" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 14px; background: {{c.surface2}}">
+            <sc-for list="{{looks}}" as="l" hint-placeholder-count="3">
+              <button type="button" role="radio" aria-checked="{{l.on}}" onClick="{{l.pick}}" style="{{l.style}}">{{l.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      <h2 style="margin: 0; padding: 12px 4px 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: {{c.muted}}">ABOUT</h2>
+      <div style="border-radius: 16px; background: {{c.surface}}; border: 1px solid {{c.line}}">
+        <a href="#help" style="min-height: 52px; padding: 0 16px; display: flex; align-items: center; border-bottom: 1px solid {{c.line}}; font-size: 15px; font-weight: 600">Help and feedback</a>
+        <a href="#terms" style="min-height: 52px; padding: 0 16px; display: flex; align-items: center; border-bottom: 1px solid {{c.line}}; font-size: 15px; font-weight: 600">Terms of Service</a>
+        <a href="#privacy" style="min-height: 52px; padding: 0 16px; display: flex; align-items: center; border-bottom: 1px solid {{c.line}}; font-size: 15px; font-weight: 600">Privacy Policy</a>
+        <div style="min-height: 52px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; font-size: 15px"><span style="font-weight: 600">Version</span><span style="color: {{c.muted}}">1.0.0</span></div>
+      </div>
+      <a href="ScrWelcome.dc.html" style="margin-top: 16px; min-height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; border: 1px solid {{c.line}}; font-size: 15px; font-weight: 700; color: {{c.danger}}">Sign out</a>
+    </div>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0">
+    <dc-import name="KitTabBar" active="profile" mode="{{mode}}" hint-size="390px,84px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { look: 2 };
+  }
+  pal(light) {
+    if (light) return { bg: '#F5F3EE', surface: '#FFFFFF', surface2: '#EEEBE4', line: '#DEDAD0', text: '#0E0E0E', muted: '#5C5850', danger: '#B3261E' };
+    return { bg: '#0A0A0A', surface: '#141414', surface2: '#1E1E1E', line: '#2C2C2C', text: '#F5F3EE', muted: '#A8A49A', danger: '#FF6B5E' };
+  }
+  renderVals() {
+    const light = this.props.mode === 'light';
+    const c = this.pal(light);
+    const sel = this.state.look;
+    return {
+      c: c,
+      mode: light ? 'light' : 'dark',
+      looks: ['Dark', 'Light', 'System'].map((l, i) => ({
+        label: l, on: i === sel,
+        style: 'height: 40px; border-radius: 10px; border: none; font-family: inherit; font-size: 14px; font-weight: 700; ' + (i === sel ? 'background: ' + c.surface + '; color: ' + c.text + '; box-shadow: 0 1px 4px rgba(0,0,0,0.2)' : 'background: transparent; color: ' + c.muted),
+        pick: () => this.setState({ look: i })
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

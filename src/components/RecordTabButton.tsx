@@ -1,41 +1,45 @@
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '@/theme/use-theme';
 
-const SIZE = 64;
+const SIZE = 56;
+const RING = 4;
 
 /** Raised centre button of the tab bar. Opens the record flow instead of a tab. */
 export function RecordTabButton() {
-  const { c } = useTheme();
+  const { c, fonts } = useTheme();
   return (
-    <View style={styles.slot}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Start recording"
-        onPress={async () => {
-          const granted = (await Location.getForegroundPermissionsAsync()).granted;
-          router.push(granted ? '/record/pre-drive' : '/location?next=record');
-        }}
-        style={({ pressed }) => [
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Record a drive"
+      onPress={async () => {
+        const granted = (await Location.getForegroundPermissionsAsync()).granted;
+        router.push(granted ? '/record/pre-drive' : '/location?next=record');
+      }}
+      style={({ pressed }) => [styles.slot, { opacity: pressed ? 0.85 : 1 }]}>
+      <View
+        style={[
           styles.circle,
-          { backgroundColor: c.accentFill, borderColor: c.bg, opacity: pressed ? 0.85 : 1 },
+          { backgroundColor: c.accentFill, borderColor: c.surface },
         ]}>
         <View style={[styles.dot, { backgroundColor: c.onAccent }]} />
-      </Pressable>
-    </View>
+      </View>
+      <Text style={{ color: c.text, fontFamily: fonts.bodyBold, fontSize: 12 }}>Record</Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  slot: { flex: 1, alignItems: 'center' },
+  slot: { flex: 1, height: 50, alignItems: 'center', justifyContent: 'flex-end', gap: 2 },
   circle: {
-    width: SIZE,
-    height: SIZE,
-    borderRadius: SIZE / 2,
-    borderWidth: 4,
-    marginTop: -SIZE / 3,
+    // 56 px visible circle plus the 4 px ring in the bar colour (design/source/KitTabBar.dc.html).
+    width: SIZE + RING * 2,
+    height: SIZE + RING * 2,
+    borderRadius: (SIZE + RING * 2) / 2,
+    borderWidth: RING,
+    marginTop: -24 - RING,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,

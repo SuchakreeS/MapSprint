@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cartrava pre-drive check</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&amp;family=Rajdhani:wght@500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Michroma&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{cursor:pointer}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: {{c.bg}}; color: {{c.text}}; font-family: 'Manrope', sans-serif">
+  <svg width="390" height="460" viewBox="0 0 390 460" role="img" aria-label="Map around your current location" style="position: absolute; left: 0; top: 0">
+    <defs><pattern id="pd-grid-{{mode}}" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0 H0 V20" fill="none" stroke="{{c.bpLine}}" stroke-width="0.6" opacity="0.28"></path></pattern></defs>
+    <rect x="0" y="0" width="390" height="460" fill="url(#pd-grid-{{mode}})"></rect>
+    <path d="M90 0 V460 M195 0 V460 M300 0 V460 M0 140 H390 M0 230 H390 M0 330 H390" fill="none" stroke="{{c.bpLine}}" stroke-width="1" opacity="0.55"></path>
+    <path d="M0 260 L390 110" fill="none" stroke="{{c.bpLine}}" stroke-width="1.5" stroke-dasharray="6 4" opacity="0.75"></path>
+    <circle cx="195" cy="300" r="90" fill="{{c.explored}}"></circle>
+    <path d="M105 230 H285 M105 330 H285 M195 210 V390" fill="none" stroke="{{c.road}}" stroke-opacity="0.16" stroke-width="8" stroke-linecap="round"></path>
+    <circle cx="195" cy="300" r="34" fill="{{c.route}}" fill-opacity="0.14"></circle>
+    <circle cx="195" cy="300" r="11" fill="{{c.route}}" stroke="{{c.bg}}" stroke-width="3"></circle>
+  </svg>
+  <a href="ScrFeed.dc.html" aria-label="Close" style="position: absolute; left: 16px; top: 55px; width: 48px; height: 48px; border-radius: 16px; display: flex; align-items: center; justify-content: center; background: {{c.surface}}; border: 1px solid {{c.line}}">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg>
+  </a>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; padding: 10px 20px 42px; border-radius: 28px 28px 0 0; background: {{c.surface}}; border-top: 1px solid {{c.line}}; display: flex; flex-direction: column; gap: 16px">
+    <div style="width: 36px; height: 4px; border-radius: 2px; background: {{c.line}}; align-self: center" aria-hidden="true"></div>
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <h1 style="margin: 0; font-family: 'Sora', sans-serif; font-size: 24px; font-weight: 600">Ready to drive?</h1>
+      <p style="margin: 0; font-size: 14px; line-height: 1.5; color: {{c.muted}}">Set up your phone before you move. Controls lock above 10 km/h.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; border-radius: 16px; background: {{c.surface2}}">
+      <div style="min-height: 56px; padding: 0 14px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid {{c.line}}">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{c.success}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8 12l3 3 5-6"></path></svg>
+        <span style="flex: 1; font-size: 15px; font-weight: 600">GPS signal</span>
+        <span style="font-size: 14px; font-weight: 700; color: {{c.success}}">Strong</span>
+      </div>
+      <div style="min-height: 64px; padding: 8px 14px; box-sizing: border-box; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid {{c.line}}">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{c.gold}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="16" height="10" rx="2"></rect><path d="M21 10v4"></path><path d="M6 10v4"></path><path d="M9 10v4"></path></svg>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Battery 64%</span><span style="font-size: 13px; color: {{c.muted}}">Plug in for drives over an hour.</span></span>
+      </div>
+      <a href="ScrGarage.dc.html" style="min-height: 56px; padding: 0 14px; display: flex; align-items: center; gap: 12px">
+        <span style="width: 22px; height: 22px; border-radius: 11px; background: #FFC20E; border: 1px solid {{c.line}}" aria-hidden="true"></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Daily driver</span><span style="font-size: 13px; color: {{c.muted}}">Tap to change car</span></span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{c.muted}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+      </a>
+    </div>
+    <div style="min-height: 56px; display: flex; align-items: center; gap: 12px">
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Sound cues and voice</span><span style="font-size: 13px; color: {{c.muted}}">Chime for new cells, voice for new districts</span></span>
+      <button type="button" role="switch" aria-checked="{{sound}}" aria-label="Sound cues and voice" onClick="{{toggleSound}}" style="{{switchStyle}}"><span style="{{knobStyle}}"></span></button>
+    </div>
+    <a href="Hud2.dc.html" style="height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center; gap: 10px; background: {{c.primary}}; color: {{c.onPrimary}}; font-size: 17px; font-weight: 700">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"></path></svg>
+      Start drive
+    </a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { sound: true };
+  }
+  pal(light) {
+    if (light) return { bg: '#F5F3EE', surface: '#FFFFFF', surface2: '#F5F3EE', line: '#DEDAD0', text: '#0E0E0E', muted: '#5C5850', primary: '#0E0E0E', onPrimary: '#FFC20E', gold: '#7A5F1E', success: '#1E7F45', bpLine: '#5C5850', explored: '#E6E2D9', road: '#0E0E0E', route: '#0E0E0E', switchOn: '#0E0E0E', knobOn: '#FFC20E' };
+    return { bg: '#0A0A0A', surface: '#141414', surface2: '#1E1E1E', line: '#2C2C2C', text: '#F5F3EE', muted: '#A8A49A', primary: '#FFC20E', onPrimary: '#0A0A0A', gold: '#C9B37E', success: '#5BD48A', bpLine: '#A8A49A', explored: '#1A1A1A', road: '#F5F3EE', route: '#FFC20E', switchOn: '#FFC20E', knobOn: '#0A0A0A' };
+  }
+  renderVals() {
+    const light = this.props.mode === 'light';
+    const c = this.pal(light);
+    const on = this.state.sound;
+    return {
+      c: c,
+      mode: light ? 'light' : 'dark',
+      sound: on,
+      switchStyle: 'position: relative; flex: none; width: 52px; height: 32px; padding: 0; border-radius: 16px; border: none; background: ' + (on ? c.switchOn : c.line),
+      knobStyle: 'position: absolute; top: 4px; left: ' + (on ? '24px' : '4px') + '; width: 24px; height: 24px; border-radius: 12px; background: ' + (on ? c.knobOn : c.muted) + '; transition: left 180ms ease-out',
+      toggleSound: () => this.setState({ sound: !on })
+    };
+  }
+}
+</script>
+</body>
+</html>

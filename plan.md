@@ -5,7 +5,7 @@ update `handoff.md`. Stop at any step boundary when usage runs low.
 Verify every step: `npm run typecheck`, `npx eslint .`, `npm test`.
 
 Reference: full product plan (Claude Docs) — goals, data model, screens, risks.
-Designs: "Cartrava Theme Prototype" canvas, page "App screens · Sport Luxe v2" (29 screens).
+Designs: `design/` folder (29 screens, dark + light images, index in `design/README.md`). Open the screen image before building it.
 
 
 ## Tech stack
@@ -35,6 +35,7 @@ Cartrava/                      repo root (Expo project root)
 ├── app.json / eas.json        Expo config + build profiles
 ├── .env.example               copy to .env (never commit .env)
 ├── assets/                    icons, splash, fonts (Phase 1), sounds (Phase 3)
+├── design/                    approved screen images + source (read design/README.md)
 ├── tests/                     Node tests for pure logic (*.test.mts)
 ├── src/
 │   ├── app/                   ROUTES ONLY (Expo Router)
@@ -76,6 +77,7 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
       (code done 2026-11-05, placeholder screens; on-phone check pending)
 - [x] 1.3 Location permission screen (design 03) + foreground permission flow
       (code done 2026-11-05, designed from tokens since no mockup; on-phone check pending)
+      (the mockup exists now: design/screens 03. Its copy is outdated: ask for "while using the app" only. See 1.13)
 - [x] 1.4 Pre-drive check screen (07): GPS signal, battery tip, car, sound toggle
       (code done 2026-11-05; car row is a placeholder until Phase 2; on-phone check pending)
 - [ ] 1.5 Driving HUD (08, v2 design): live speed (EMA), stats, Mapbox follow camera,
@@ -87,6 +89,8 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
 - [ ] 1.10 Gap log: store every gap > 3 s (time + position) per drive; show max gap in debug stats
 - [ ] 1.11 "Finish this drive?" prompt after being stopped for a while (forgot-to-stop case, spike run #6)
 - [ ] 1.12 Remove the spike screens (map / gps / h3) once real screens replace them
+- [x] 1.13 Design alignment pass (code done 2026-11-05, on-phone check pending; icons still undecided): 1.1-1.4 were built before `design/` existed. Compare the UI kit, tab bar,
+      location (03) and pre-drive (07) screens with `design/screens/` + `design/source/` (sizes, radii, spacing, icons) and fix differences
 
 ## Phase 2 — Backend (≈30 h) — gate: closed test starts (12+ testers, 14 days)
 - [ ] 2.1 Supabase project (Singapore, free plan) + migrations for tables in plan doc

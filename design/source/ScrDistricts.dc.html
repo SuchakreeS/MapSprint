@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cartrava districts</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&amp;family=Rajdhani:wght@500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Michroma&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{cursor:pointer}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: {{c.bg}}; color: {{c.text}}; font-family: 'Manrope', sans-serif">
+  <div style="position: absolute; left: 0; right: 0; top: 47px; height: 52px; box-sizing: border-box; padding: 0 8px; display: flex; align-items: center; gap: 4px">
+    <a href="ScrExploreMap.dc.html" aria-label="Back to map" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <h1 style="margin: 0; font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 600">Districts</h1>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; top: 99px; bottom: 84px; overflow-y: auto">
+    <div style="box-sizing: border-box; padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 16px">
+      <div role="tablist" aria-label="Province" style="display: flex; flex-wrap: wrap; gap: 8px">
+        <sc-for list="{{chips}}" as="ch" hint-placeholder-count="5">
+          <button type="button" role="tab" aria-selected="{{ch.on}}" onClick="{{ch.pick}}" style="{{ch.style}}">{{ch.label}}</button>
+        </sc-for>
+      </div>
+      <sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+        <section style="display: flex; flex-direction: column; gap: 8px">
+          <h2 style="margin: 0; padding: 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: {{c.muted}}">{{g.name}}</h2>
+          <div style="display: flex; flex-direction: column; border-radius: 16px; background: {{c.surface}}; border: 1px solid {{c.line}}">
+            <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="3">
+              <a href="ScrExploreMap.dc.html" style="{{r.rowStyle}}">
+                <span style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px">
+                  <span style="font-size: 15px; font-weight: 700">{{r.name}}</span>
+                  <span style="font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums">{{r.pct}}%</span>
+                </span>
+                <span style="height: 6px; border-radius: 3px; background: {{c.line}}; overflow: hidden"><span style="{{r.barStyle}}"></span></span>
+                <span style="font-size: 13px; color: {{c.muted}}; font-variant-numeric: tabular-nums">{{r.cells}} cells explored</span>
+              </a>
+            </sc-for>
+          </div>
+        </section>
+      </sc-for>
+    </div>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0">
+    <dc-import name="KitTabBar" active="map" mode="{{mode}}" hint-size="390px,84px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { prov: 'All' };
+  }
+  pal(light) {
+    if (light) return { bg: '#F5F3EE', surface: '#FFFFFF', surface2: '#EEEBE4', line: '#DEDAD0', text: '#0E0E0E', muted: '#5C5850', bar: '#0E0E0E', chipOn: '#0E0E0E', onChip: '#FFC20E' };
+    return { bg: '#0A0A0A', surface: '#141414', surface2: '#1E1E1E', line: '#2C2C2C', text: '#F5F3EE', muted: '#A8A49A', bar: '#FFC20E', chipOn: '#FFC20E', onChip: '#0A0A0A' };
+  }
+  renderVals() {
+    const light = this.props.mode === 'light';
+    const c = this.pal(light);
+    const data = [
+      { name: 'Bangkok', rows: [['Bang Kapi', 34, '142 / 418'], ['Huai Khwang', 27, '61 / 226'], ['Chatuchak', 22, '72 / 327'], ['Lat Phrao', 9, '24 / 266']] },
+      { name: 'Pathum Thani', rows: [['Mueang Pathum Thani', 41, '305 / 744'], ['Khlong Luang', 18, '210 / 1,166']] },
+      { name: 'Nonthaburi', rows: [['Mueang Nonthaburi', 12, '68 / 567']] }
+    ];
+    const provs = ['All', 'Bangkok', 'Pathum Thani', 'Nonthaburi', 'Samut Prakan'];
+    const sel = this.state.prov;
+    const shown = data.filter((g) => sel === 'All' || g.name === sel);
+    return {
+      c: c,
+      mode: light ? 'light' : 'dark',
+      chips: provs.map((p) => ({
+        label: p,
+        on: p === sel,
+        style: 'height: 40px; padding: 0 14px; border-radius: 20px; font-family: inherit; font-size: 14px; font-weight: 700; ' + (p === sel ? 'background: ' + c.chipOn + '; color: ' + c.onChip + '; border: none' : 'background: ' + c.surface + '; color: ' + c.text + '; border: 1px solid ' + c.line),
+        pick: () => this.setState({ prov: p })
+      })),
+      groups: shown.map((g) => ({
+        name: g.name.toUpperCase(),
+        rows: g.rows.map((r, i) => ({
+          name: r[0],
+          pct: r[1],
+          cells: r[2],
+          rowStyle: 'display: flex; flex-direction: column; gap: 6px; padding: 12px 16px;' + (i < g.rows.length - 1 ? ' border-bottom: 1px solid ' + c.line : ''),
+          barStyle: 'display: block; height: 6px; width: ' + r[1] + '%; background: ' + c.bar
+        }))
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

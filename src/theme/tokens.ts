@@ -59,11 +59,12 @@ export const palettes: Record<Mode, Palette> = {
   },
 };
 
-export const radius = { sm: 12, md: 16, lg: 20, xl: 28 } as const;
+export const radius = { sm: 12, notice: 14, md: 16, button: 18, lg: 20, xl: 28 } as const;
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 
 // Font family names as registered in src/theme/fonts.ts.
-// Roles: Manrope = body, Sora = headings, Rajdhani = big numbers, Michroma = logo/labels only.
+// Roles: Manrope = body and labels, Sora = headings, Rajdhani = big numbers,
+// Michroma = wordmark / brand label only (design/README.md).
 export const fonts = {
   body: 'Manrope_400Regular',
   bodyMedium: 'Manrope_600SemiBold',
@@ -72,7 +73,7 @@ export const fonts = {
   headingBold: 'Sora_700Bold',
   display: 'Rajdhani_600SemiBold',
   displayBold: 'Rajdhani_700Bold',
-  label: 'Michroma_400Regular',
+  wordmark: 'Michroma_400Regular',
 } as const;
 
 export interface TextStyleToken {
@@ -85,9 +86,16 @@ export interface TextStyleToken {
 export const type = {
   hudNumber: { fontFamily: fonts.displayBold, fontSize: 96, lineHeight: 100 },
   statNumber: { fontFamily: fonts.display, fontSize: 32, lineHeight: 36 },
-  title: { fontFamily: fonts.headingBold, fontSize: 28, lineHeight: 34 },
+  title: { fontFamily: fonts.heading, fontSize: 26, lineHeight: 31 },
+  sheetTitle: { fontFamily: fonts.heading, fontSize: 24, lineHeight: 29 },
   heading: { fontFamily: fonts.heading, fontSize: 20, lineHeight: 26 },
-  body: { fontFamily: fonts.body, fontSize: 16, lineHeight: 22 },
-  caption: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18 },
-  label: { fontFamily: fonts.label, fontSize: 11, lineHeight: 16, letterSpacing: 1.2 },
+  body: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22 },
+  bodyStrong: { fontFamily: fonts.bodyBold, fontSize: 15, lineHeight: 22 },
+  rowTitle: { fontFamily: fonts.bodyMedium, fontSize: 15, lineHeight: 21 },
+  small: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20 },
+  caption: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19 },
+  button: { fontFamily: fonts.bodyBold, fontSize: 16, lineHeight: 20 },
+  buttonLarge: { fontFamily: fonts.bodyBold, fontSize: 17, lineHeight: 22 },
+  label: { fontFamily: fonts.bodyBold, fontSize: 12, lineHeight: 16, letterSpacing: 0.8 },
+  wordmark: { fontFamily: fonts.wordmark, fontSize: 11, lineHeight: 16, letterSpacing: 1.2 },
 } as const satisfies Record<string, TextStyleToken>;

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cartrava feed</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&amp;family=Rajdhani:wght@500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Michroma&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{cursor:pointer}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: {{c.bg}}; color: {{c.text}}; font-family: 'Manrope', sans-serif">
+  <div style="position: absolute; left: 0; right: 0; top: 47px; height: 56px; box-sizing: border-box; padding: 0 8px 0 16px; display: flex; align-items: center; justify-content: space-between">
+    <h1 style="margin: 0; font-family: 'Sora', sans-serif; font-size: 28px; font-weight: 600">Feed</h1>
+    <div style="display: flex">
+      <a href="ScrFindFriends.dc.html" aria-label="Find friends" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg></a>
+      <a href="ScrNotifications.dc.html" aria-label="Notifications, 3 new" style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"></path><path d="M10 21h4"></path></svg><span style="position: absolute; top: 4px; right: 2px; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 9px; display: flex; align-items: center; justify-content: center; background: {{c.accentFill}}; color: {{c.onAccent}}; font-size: 12px; font-weight: 700">3</span></a>
+    </div>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; top: 103px; bottom: 84px; overflow-y: auto">
+    <div style="box-sizing: border-box; padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 12px">
+      <sc-for list="{{posts}}" as="p" hint-placeholder-count="2">
+        <article style="display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: 20px; background: {{c.surface}}; border: 1px solid {{c.line}}">
+          <div style="display: flex; align-items: center; gap: 10px">
+            <span style="width: 40px; height: 40px; flex: none; border-radius: 20px; display: flex; align-items: center; justify-content: center; background: {{c.surface2}}; border: 1.5px solid {{c.gold}}; font-family: 'Sora', sans-serif; font-weight: 600; font-size: 16px">{{p.initial}}</span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">{{p.name}}</span><span style="font-size: 13px; color: {{c.muted}}">{{p.when}}</span></span>
+            <span style="height: 28px; padding: 0 10px; border-radius: 14px; display: flex; align-items: center; background: {{c.surface2}}; font-size: 12px; font-weight: 700; color: {{c.gold}}">LV {{p.level}}</span>
+          </div>
+          <a href="ScrDriveDetail.dc.html" style="font-family: 'Sora', sans-serif; font-size: 17px; font-weight: 600; line-height: 1.3">{{p.title}}</a>
+          <a href="ScrDriveDetail.dc.html" aria-label="Open drive" style="display: block; border-radius: 14px; overflow: hidden; border: 1px solid {{c.line}}">
+            <svg width="326" height="136" viewBox="0 0 326 136" aria-hidden="true" style="display: block">
+              <rect x="0" y="0" width="326" height="136" fill="{{c.bg}}"></rect>
+              <path d="M0 34 H326 M0 68 H326 M0 102 H326 M54 0 V136 M136 0 V136 M218 0 V136 M290 0 V136" fill="none" stroke="{{c.bpLine}}" stroke-width="0.8" opacity="0.45"></path>
+              <path d="{{p.path}}" fill="none" stroke="{{c.explored}}" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"></path>
+              <path d="{{p.path}}" fill="none" stroke="{{c.route}}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </a>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+            <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: {{c.muted}}">DISTANCE</span><span style="font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums">{{p.km}} <span style="font-family: 'Manrope', sans-serif; font-size: 12px; color: {{c.muted}}">km</span></span></span>
+            <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: {{c.muted}}">MOVING AVG</span><span style="font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums">{{p.avg}} <span style="font-family: 'Manrope', sans-serif; font-size: 12px; color: {{c.muted}}">km/h</span></span></span>
+            <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: {{c.muted}}">NEW CELLS</span><span style="font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; color: {{c.primaryText}}">{{p.cells}}</span></span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; padding-top: 4px; border-top: 1px solid {{c.line}}">
+            <button type="button" aria-pressed="{{p.liked}}" onClick="{{p.toggle}}" style="{{p.kudosStyle}}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="{{p.kudosFill}}" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 11v9H4v-9z"></path><path d="M7 11l4-7c1.5 0 2.5 1 2.2 2.6L12.6 10H19a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 17.8 20H7"></path></svg>
+              {{p.kudosLabel}}
+            </button>
+            <a href="ScrComments.dc.html" style="height: 44px; padding: 0 12px; display: flex; align-items: center; gap: 8px; border-radius: 22px; font-size: 14px; font-weight: 700; color: {{c.muted}}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path></svg>
+              {{p.comments}}
+            </a>
+            <span style="margin-left: auto; height: 28px; padding: 0 10px; border-radius: 14px; display: flex; align-items: center; background: {{c.accentFill}}; color: {{c.onAccent}}; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums">+{{p.xp}} XP</span>
+          </div>
+        </article>
+      </sc-for>
+    </div>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0">
+    <dc-import name="KitTabBar" active="feed" mode="{{mode}}" hint-size="390px,84px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { liked: [false, true] };
+  }
+  pal(light) {
+    if (light) return { bg: '#F5F3EE', surface: '#FFFFFF', surface2: '#EEEBE4', line: '#DEDAD0', text: '#0E0E0E', muted: '#5C5850', primaryText: '#0E0E0E', accentFill: '#FFC20E', onAccent: '#0E0E0E', gold: '#7A5F1E', bpLine: '#5C5850', explored: '#E6E2D9', route: '#0E0E0E', likeOn: '#0E0E0E' };
+    return { bg: '#0A0A0A', surface: '#141414', surface2: '#1E1E1E', line: '#2C2C2C', text: '#F5F3EE', muted: '#A8A49A', primaryText: '#FFC20E', accentFill: '#FFC20E', onAccent: '#0A0A0A', gold: '#C9B37E', bpLine: '#A8A49A', explored: '#202020', route: '#FFC20E', likeOn: '#FFC20E' };
+  }
+  renderVals() {
+    const light = this.props.mode === 'light';
+    const c = this.pal(light);
+    const data = [
+      { name: 'Mint', initial: 'M', when: 'Today · 21:40 · Weekend car', level: 12, title: 'Late dinner loop around Ari', km: '23.6', avg: '31.2', cells: 18, xp: '912', kudos: 14, comments: 3, path: 'M20 110 L54 110 L54 68 L136 68 L136 34 L218 34 L218 102 L290 102 L290 60' },
+      { name: 'Beam', initial: 'B', when: 'Today · 09:15 · Daily driver', level: 9, title: 'Sunday explore: Nonthaburi', km: '41.0', avg: '38.5', cells: 46, xp: '1,640', kudos: 22, comments: 5, path: 'M30 20 L54 34 L136 34 L136 102 L218 102 L218 68 L306 68' }
+    ];
+    const liked = this.state.liked;
+    return {
+      c: c,
+      mode: light ? 'light' : 'dark',
+      posts: data.map((d, i) => {
+        const on = liked[i];
+        return Object.assign({}, d, {
+          liked: on,
+          kudosLabel: String(d.kudos + (on ? 1 : 0)),
+          kudosFill: on ? c.likeOn : 'none',
+          kudosStyle: 'height: 44px; padding: 0 12px; display: flex; align-items: center; gap: 8px; border-radius: 22px; border: none; background: transparent; font-family: inherit; font-size: 14px; font-weight: 700; color: ' + (on ? c.likeOn : c.muted),
+          toggle: () => { const n = liked.slice(); n[i] = !n[i]; this.setState({ liked: n }); }
+        });
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

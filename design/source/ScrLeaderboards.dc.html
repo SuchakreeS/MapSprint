@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cartrava leaderboards</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&amp;family=Rajdhani:wght@500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Michroma&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{cursor:pointer}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: {{c.bg}}; color: {{c.text}}; font-family: 'Manrope', sans-serif">
+  <div style="position: absolute; left: 0; right: 0; top: 47px; height: 56px; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; justify-content: space-between">
+    <h1 style="margin: 0; font-family: 'Sora', sans-serif; font-size: 28px; font-weight: 600">Leaderboards</h1>
+    <span style="height: 32px; padding: 0 12px; border-radius: 16px; display: flex; align-items: center; gap: 6px; background: {{c.surface}}; border: 1px solid {{c.line}}; font-size: 13px; font-weight: 700; color: {{c.muted}}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2.5 2.5"></path></svg>
+      Resets in 4d 15h
+    </span>
+  </div>
+  <div style="position: absolute; left: 16px; right: 16px; top: 111px; display: flex; flex-direction: column; gap: 8px">
+    <div role="tablist" aria-label="Board" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 16px; background: {{c.surface2}}">
+      <sc-for list="{{boards}}" as="b" hint-placeholder-count="3">
+        <button type="button" role="tab" aria-selected="{{b.on}}" onClick="{{b.pick}}" style="{{b.style}}">{{b.label}}</button>
+      </sc-for>
+    </div>
+    <div role="tablist" aria-label="Who" style="display: flex; gap: 8px">
+      <sc-for list="{{scopes}}" as="s" hint-placeholder-count="2">
+        <button type="button" role="tab" aria-selected="{{s.on}}" onClick="{{s.pick}}" style="{{s.style}}">{{s.label}}</button>
+      </sc-for>
+    </div>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; top: 215px; bottom: 164px; overflow-y: auto">
+    <div style="box-sizing: border-box; padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 8px">
+      <span style="padding: 0 4px; font-size: 13px; color: {{c.muted}}">{{hint}}</span>
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+        <a href="ScrOtherProfile.dc.html" style="{{r.style}}">
+          <span style="{{r.rankStyle}}">{{r.rank}}</span>
+          <span style="width: 40px; height: 40px; flex: none; border-radius: 20px; display: flex; align-items: center; justify-content: center; background: {{c.surface2}}; font-family: 'Sora', sans-serif; font-weight: 600">{{r.initial}}</span>
+          <span style="flex: 1; min-width: 0; font-size: 15px; font-weight: 700">{{r.name}}</span>
+          <span style="font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums">{{r.value}} <span style="font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600; color: {{c.muted}}">{{unit}}</span></span>
+        </a>
+      </sc-for>
+    </div>
+  </div>
+  <div style="position: absolute; left: 16px; right: 16px; bottom: 96px; height: 60px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 12px; border-radius: 16px; background: {{c.youBg}}; color: {{c.onYou}}">
+    <span style="font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700; width: 28px; text-align: center">#{{myRank}}</span>
+    <span style="flex: 1; font-size: 15px; font-weight: 700">You · Nok</span>
+    <span style="font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums">{{myValue}} <span style="font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 700">{{unit}}</span></span>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0">
+    <dc-import name="KitTabBar" active="leaderboards" mode="{{mode}}" hint-size="390px,84px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { board: 0, scope: 0 };
+  }
+  pal(light) {
+    if (light) return { bg: '#F5F3EE', surface: '#FFFFFF', surface2: '#EEEBE4', line: '#DEDAD0', text: '#0E0E0E', muted: '#5C5850', gold: '#7A5F1E', youBg: '#0E0E0E', onYou: '#FFC20E', chipOn: '#0E0E0E', onChip: '#FFC20E', medal: '#FFC20E', onMedal: '#0E0E0E' };
+    return { bg: '#0A0A0A', surface: '#141414', surface2: '#1E1E1E', line: '#2C2C2C', text: '#F5F3EE', muted: '#A8A49A', gold: '#C9B37E', youBg: '#FFC20E', onYou: '#0A0A0A', chipOn: '#F5F3EE', onChip: '#0A0A0A', medal: '#FFC20E', onMedal: '#0A0A0A' };
+  }
+  renderVals() {
+    const light = this.props.mode === 'light';
+    const c = this.pal(light);
+    const s = this.state;
+    const boards = [
+      { label: 'Distance', unit: 'km', hint: 'Moving kilometres this week.', rows: [['Beam', '312.4'], ['Kan', '288.0'], ['Nok (you)', '201.6'], ['Mint', '188.2'], ['Fah', '140.9'], ['Ploy', '96.3']], me: 3 },
+      { label: 'Explorer', unit: 'cells', hint: 'First-ever cells this week.', rows: [['Kan', '214'], ['Beam', '160'], ['Nok (you)', '131'], ['Fah', '98'], ['Mint', '77'], ['Ploy', '40']], me: 3 },
+      { label: 'Smooth', unit: '/100', hint: 'Average smooth score. Needs 50 km this week to qualify.', rows: [['Fah', '94'], ['Nok (you)', '91'], ['Mint', '88'], ['Kan', '86'], ['Beam', '82']], me: 2 }
+    ];
+    const b = boards[s.board];
+    const seg = (on) => 'height: 40px; border-radius: 12px; border: none; font-family: inherit; font-size: 14px; font-weight: 700; ' + (on ? 'background: ' + c.surface + '; color: ' + c.text + '; box-shadow: 0 1px 4px rgba(0,0,0,0.2)' : 'background: transparent; color: ' + c.muted);
+    const chip = (on) => 'height: 40px; padding: 0 14px; border-radius: 20px; font-family: inherit; font-size: 14px; font-weight: 700; ' + (on ? 'background: ' + c.chipOn + '; color: ' + c.onChip + '; border: none' : 'background: ' + c.surface + '; color: ' + c.text + '; border: 1px solid ' + c.line);
+    return {
+      c: c,
+      mode: light ? 'light' : 'dark',
+      unit: b.unit,
+      hint: b.hint,
+      myRank: b.me,
+      myValue: b.rows[b.me - 1][1],
+      boards: boards.map((x, i) => ({ label: x.label, on: i === s.board, style: seg(i === s.board), pick: () => this.setState({ board: i }) })),
+      scopes: ['Friends', 'Pathum Thani'].map((x, i) => ({ label: x, on: i === s.scope, style: chip(i === s.scope), pick: () => this.setState({ scope: i }) })),
+      rows: b.rows.map((r, i) => {
+        const me = i + 1 === b.me;
+        const top = i < 3;
+        return {
+          rank: i + 1,
+          name: r[0],
+          initial: r[0].charAt(0),
+          value: r[1],
+          style: 'min-height: 60px; padding: 0 14px; display: flex; align-items: center; gap: 12px; border-radius: 16px; background: ' + c.surface + '; border: ' + (me ? '2px solid ' + c.medal : '1px solid ' + c.line),
+          rankStyle: 'width: 28px; height: 28px; flex: none; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-family: Rajdhani, sans-serif; font-size: 18px; font-weight: 700; ' + (top ? 'background: ' + c.medal + '; color: ' + c.onMedal : 'color: ' + c.muted)
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -3,6 +3,7 @@
 ## Start of every session (mandatory)
 1. Read `handoff.md` FIRST. It says where the last session stopped and what to do next.
 2. Read only the `plan.md` step(s) handoff.md points to. Do not re-read the whole repo.
+   If the step builds a screen, open its image in `design/screens/` first (see `design/README.md`).
 3. Read `AGENTS.md` (Expo rules: SDK 58, never trust memory for Expo APIs, use `npx expo install`).
 
 ## Which model to use
@@ -34,6 +35,9 @@ Keep it short. Tick finished steps in plan.md.
 - Recording = foreground service with notification. Needs only "while using" location permission.
   `isAndroidBackgroundLocationEnabled` stays **false** (avoids Google Play background-location review).
 - Theme: Sport Luxe tokens in `src/theme/tokens.ts`. No hard-coded colours in components.
+- Designs: `design/README.md` indexes all 29 launch screens (Onyx dark + Pearl light images in
+  `design/screens/`, exact sizes/colours/icons in `design/source/`). Read its "Known differences"
+  section before building (screen 03 copy is outdated; "Cartrava" in the images is a placeholder name).
 - Fog of war = blueprint style. H3 resolution 9 (avg edge ≈ 200 m, area ≈ 0.105 km²).
 - Safety: never reward or rank speed. Controls lock above 10 km/h.
 - Metric units only.

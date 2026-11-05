@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cartrava profile setup</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&amp;family=Rajdhani:wght@500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Michroma&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{cursor:pointer}
+input::placeholder{color:inherit;opacity:0.55}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; padding: 55px 24px 42px; display: flex; flex-direction: column; gap: 24px; background: {{c.bg}}; color: {{c.text}}; font-family: 'Manrope', sans-serif">
+  <div style="display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <a href="ScrLocation.dc.html" aria-label="Back" style="width: 44px; height: 44px; margin-left: -10px; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+      <span style="font-size: 13px; font-weight: 700; color: {{c.muted}}">Step 4 of 6</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px" aria-hidden="true">
+      <span style="height: 4px; border-radius: 2px; background: {{c.progress}}"></span><span style="height: 4px; border-radius: 2px; background: {{c.progress}}"></span><span style="height: 4px; border-radius: 2px; background: {{c.progress}}"></span><span style="height: 4px; border-radius: 2px; background: {{c.progress}}"></span><span style="height: 4px; border-radius: 2px; background: {{c.line}}"></span><span style="height: 4px; border-radius: 2px; background: {{c.line}}"></span>
+    </div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <h1 style="margin: 0; font-family: 'Sora', sans-serif; font-size: 28px; font-weight: 600; line-height: 1.2">Set up your profile</h1>
+    <p style="margin: 0; font-size: 15px; line-height: 1.5; color: {{c.muted}}">Friends find you by your username.</p>
+  </div>
+  <div style="position: relative; width: 112px; height: 112px; align-self: center">
+    <div style="width: 112px; height: 112px; border-radius: 56px; display: flex; align-items: center; justify-content: center; background: {{c.surface2}}; border: 2px solid {{c.gold}}; font-family: 'Sora', sans-serif; font-size: 36px; font-weight: 600; color: {{c.muted}}">N</div>
+    <button type="button" aria-label="Add profile photo" style="position: absolute; right: -4px; bottom: -4px; width: 44px; height: 44px; border-radius: 22px; border: 3px solid {{c.bg}}; background: {{c.accentFill}}; color: {{c.onAccent}}; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>
+    </button>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label for="ps-user" style="font-size: 14px; font-weight: 700">Username</label>
+      <div style="position: relative">
+        <span style="position: absolute; left: 16px; top: 15px; font-size: 16px; color: {{c.muted}}">@</span>
+        <input id="ps-user" type="text" autocomplete="username" value="nok_drives" style="width: 100%; height: 52px; box-sizing: border-box; padding: 0 16px 0 34px; border-radius: 14px; background: {{c.surface}}; border: 1px solid {{c.success}}; color: {{c.text}}; font-family: 'Manrope', sans-serif; font-size: 16px">
+      </div>
+      <span style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: {{c.success}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>Username is available</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label for="ps-name" style="font-size: 14px; font-weight: 700">Display name</label>
+      <input id="ps-name" type="text" autocomplete="name" value="Nok" style="height: 52px; box-sizing: border-box; padding: 0 16px; border-radius: 14px; background: {{c.surface}}; border: 1px solid {{c.line}}; color: {{c.text}}; font-family: 'Manrope', sans-serif; font-size: 16px">
+    </div>
+  </div>
+  <a href="ScrAddCar.dc.html" style="margin-top: auto; height: 56px; border-radius: 18px; display: flex; align-items: center; justify-content: center; background: {{c.primary}}; color: {{c.onPrimary}}; font-size: 16px; font-weight: 700">Continue</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  pal(light) {
+    if (light) return { bg: '#F5F3EE', surface: '#FFFFFF', surface2: '#EEEBE4', line: '#DEDAD0', text: '#0E0E0E', muted: '#5C5850', primary: '#0E0E0E', onPrimary: '#FFC20E', accentFill: '#FFC20E', onAccent: '#0E0E0E', gold: '#7A5F1E', progress: '#0E0E0E', success: '#1E7F45' };
+    return { bg: '#0A0A0A', surface: '#141414', surface2: '#1E1E1E', line: '#2C2C2C', text: '#F5F3EE', muted: '#A8A49A', primary: '#FFC20E', onPrimary: '#0A0A0A', accentFill: '#FFC20E', onAccent: '#0A0A0A', gold: '#C9B37E', progress: '#FFC20E', success: '#5BD48A' };
+  }
+  renderVals() {
+    return { c: this.pal(this.props.mode === 'light') };
+  }
+}
+</script>
+</body>
+</html>

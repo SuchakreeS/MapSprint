@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cartrava badges</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&amp;family=Rajdhani:wght@500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Michroma&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: {{c.bg}}; color: {{c.text}}; font-family: 'Manrope', sans-serif">
+  <div style="position: absolute; left: 0; right: 0; top: 47px; height: 52px; box-sizing: border-box; padding: 0 8px; display: flex; align-items: center; gap: 4px">
+    <a href="ScrProfile.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <h1 style="margin: 0; font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 600">Badges</h1>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; top: 99px; bottom: 84px; overflow-y: auto">
+    <div style="box-sizing: border-box; padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: 18px; background: {{c.surface}}; border: 1px solid {{c.line}}">
+        <span style="font-size: 15px"><span style="font-family: 'Rajdhani', sans-serif; font-size: 28px; font-weight: 700">6</span> <span style="color: {{c.muted}}">of 10 unlocked</span></span>
+        <span style="height: 8px; border-radius: 4px; background: {{c.line}}; overflow: hidden"><span style="display: block; width: 60%; height: 8px; background: {{c.bar}}"></span></span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{badges}}" as="b" hint-placeholder-count="10">
+          <div style="{{b.card}}">
+            <span style="{{b.icon}}">
+              <sc-if value="{{b.locked}}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg></sc-if>
+              <sc-if value="{{b.open}}" hint-placeholder-val="{{ true }}"><span style="font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700">{{b.mark}}</span></sc-if>
+            </span>
+            <span style="font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 600">{{b.name}}</span>
+            <span style="font-size: 13px; line-height: 1.4; color: {{c.muted}}">{{b.rule}}</span>
+            <sc-if value="{{b.locked}}" hint-placeholder-val="{{ false }}">
+              <span style="display: flex; flex-direction: column; gap: 4px">
+                <span style="height: 6px; border-radius: 3px; background: {{c.line}}; overflow: hidden"><span style="{{b.bar}}"></span></span>
+                <span style="font-size: 12px; font-weight: 700; color: {{c.muted}}; font-variant-numeric: tabular-nums">{{b.progress}}</span>
+              </span>
+            </sc-if>
+            <sc-if value="{{b.open}}" hint-placeholder-val="{{ true }}"><span style="font-size: 12px; font-weight: 700; color: {{c.gold}}">Unlocked {{b.date}}</span></sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0">
+    <dc-import name="KitTabBar" active="profile" mode="{{mode}}" hint-size="390px,84px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  pal(light) {
+    if (light) return { bg: '#F5F3EE', surface: '#FFFFFF', line: '#DEDAD0', text: '#0E0E0E', muted: '#5C5850', accentFill: '#FFC20E', onAccent: '#0E0E0E', gold: '#7A5F1E', bar: '#0E0E0E' };
+    return { bg: '#0A0A0A', surface: '#141414', line: '#2C2C2C', text: '#F5F3EE', muted: '#A8A49A', accentFill: '#FFC20E', onAccent: '#0A0A0A', gold: '#C9B37E', bar: '#FFC20E' };
+  }
+  renderVals() {
+    const light = this.props.mode === 'light';
+    const c = this.pal(light);
+    const data = [
+      ['1', 'First Gear', 'Record your first drive', '12 Aug', 0],
+      ['100', 'Century', '100 km total', '20 Aug', 0],
+      ['C1', 'Cartographer I', '100 cells explored', '2 Sep', 0],
+      ['C2', 'Cartographer II', '1,000 cells explored', '3 Nov', 0],
+      ['ZD', 'Zen Driver', 'Smooth score 90+ on a 20 km+ drive', '18 Oct', 0],
+      ['WE', 'Weekend Explorer', '20 new cells on a Saturday or Sunday', '25 Oct', 0],
+      ['', 'Cartographer III', '10,000 cells explored', '1,248 / 10,000 cells', 12],
+      ['', 'District Hunter', 'Explore 50% of any district', 'Best: 41% of 50%', 82],
+      ['', 'Province Collector', 'Drive in all 4 launch provinces', '3 / 4 provinces', 75],
+      ['', 'Streak 7', 'Drive 7 days in a row', '4 / 7 days', 57]
+    ];
+    return {
+      c: c,
+      mode: light ? 'light' : 'dark',
+      badges: data.map((b) => {
+        const locked = b[4] > 0;
+        return {
+          mark: b[0], name: b[1], rule: b[2], date: b[3], progress: b[3],
+          locked: locked, open: !locked,
+          card: 'display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 18px; background: ' + c.surface + '; border: 1px ' + (locked ? 'dashed ' + c.muted : 'solid ' + c.line),
+          icon: 'width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; ' + (locked ? 'background: transparent; color: ' + c.muted + '; border: 1.5px dashed ' + c.muted : 'background: ' + c.accentFill + '; color: ' + c.onAccent),
+          bar: 'display: block; height: 6px; width: ' + b[4] + '%; background: ' + c.bar
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

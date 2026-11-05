@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cartrava welcome</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&amp;family=Rajdhani:wght@500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Michroma&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: {{c.bg}}; color: {{c.text}}; font-family: 'Manrope', sans-serif">
+  <svg width="390" height="560" viewBox="0 0 390 560" aria-hidden="true" style="position: absolute; left: 0; top: 0">
+    <defs>
+      <pattern id="wl-grid-{{mode}}" width="22" height="22" patternUnits="userSpaceOnUse"><path d="M22 0 H0 V22" fill="none" stroke="{{c.bpLine}}" stroke-width="0.6" opacity="0.25"></path></pattern>
+      <linearGradient id="wl-fade-{{mode}}" x1="0" y1="0" x2="0" y2="1"><stop offset="0.55" stop-color="{{c.bg}}" stop-opacity="0"></stop><stop offset="1" stop-color="{{c.bg}}" stop-opacity="1"></stop></linearGradient>
+    </defs>
+    <rect x="0" y="0" width="390" height="560" fill="url(#wl-grid-{{mode}})"></rect>
+    <path d="M0 140 H390 M0 260 H390 M0 380 H390 M80 0 V560 M200 0 V560 M310 0 V560" fill="none" stroke="{{c.bpLine}}" stroke-width="1" opacity="0.5"></path>
+    <path d="M0 330 L390 120" fill="none" stroke="{{c.bpLine}}" stroke-width="1.4" stroke-dasharray="6 4" opacity="0.7"></path>
+    <path d="M30 460 L80 460 L80 380 L200 380 L200 260 L310 260 L310 140" fill="none" stroke="{{c.explored}}" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="M30 460 L80 460 L80 380 L200 380 L200 260 L310 260 L310 140" fill="none" stroke="{{c.route}}" stroke-opacity="0.2" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="M30 460 L80 460 L80 380 L200 380 L200 260 L310 260 L310 140" fill="none" stroke="{{c.route}}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"></path>
+    <circle cx="310" cy="140" r="28" fill="{{c.route}}" fill-opacity="0.16"></circle>
+    <path d="M310 122 L323 153 L310 145 L297 153 Z" fill="{{c.route}}" stroke="{{c.bg}}" stroke-width="2.5" stroke-linejoin="round"></path>
+    <rect x="0" y="0" width="390" height="560" fill="url(#wl-fade-{{mode}})"></rect>
+  </svg>
+  <div style="position: absolute; left: 24px; right: 24px; bottom: 42px; display: flex; flex-direction: column; gap: 24px">
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <span style="font-family: 'Michroma', sans-serif; font-size: 18px; letter-spacing: 0.22em; color: {{c.gold}}">CARTRAVA</span>
+      <h1 style="margin: 0; font-family: 'Sora', sans-serif; font-size: 32px; font-weight: 600; line-height: 1.15">Every drive clears the map.</h1>
+      <p style="margin: 0; font-size: 16px; line-height: 1.5; color: {{c.muted}}">Track your speed, explore new roads and level up with friends.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <a href="ScrLocation.dc.html" style="height: 56px; border-radius: 18px; display: flex; align-items: center; justify-content: center; gap: 10px; background: {{c.primary}}; color: {{c.onPrimary}}; font-size: 16px; font-weight: 700">Continue with Google</a>
+      <a href="ScrSignIn.dc.html" style="height: 56px; border-radius: 18px; display: flex; align-items: center; justify-content: center; gap: 10px; background: {{c.surface2}}; border: 1px solid {{c.line}}; color: {{c.text}}; font-size: 16px; font-weight: 700">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 7l9 6 9-6"></path></svg>
+        Sign up with email
+      </a>
+      <a href="ScrSignIn.dc.html" style="height: 44px; display: flex; align-items: center; justify-content: center; font-size: 15px; color: {{c.muted}}">Already have an account?&#160;<span style="font-weight: 700; color: {{c.text}}; text-decoration: underline">Log in</span></a>
+    </div>
+    <p style="margin: 0; font-size: 12px; line-height: 1.5; text-align: center; color: {{c.muted}}">By continuing you agree to the Terms of Service and Privacy Policy.</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  pal(light) {
+    if (light) return { bg: '#F5F3EE', surface: '#FFFFFF', surface2: '#EEEBE4', line: '#DEDAD0', text: '#0E0E0E', muted: '#5C5850', primary: '#0E0E0E', onPrimary: '#FFC20E', primaryText: '#0E0E0E', accentFill: '#FFC20E', onAccent: '#0E0E0E', gold: '#7A5F1E', bpLine: '#5C5850', explored: '#E6E2D9', route: '#0E0E0E' };
+    return { bg: '#0A0A0A', surface: '#141414', surface2: '#1E1E1E', line: '#2C2C2C', text: '#F5F3EE', muted: '#A8A49A', primary: '#FFC20E', onPrimary: '#0A0A0A', primaryText: '#FFC20E', accentFill: '#FFC20E', onAccent: '#0A0A0A', gold: '#C9B37E', bpLine: '#A8A49A', explored: '#1A1A1A', route: '#FFC20E' };
+  }
+  renderVals() {
+    const light = this.props.mode === 'light';
+    return { c: this.pal(light), mode: light ? 'light' : 'dark' };
+  }
+}
+</script>
+</body>
+</html>

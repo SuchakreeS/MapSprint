@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cartrava explore map</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&amp;family=Rajdhani:wght@500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Michroma&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{cursor:pointer}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: {{c.bg}}; color: {{c.text}}; font-family: 'Manrope', sans-serif">
+  <svg width="390" height="600" viewBox="0 0 390 600" role="img" aria-label="Your explored map. Driven areas are filled in; unexplored areas show as a blueprint." style="position: absolute; left: 0; top: 0">
+    <defs>
+      <pattern id="em-grid-{{mode}}" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0 H0 V20" fill="none" stroke="{{c.bpLine}}" stroke-width="0.6" opacity="0.28"></path></pattern>
+      <filter id="em-soft-{{mode}}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="6"></feGaussianBlur></filter>
+      <mask id="em-mask-{{mode}}" maskUnits="userSpaceOnUse" x="0" y="0" width="390" height="600">
+        <rect x="0" y="0" width="390" height="600" fill="#000000"></rect>
+        <g filter="url(#em-soft-{{mode}})" fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round">
+          <path d="{{map.a}}" stroke-width="58"></path>
+          <path d="{{map.b}}" stroke-width="52"></path>
+          <path d="{{map.c}}" stroke-width="48"></path>
+          <circle cx="250" cy="300" r="70" fill="#FFFFFF" stroke="none"></circle>
+        </g>
+      </mask>
+    </defs>
+    <rect x="0" y="0" width="390" height="600" fill="url(#em-grid-{{mode}})"></rect>
+    <path d="{{map.roads}}" fill="none" stroke="{{c.bpLine}}" stroke-width="1" opacity="0.55"></path>
+    <path d="M0 470 L390 150" fill="none" stroke="{{c.bpLine}}" stroke-width="1.5" stroke-dasharray="6 4" opacity="0.75"></path>
+    <g mask="url(#em-mask-{{mode}})">
+      <rect x="0" y="0" width="390" height="600" fill="{{c.explored}}"></rect>
+      <path d="{{map.roads}}" fill="none" stroke="{{c.road}}" stroke-opacity="{{c.roadOp}}" stroke-width="7" stroke-linecap="round"></path>
+      <path d="M0 470 L390 150" fill="none" stroke="{{c.express}}" stroke-width="9" stroke-linecap="round" opacity="0.85"></path>
+    </g>
+    <circle cx="160" cy="360" r="26" fill="{{c.route}}" fill-opacity="0.16"></circle>
+    <circle cx="160" cy="360" r="9" fill="{{c.route}}" stroke="{{c.bg}}" stroke-width="3"></circle>
+  </svg>
+  <div style="position: absolute; left: 16px; right: 16px; top: 55px; display: flex; flex-direction: column; gap: 8px">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 20px; background: {{c.surface}}; border: 1px solid {{c.line}}">
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: {{c.muted}}">CELLS EXPLORED</span>
+        <span style="font-family: 'Rajdhani', sans-serif; font-size: 30px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums">{{cells}}</span>
+      </span>
+      <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: {{c.muted}}">AREA</span>
+        <span style="font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums">{{area}} <span style="font-family: 'Manrope', sans-serif; font-size: 13px; color: {{c.muted}}">km²</span></span>
+      </span>
+    </div>
+    <div role="tablist" aria-label="Time range" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 16px; background: {{c.surface}}; border: 1px solid {{c.line}}">
+      <button type="button" role="tab" aria-selected="{{isAll}}" onClick="{{toAll}}" style="{{allStyle}}">All time</button>
+      <button type="button" role="tab" aria-selected="{{isWeek}}" onClick="{{toWeek}}" style="{{weekStyle}}">This week</button>
+    </div>
+  </div>
+  <button type="button" aria-label="Recenter map on your location" style="position: absolute; right: 16px; top: 482px; width: 48px; height: 48px; padding: 0; border-radius: 16px; display: flex; align-items: center; justify-content: center; background: {{c.surface}}; border: 1px solid {{c.line}}; color: {{c.text}}">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle><circle cx="12" cy="12" r="2.5"></circle><path d="M12 2v3"></path><path d="M12 19v3"></path><path d="M2 12h3"></path><path d="M19 12h3"></path></svg>
+  </button>
+  <div style="position: absolute; left: 0; right: 0; bottom: 84px; height: 202px; box-sizing: border-box; padding: 10px 16px 12px; border-radius: 28px 28px 0 0; background: {{c.surface}}; border-top: 1px solid {{c.line}}; display: flex; flex-direction: column; gap: 6px">
+    <div style="width: 36px; height: 4px; border-radius: 2px; background: {{c.line}}; align-self: center" aria-hidden="true"></div>
+    <div style="height: 44px; display: flex; align-items: center; justify-content: space-between">
+      <h2 style="margin: 0; font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 600">Districts</h2>
+      <a href="ScrDistricts.dc.html" style="height: 44px; display: flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 700; color: {{c.muted}}">See all 7<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg></a>
+    </div>
+    <a href="ScrDistricts.dc.html" style="display: flex; flex-direction: column; gap: 6px; padding: 8px 0">
+      <span style="display: flex; justify-content: space-between; font-size: 15px"><span style="font-weight: 700">Mueang Pathum Thani</span><span style="font-weight: 700; font-variant-numeric: tabular-nums">41%</span></span>
+      <span style="height: 6px; border-radius: 3px; background: {{c.line}}; overflow: hidden"><span style="display: block; width: 41%; height: 6px; background: {{c.bar}}"></span></span>
+    </a>
+    <a href="ScrDistricts.dc.html" style="display: flex; flex-direction: column; gap: 6px; padding: 8px 0">
+      <span style="display: flex; justify-content: space-between; font-size: 15px"><span style="font-weight: 700">Bang Kapi</span><span style="font-weight: 700; font-variant-numeric: tabular-nums">34%</span></span>
+      <span style="height: 6px; border-radius: 3px; background: {{c.line}}; overflow: hidden"><span style="display: block; width: 34%; height: 6px; background: {{c.bar}}"></span></span>
+    </a>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0">
+    <dc-import name="KitTabBar" active="map" mode="{{mode}}" hint-size="390px,84px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { range: 'all' };
+  }
+  pal(light) {
+    if (light) return { bg: '#F5F3EE', surface: '#FFFFFF', surface2: '#EEEBE4', line: '#DEDAD0', text: '#0E0E0E', muted: '#5C5850', bpLine: '#5C5850', explored: '#E6E2D9', road: '#0E0E0E', roadOp: 0.14, express: '#E0A800', route: '#0E0E0E', bar: '#0E0E0E' };
+    return { bg: '#0A0A0A', surface: '#141414', surface2: '#1E1E1E', line: '#2C2C2C', text: '#F5F3EE', muted: '#A8A49A', bpLine: '#A8A49A', explored: '#171717', road: '#F5F3EE', roadOp: 0.16, express: '#FFC20E', route: '#FFC20E', bar: '#FFC20E' };
+  }
+  renderVals() {
+    const light = this.props.mode === 'light';
+    const c = this.pal(light);
+    const all = this.state.range === 'all';
+    const tab = (on) => 'height: 40px; border-radius: 12px; border: none; font-family: inherit; font-size: 14px; font-weight: 700; ' + (on ? 'background: ' + c.surface2 + '; color: ' + c.text : 'background: transparent; color: ' + c.muted);
+    return {
+      c: c,
+      mode: light ? 'light' : 'dark',
+      isAll: all,
+      isWeek: !all,
+      allStyle: tab(all),
+      weekStyle: tab(!all),
+      cells: all ? '1,248' : '131',
+      area: all ? '131.0' : '13.8',
+      toAll: () => this.setState({ range: 'all' }),
+      toWeek: () => this.setState({ range: 'week' }),
+      map: {
+        roads: 'M70 0 V600 M160 0 V600 M250 0 V600 M330 0 V600 M0 110 H390 M0 210 H390 M0 300 H390 M0 360 H390 M0 450 H390 M0 540 H390',
+        a: 'M0 540 L70 540 L70 360 L160 360 L160 210 L250 210 L250 110 L330 110',
+        b: 'M160 360 L160 450 L330 450 L330 300',
+        c: 'M70 210 L160 210 M250 300 L390 300'
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

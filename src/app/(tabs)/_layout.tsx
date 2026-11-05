@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { Text } from 'react-native';
 
 import { RecordTabButton } from '@/components/RecordTabButton';
 import { useTheme } from '@/theme/use-theme';
@@ -12,7 +13,13 @@ export default function TabsLayout() {
         tabBarStyle: { backgroundColor: c.surface, borderTopColor: c.line },
         tabBarActiveTintColor: c.primaryText,
         tabBarInactiveTintColor: c.muted,
-        tabBarLabelStyle: { fontFamily: fonts.bodyMedium, fontSize: 12 },
+        // Active label is bold, inactive semibold (design/source/KitTabBar.dc.html).
+        tabBarLabel: ({ focused, color, children }) => (
+          <Text
+            style={{ color, fontSize: 12, fontFamily: focused ? fonts.bodyBold : fonts.bodyMedium }}>
+            {children}
+          </Text>
+        ),
         tabBarIconStyle: { display: 'none' },
       }}>
       <Tabs.Screen name="index" options={{ title: 'Feed' }} />
