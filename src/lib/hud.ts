@@ -19,3 +19,16 @@ export function gaugeFraction(kmh: number | null): number {
   if (kmh == null || !Number.isFinite(kmh) || kmh <= 0) return 0;
   return Math.min(1, kmh / GAUGE_MAX_KMH);
 }
+
+/** A speed older than this counts as unknown (tunnel, GPS lost), so it cannot lock the controls. */
+export const STALE_SPEED_MS = 10_000;
+
+/** Smoothed speed if the last accepted GPS point is recent enough, otherwise null (unknown). */
+export function currentSpeedKmh(
+  lastKmh: number | null,
+  lastAcceptedTs: number | null,
+  nowMs: number,
+): number | null {
+  if (lastKmh == null || lastAcceptedTs == null) return null;
+  return nowMs - lastAcceptedTs > STALE_SPEED_MS ? null : lastKmh;
+}

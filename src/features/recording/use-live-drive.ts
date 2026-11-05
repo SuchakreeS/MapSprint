@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import type { DriveSummary } from '@/lib/geo';
+import { currentSpeedKmh } from '@/lib/hud';
 import { createLiveStats } from '@/lib/live-stats';
 import { appendRoutePoint, type RouteCoord } from '@/lib/route-line';
 
@@ -16,11 +17,20 @@ export interface LiveDrive {
   /** Seconds since the drive started (wall clock; pause arrives in task 1.6). */
   elapsedS: number;
   snapshot: DriveSummary | null;
+  /** Smoothed speed, or null when unknown or older than 10 s (see currentSpeedKmh). */
+  speedKmh: number | null;
   /** Thinned route as `[lng, lat]`. A new array only when points were added. */
   route: RouteCoord[];
 }
 
-const INITIAL: LiveDrive = { ready: false, error: null, elapsedS: 0, snapshot: null, route: [] };
+const INITIAL: LiveDrive = {
+  ready: false,
+  error: null,
+  elapsedS: 0,
+  snapshot: null,
+  speedKmh: null,
+  route: [],
+};
 
 /**
  * Starts recording (or resumes the active session) and follows it: the background task writes
@@ -49,11 +59,13 @@ export function useLiveDrive(): LiveDrive {
             appendRoutePoint(coords, p);
             lastTs = p.ts;
           }
+          const snapshot = stats.snapshot();
           setLive((prev) => ({
             ready: true,
             error: null,
             elapsedS: Math.max(0, Math.floor((Date.now() - startedAt) / 1000)),
-            snapshot: stats.snapshot(),
+            snapshot,
+            speedKmh: currentSpeedKmh(snapshot.lastKmh, stats.lastAcceptedTs(), Date.now()),
             route: fresh.length ? [...coords] : prev.route,
           }));
         };

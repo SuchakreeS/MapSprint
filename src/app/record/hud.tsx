@@ -1,16 +1,21 @@
 import { Camera, LineLayer, LocationPuck, MapView, ShapeSource } from '@rnmapbox/maps';
+import { useKeepAwake } from 'expo-keep-awake';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { HoldToFinishButton } from '@/components/HoldToFinishButton';
 import { HudStat } from '@/components/HudStat';
 import { PauseGlyph } from '@/components/PauseGlyph';
 import { SpeedGauge } from '@/components/SpeedGauge';
 import { MAP_STYLE } from '@/features/map/map-style';
+import { stopRecording } from '@/features/recording/recorder';
 import { useLiveDrive } from '@/features/recording/use-live-drive';
 import { formatDistanceKm, formatDuration, formatKmh1 } from '@/lib/format';
+import { controlsLocked } from '@/lib/hud';
 import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
@@ -27,9 +32,29 @@ function RecenterGlyph({ color }: { color: string }) {
 export default function HudScreen() {
   const { mode, c, type } = useTheme();
   const insets = useSafeAreaInsets();
-  const { ready, error, elapsedS, snapshot, route } = useLiveDrive();
+  const { ready, error, elapsedS, snapshot, speedKmh, route } = useLiveDrive();
   const [following, setFollowing] = useState(true);
   const [sheetHeight, setSheetHeight] = useState(0);
+  const [finishError, setFinishError] = useState<string | null>(null);
+
+  const locked = controlsLocked(speedKmh);
+
+  // Screen stays on while the HUD is open, and the Android back button does nothing:
+  // the only way out is Hold to finish.
+  useKeepAwake();
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => sub.remove();
+  }, []);
+
+  const finish = async () => {
+    try {
+      await stopRecording();
+      router.replace('/record/saving');
+    } catch (e) {
+      setFinishError(e instanceof Error ? e.message : 'Could not stop the recording.');
+    }
+  };
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
@@ -93,7 +118,7 @@ export default function HudScreen() {
         ) : (
           <>
             <View style={styles.gauge}>
-              <SpeedGauge kmh={ready ? (snapshot?.lastKmh ?? null) : null} />
+              <SpeedGauge kmh={ready ? speedKmh : null} />
             </View>
 
             <View style={styles.stats}>
@@ -107,7 +132,12 @@ export default function HudScreen() {
               <HudStat label="Time" value={formatDuration(elapsedS)} />
             </View>
 
-            {/* Placeholders until 1.5c (hold to finish, speed lock) and 1.6 (pause). */}
+            {locked && (
+              <Text style={[type.caption, styles.lockNote, { color: c.muted }]}>
+                Controls are locked while you are moving.
+              </Text>
+            )}
+            {/* Pause stays disabled until task 1.6 (auto-pause and manual pause in the recorder). */}
             <View style={styles.actions}>
               <Button
                 label="Pause"
@@ -118,11 +148,25 @@ export default function HudScreen() {
                 leading={(color) => <PauseGlyph color={color} />}
                 style={styles.pause}
               />
-              <Button label="Hold to finish" size="lg" onPress={() => {}} style={styles.finish} />
+              <HoldToFinishButton locked={locked} onFinish={finish} style={styles.finish} />
             </View>
           </>
         )}
       </View>
+
+      <ConfirmDialog
+        visible={finishError != null}
+        tag="ERROR"
+        title="Could not finish the drive"
+        message={`${finishError ?? ''} Your points are saved on this phone. Try again?`}
+        cancelLabel="Keep driving"
+        confirmLabel="Try again"
+        onCancel={() => setFinishError(null)}
+        onConfirm={() => {
+          setFinishError(null);
+          finish();
+        }}
+      />
     </View>
   );
 }
@@ -158,6 +202,7 @@ const styles = StyleSheet.create({
   gauge: { alignSelf: 'center', marginTop: 8 },
   stats: { flexDirection: 'row', marginTop: 12 },
   middle: { borderLeftWidth: 1, borderRightWidth: 1 },
+  lockNote: { textAlign: 'center', marginTop: space.md },
   actions: { flexDirection: 'row', gap: space.md, marginTop: space.lg },
   pause: { flex: 1, paddingHorizontal: space.md },
   finish: { flex: 2 },

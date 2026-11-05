@@ -95,3 +95,18 @@ test('live stats can be read between pushes without changing the result', () => 
   }
   assert.deepEqual(live.snapshot(), summarize(pts));
 });
+
+test('lastAcceptedTs is null before any point', () => {
+  assert.equal(createLiveStats().lastAcceptedTs(), null);
+});
+
+test('lastAcceptedTs is the ts of the last ACCEPTED point, not the last pushed', () => {
+  const pts = cleanCity();
+  const live = createLiveStats();
+  for (const p of pts.slice(0, 10)) live.push(p);
+  const accepted = pts[9].ts;
+  live.push({ ...pts[10], accuracy: 80 }); // rejected for accuracy
+  assert.equal(live.lastAcceptedTs(), accepted);
+  live.push({ ...pts[11], lat: pts[11].lat + 0.05 }); // rejected as a teleport
+  assert.equal(live.lastAcceptedTs(), accepted);
+});

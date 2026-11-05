@@ -33,3 +33,24 @@ test('gauge fraction is clamped and survives bad input', () => {
 test('redline starts at 85% of the gauge', () => {
   assert.equal(REDLINE_START, 0.85);
 });
+
+import { STALE_SPEED_MS, currentSpeedKmh } from '../src/lib/hud.ts';
+
+test('a fresh speed is used as is', () => {
+  assert.equal(STALE_SPEED_MS, 10_000);
+  assert.equal(currentSpeedKmh(60, 95_000, 100_000), 60);
+  assert.equal(currentSpeedKmh(60, 90_000, 100_000), 60);
+});
+
+test('a speed older than 10 s is unknown, so a tunnel cannot lock the controls', () => {
+  assert.equal(currentSpeedKmh(60, 89_999, 100_000), null);
+});
+
+test('no speed or no accepted point yet is unknown', () => {
+  assert.equal(currentSpeedKmh(null, 99_000, 100_000), null);
+  assert.equal(currentSpeedKmh(60, null, 100_000), null);
+});
+
+test('a point timestamped slightly in the future (clock skew) still counts as fresh', () => {
+  assert.equal(currentSpeedKmh(42, 100_500, 100_000), 42);
+});

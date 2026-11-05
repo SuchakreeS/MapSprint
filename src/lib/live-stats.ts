@@ -13,6 +13,8 @@ export interface LiveStats {
   /** Points must arrive in ascending `ts`. */
   push(p: GpsPoint): void;
   snapshot(): DriveSummary;
+  /** Timestamp (ms) of the last point that passed the cleaning rules, or null. */
+  lastAcceptedTs(): number | null;
 }
 
 /**
@@ -67,6 +69,10 @@ export function createLiveStats(): LiveStats {
       }
       last = p;
       accepted++;
+    },
+
+    lastAcceptedTs() {
+      return last ? last.ts : null;
     },
 
     snapshot() {

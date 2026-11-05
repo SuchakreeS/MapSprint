@@ -2,6 +2,7 @@ import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { isRecording } from '@/features/recording/recorder';
 import { useTheme } from '@/theme/use-theme';
 
 const SIZE = 56;
@@ -15,6 +16,8 @@ export function RecordTabButton() {
       accessibilityRole="button"
       accessibilityLabel="Record a drive"
       onPress={async () => {
+        // A drive is already running (app was left or restarted): go back to its HUD.
+        if (await isRecording()) return router.push('/record/hud');
         const granted = (await Location.getForegroundPermissionsAsync()).granted;
         router.push(granted ? '/record/pre-drive' : '/location?next=record');
       }}
