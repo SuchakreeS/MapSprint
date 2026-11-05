@@ -8,6 +8,7 @@ const SPIKES = [
   { href: '/map', title: '1 · Mapbox map', body: 'Dark map, your location puck, camera follows you.' },
   { href: '/gps', title: '2 · Background GPS', body: 'Record with the screen off for 30 min. Pass if no gap over 5 s.' },
   { href: '/h3', title: '3 · H3 on Hermes', body: 'Hex cell maths runs on the phone and matches Node results.' },
+  { href: '/kit', title: 'UI kit preview', body: 'Fonts and shared components (Phase 1.1). Temporary.' },
 ] as const;
 
 export default function SpikeHub() {

@@ -57,3 +57,33 @@ export const palettes: Record<Mode, Palette> = {
 
 export const radius = { sm: 12, md: 16, lg: 20, xl: 28 } as const;
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
+
+// Font family names as registered in src/theme/fonts.ts.
+// Roles: Manrope = body, Sora = headings, Rajdhani = big numbers, Michroma = logo/labels only.
+export const fonts = {
+  body: 'Manrope_400Regular',
+  bodyMedium: 'Manrope_600SemiBold',
+  bodyBold: 'Manrope_700Bold',
+  heading: 'Sora_600SemiBold',
+  headingBold: 'Sora_700Bold',
+  display: 'Rajdhani_600SemiBold',
+  displayBold: 'Rajdhani_700Bold',
+  label: 'Michroma_400Regular',
+} as const;
+
+export interface TextStyleToken {
+  fontFamily: string;
+  fontSize: number;
+  lineHeight: number;
+  letterSpacing?: number;
+}
+
+export const type = {
+  hudNumber: { fontFamily: fonts.displayBold, fontSize: 96, lineHeight: 100 },
+  statNumber: { fontFamily: fonts.display, fontSize: 32, lineHeight: 36 },
+  title: { fontFamily: fonts.headingBold, fontSize: 28, lineHeight: 34 },
+  heading: { fontFamily: fonts.heading, fontSize: 20, lineHeight: 26 },
+  body: { fontFamily: fonts.body, fontSize: 16, lineHeight: 22 },
+  caption: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18 },
+  label: { fontFamily: fonts.label, fontSize: 11, lineHeight: 16, letterSpacing: 1.2 },
+} as const satisfies Record<string, TextStyleToken>;

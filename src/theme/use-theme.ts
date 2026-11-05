@@ -1,9 +1,10 @@
 import { useColorScheme } from 'react-native';
 
-import { palettes, type Mode, type Palette } from './tokens';
+import { fonts, palettes, type, type Mode, type Palette } from './tokens';
 
-export function useTheme(): { mode: Mode; c: Palette } {
+export function useTheme() {
   const scheme = useColorScheme();
   const mode: Mode = scheme === 'light' ? 'light' : 'dark';
-  return { mode, c: palettes[mode] };
+  const c: Palette = palettes[mode];
+  return { mode, c, fonts, type };
 }

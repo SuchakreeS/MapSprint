@@ -41,8 +41,19 @@ Phase 0 (Spikes) — **all three spikes done: Spike 1 (Mapbox) PASS, Spike 2 (GP
 - Removed unused template deps `@expo/ui`, `expo-symbols`, `expo-web-browser`, `expo-glass-effect` from package.json (session 2). expo-router still pulls expo-glass-effect in itself; that is fine. User must run `npm install` on Windows to prune node_modules.
 - Standalone test build: `npx eas-cli@latest build --profile preview -p android`. EXPO_PUBLIC_MAPBOX_TOKEN must exist as an EAS env var (environment preview), because the local .env is not uploaded. eas.json profiles now set `environment`.
 
+## Session 4 (2026-11-05): Phase 1 task 1.1 code done
+Branch `phase1-ui-kit` (off master). Plan: `docs/superpowers/plans/2026-11-05-fonts-and-ui-kit.md`.
+- `src/lib/format.ts` + `tests/format.test.mts` (speed/distance/duration display; `--` for unknown speed). Committed.
+- Fonts: `@expo-google-fonts/{sora,rajdhani,manrope,michroma}` via `useFonts` (no native rebuild). `src/theme/fonts.ts` (`useAppFonts`), `fonts` + `type` scale in `tokens.ts`, `useTheme()` now returns `{ mode, c, fonts, type }`. Root layout holds the splash until fonts load or fail.
+- Roles: Manrope body, Sora headings, Rajdhani big numbers, Michroma logo/labels only.
+- UI kit in `src/components/`: Button, Card, Stat, Switch, Header. Temporary preview route `src/app/kit.tsx` (linked from the spike hub); remove under 1.12.
+- Results: `npm run typecheck` clean, `npx eslint .` clean, `npm test` 13/13, no hex colours outside `src/theme`.
+- NOT yet done: on-phone check of the Kit screen (fonts distinct, dark + light, disabled Button inert). No independent code review was run (self-check only).
+- PS commits manually from now on (not uncommitted: fonts/kit/plan/handoff changes).
+- Note: after adding a route, `.expo/types/router.d.ts` is stale until Metro starts; typecheck then fails on the new href.
+
 ## Next step
-Start plan.md Phase 1 (Recorder). Start with 1.1 fonts + UI kit, then 1.2 routes, then the HUD.
+Check the Kit screen on the Samsung (`npx expo start --dev-client`), then plan.md 1.2 (Expo Router structure), then the HUD.
 Things learned in the spikes that Phase 1 must include (also added to plan.md as 1.10 and 1.11):
 - Gap log: record every gap > 3 s (time + position) so tunnels/viaducts can be told apart from throttling.
 - "Finish this drive?" prompt: PS forgot to press Stop in run #6 and it recorded for 88 min. Prompt (notification + in-app) after being stopped for a while after a drive.

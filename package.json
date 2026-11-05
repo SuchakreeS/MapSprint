@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "@expo-google-fonts/manrope": "^0.4.3",
+    "@expo-google-fonts/michroma": "^0.4.2",
+    "@expo-google-fonts/rajdhani": "^0.4.1",
+    "@expo-google-fonts/sora": "^0.4.2",
     "@rnmapbox/maps": "^10.3.16",
     "eslint-config-expo": "~58.0.4",
     "expo": "~58.0.22",
