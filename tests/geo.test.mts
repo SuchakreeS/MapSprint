@@ -2,7 +2,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { haversineMeters, summarize, type GpsPoint } from '../src/lib/geo.ts';
+import { haversineMeters, type GpsPoint } from '../src/lib/geo.ts';
+import { summarize } from '../src/lib/live-stats.ts';
 
 test('haversine: 1 degree of latitude is about 111.2 km', () => {
   const d = haversineMeters({ lat: 13.0, lng: 100.5 }, { lat: 14.0, lng: 100.5 });

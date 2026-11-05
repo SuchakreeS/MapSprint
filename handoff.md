@@ -113,8 +113,17 @@ Compared UI kit, tab bar, screen 03 and 07 with `design/`; PS approved the diffe
 - Results: typecheck clean, eslint clean, npm test 26/26, no hex outside `src/theme` (only `notificationColor` in recorder.ts, native notification, pre-existing).
 - NOT yet checked on phone: pre-drive map + sheet in dark and light, location screen (normal and blocked states), tab bar, Button/Switch in the Kit preview, light-mode buttons are black with yellow text.
 
+## Session 4f (2026-11-05): task 1.5a HUD pure logic, code done (uncommitted)
+- 1.13 checked on the Samsung and committed by PS. PS approved the HUD plan: `docs/superpowers/plans/2026-11-05-driving-hud.md` (3 parts: 1.5a logic, 1.5b screen, 1.5c controls). Gauge stays View-drawn (no react-native-svg).
+- `src/lib/live-stats.ts`: `createLiveStats()` (push one point at a time, `snapshot()` = `DriveSummary`) and `summarize()`, which now delegates to it. **`summarize` moved from `geo.ts` to `live-stats.ts`** (avoids a circular import); importers updated (`gps.tsx`, tests).
+- Safety net: 3 characterization tests pin the old `summarize` numbers (`tests/live-stats.test.mts`, drives in `tests/fixtures.mts`); they still pass after the refactor. Plus tests that the live engine equals `summarize` at prefixes 1, 10, all.
+- `src/lib/hud.ts`: `CONTROL_LOCK_KMH` 10, `controlsLocked(kmh)` (null = not locked), `GAUGE_MAX_KMH` 160, `REDLINE_START` 0.85, `gaugeFraction`. `src/lib/route-line.ts`: `appendRoutePoint` (5 m thinning, `[lng, lat]`). `formatKmh1` in `format.ts`.
+- `tsconfig.json`: added `allowImportingTsExtensions` (lib files that import each other need `.ts` so Node tests can run them; base config already has `noEmit`).
+- Results: typecheck clean, eslint clean, npm test 44/44.
+- Gotcha again: stale `.expo/types/router.d.ts` makes typecheck fail on `"/"`; delete it and start Metro once.
+
 ## Next step
-1) PS checks 1.13 on the Samsung and commits. 2) Plan 1.5 driving HUD from `design/screens/{dark,light}/08-driving-hud.png` + `design/source/Hud2.dc.html`: brainstorm + writing-plans, show the plan to PS BEFORE coding. 1.5 is large (live speed EMA, stats, Mapbox follow camera, hold-to-finish 800 ms, pause, controls lock > 10 km/h, keep-awake); wire `startRecording()` there.
+1) PS commits 1.5a. 2) Do 1.5b (HUD screen with live data: `getPointsSince`, `useLiveDrive`, `SpeedGauge`, `HudStat`, Mapbox follow map + route line) per the plan file, then 1.5c (hold-to-finish, lock, keep-awake, back-block, resume via Record button). Pause stays disabled until 1.6.
 Things learned in the spikes that Phase 1 must include (also added to plan.md as 1.10 and 1.11):
 - Gap log: record every gap > 3 s (time + position) so tunnels/viaducts can be told apart from throttling.
 - "Finish this drive?" prompt: PS forgot to press Stop in run #6 and it recorded for 88 min. Prompt (notification + in-app) after being stopped for a while after a drive.

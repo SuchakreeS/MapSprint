@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { formatDistanceKm, formatDuration, formatSpeedKmh } from '../src/lib/format.ts';
+import { formatDistanceKm, formatDuration, formatKmh1, formatSpeedKmh } from '../src/lib/format.ts';
 
 test('speed rounds to a whole number', () => {
   assert.equal(formatSpeedKmh(42.4), '42');
@@ -42,4 +42,12 @@ test('duration rolls over to H:MM:SS from one hour', () => {
 test('duration falls back to 0:00 for negative or NaN', () => {
   assert.equal(formatDuration(-3), '0:00');
   assert.equal(formatDuration(NaN), '0:00');
+});
+
+test('speed with one decimal, or -- when unknown', () => {
+  assert.equal(formatKmh1(40.84), '40.8');
+  assert.equal(formatKmh1(0), '0.0');
+  assert.equal(formatKmh1(null), '--');
+  assert.equal(formatKmh1(-1), '--');
+  assert.equal(formatKmh1(NaN), '--');
 });

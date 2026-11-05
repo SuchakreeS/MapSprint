@@ -22,3 +22,8 @@ export function formatDuration(seconds: number): string {
   const ss = String(s).padStart(2, '0');
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
 }
+
+/** One decimal km/h (e.g. moving average), or "--" when unknown. */
+export function formatKmh1(kmh: number | null | undefined): string {
+  return isUsable(kmh) ? kmh.toFixed(1) : '--';
+}

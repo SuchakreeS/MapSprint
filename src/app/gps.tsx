@@ -3,7 +3,8 @@ import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'r
 
 import { getActiveSessionId, getPoints, listSessions, type SessionRow } from '@/features/recording/db';
 import { isRecording, startRecording, stopRecording } from '@/features/recording/recorder';
-import { summarize, type DriveSummary } from '@/lib/geo';
+import type { DriveSummary } from '@/lib/geo';
+import { summarize } from '@/lib/live-stats';
 import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
