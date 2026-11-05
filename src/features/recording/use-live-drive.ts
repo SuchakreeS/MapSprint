@@ -21,6 +21,8 @@ interface LiveState {
   speedKmh: number | null;
   /** Manual or automatic pause, or null while the drive is running. */
   paused: PauseState | null;
+  /** Clock reading (ms) of the last update, so screens need not read the clock while rendering. */
+  nowMs: number;
   /** Thinned route as `[lng, lat]`. A new array only when points were added. */
   route: RouteCoord[];
 }
@@ -38,6 +40,7 @@ const INITIAL: LiveState = {
   snapshot: null,
   speedKmh: null,
   paused: null,
+  nowMs: 0,
   route: [],
 };
 
@@ -90,6 +93,7 @@ export function useLiveDrive(): LiveDrive {
             snapshot,
             speedKmh: paused ? null : currentSpeedKmh(snapshot.lastKmh, stats.lastAcceptedTs(), now),
             paused,
+            nowMs: now,
             route: points.length ? [...coords] : prev.route,
           }));
         };

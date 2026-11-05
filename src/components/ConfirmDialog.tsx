@@ -16,6 +16,12 @@ interface Props {
   confirmLabel: string;
   onCancel: () => void;
   onConfirm: () => void;
+  /**
+   * `cancel` (default): the safe button is the filled yellow one, the confirm is outlined red.
+   * `confirm`: for prompts where confirming is the expected answer ("Finish this drive?"): the
+   * confirm button is the filled one and goes first.
+   */
+  emphasis?: 'cancel' | 'confirm';
 }
 
 export function ConfirmDialog({
@@ -27,8 +33,16 @@ export function ConfirmDialog({
   confirmLabel,
   onCancel,
   onConfirm,
+  emphasis = 'cancel',
 }: Props) {
   const { c, type } = useTheme();
+  const confirmFirst = emphasis === 'confirm';
+  const cancelButton = (
+    <Button label={cancelLabel} variant={confirmFirst ? 'secondary' : 'primary'} onPress={onCancel} />
+  );
+  const confirmButton = (
+    <Button label={confirmLabel} variant={confirmFirst ? 'primary' : 'danger'} onPress={onConfirm} />
+  );
   return (
     <Modal
       visible={visible}
@@ -50,8 +64,8 @@ export function ConfirmDialog({
           </Text>
           <Text style={[type.body, { color: c.muted }]}>{message}</Text>
           <View style={styles.actions}>
-            <Button label={cancelLabel} onPress={onCancel} />
-            <Button label={confirmLabel} variant="danger" onPress={onConfirm} />
+            {confirmFirst ? confirmButton : cancelButton}
+            {confirmFirst ? cancelButton : confirmButton}
           </View>
         </Pressable>
       </Pressable>

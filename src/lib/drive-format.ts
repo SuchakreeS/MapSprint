@@ -23,6 +23,12 @@ const hhmm = (ts: number) => {
   return `${two(d.getHours())}:${two(d.getMinutes())}`;
 };
 
+/** "07:05:09" */
+export function formatClockTime(ts: number): string {
+  const d = new Date(ts);
+  return `${two(d.getHours())}:${two(d.getMinutes())}:${two(d.getSeconds())}`;
+}
+
 /** Auto title from the start time (users can rename drives once there is a server). */
 export function driveTitle(startedAt: number): string {
   const h = new Date(startedAt).getHours();

@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { GpsCheckCard } from '@/components/GpsCheckCard';
 import { RouteArt } from '@/components/RouteArt';
 import { loadDrive } from '@/features/recording/drive-history';
 import { formatDateTimeRange } from '@/lib/drive-format';
@@ -80,6 +81,9 @@ export default function RecapScreen() {
           <Tile label="Moving avg" value={formatKmh1(s.avgMovingKmh)} unit="km/h" />
           <Tile label="Overall avg" value={formatKmh1(s.avgOverallKmh)} unit="km/h" />
         </View>
+
+        {/* Field-test aid (plan 1.9 / 1.10); decide later whether it moves behind a debug switch. */}
+        <GpsCheckCard summary={s} gaps={drive.gaps} />
       </ScrollView>
     </SafeAreaView>
   );

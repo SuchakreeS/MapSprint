@@ -86,8 +86,11 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
 - [x] 1.7 Local drive history list + local recap stats (no server yet) (code done 2026-11-05; on-phone test pending; XP/level/cells/smooth/badges left for Phase 3)
 - [ ] 1.8 Samsung/OEM battery-optimisation guide screen
 - [ ] 1.9 Field test 10 drives, compare with trip meter; tune CLEANING constants
-- [ ] 1.10 Gap log: store every gap > 3 s (time + position) per drive; show max gap in debug stats
-- [ ] 1.11 "Finish this drive?" prompt after being stopped for a while (forgot-to-stop case, spike run #6)
+- [x] 1.10 Gap log: store every gap > 3 s (time + position) per drive; show max gap in debug stats
+      (code done 2026-11-05; derived from stored points, shown in the recap "GPS check" card; on-phone test pending)
+- [x] 1.11 "Finish this drive?" prompt after being stopped for a while (forgot-to-stop case, spike run #6)
+      (IN-APP ONLY, code done 2026-11-05: dialog on the HUD + "Drive in progress" pill on the tabs; PS decided the
+      local NOTIFICATION version comes later with expo-notifications, see 4.3; on-phone test pending)
 - [ ] 1.12 Remove the spike screens (map / gps / h3) once real screens replace them
 - [x] 1.13 Design alignment pass (code done 2026-11-05, on-phone check pending; icons still undecided): 1.1-1.4 were built before `design/` existed. Compare the UI kit, tab bar,
       location (03) and pre-drive (07) screens with `design/screens/` + `design/source/` (sizes, radii, spacing, icons) and fix differences
@@ -117,6 +120,8 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
 - [ ] 4.1 Follows (private accounts, requests) + Followers screen (25)
 - [ ] 4.2 Feed (12), Drive detail (13), Comments (14), kudos
 - [ ] 4.3 Notifications (15) + push (expo-notifications)
+      + LOCAL notification for the forgot-to-stop case ("Finish this drive?" when the phone is locked; the in-app
+      version from 1.11 is done). Needs the new native library, so it triggers a rebuild. PS asked to note this (2026-11-05).
 - [ ] 4.4 Find friends (16), Other profile (24)
 - [ ] 4.5 Leaderboards (19): Distance/Explorer/Smooth × Friends/Province, pg_cron weekly reset
 - [ ] 4.6 Profile (20), History (21), Badges (22), Garage (23), Settings (26–29)

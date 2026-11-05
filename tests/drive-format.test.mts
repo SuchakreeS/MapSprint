@@ -95,3 +95,11 @@ test('the same month in different years stays separate', () => {
 test('no drives means no groups', () => {
   assert.deepEqual(groupByMonth([]), []);
 });
+
+import { formatClockTime } from '../src/lib/drive-format.ts';
+
+test('clock time with seconds', () => {
+  assert.equal(formatClockTime(at(2026, 11, 3, 7, 5) + 9_000), '07:05:09');
+  assert.equal(formatClockTime(at(2026, 11, 3, 23, 59) + 59_000), '23:59:59');
+  assert.equal(formatClockTime(at(2026, 11, 3, 0, 0)), '00:00:00');
+});

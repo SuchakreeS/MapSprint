@@ -1,5 +1,6 @@
 // Reads finished drives back from SQLite for the history list and the recap.
 import { CLEANING, type DriveSummary } from '@/lib/geo';
+import { findGaps, type GpsGap } from '@/lib/gaps';
 import { summarize, type PauseEvent } from '@/lib/live-stats';
 import { simplifyToMax } from '@/lib/route-art';
 import { appendRoutePoint, type RouteCoord } from '@/lib/route-line';
@@ -20,6 +21,8 @@ export interface DriveItem {
   startedAt: number;
   endedAt: number;
   summary: DriveSummary;
+  /** Every stretch with no GPS point for more than 3 s (manual pauses excluded). */
+  gaps: GpsGap[];
   /** Thinned and simplified `[lng, lat]` route for drawing. */
   route: RouteCoord[];
 }
@@ -42,6 +45,7 @@ export function loadDrive(id: number): DriveItem | null {
     startedAt: session.started_at,
     endedAt: session.ended_at,
     summary: summarize(points, events),
+    gaps: findGaps(points, events),
     route: simplifyToMax(coords, MAX_ROUTE_POINTS),
   };
 }

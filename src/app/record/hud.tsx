@@ -17,6 +17,7 @@ import { getActiveSessionId } from '@/features/recording/db';
 import { stopRecording } from '@/features/recording/recorder';
 import { useLiveDrive } from '@/features/recording/use-live-drive';
 import { formatDistanceKm, formatDuration, formatKmh1 } from '@/lib/format';
+import { shouldPromptFinish, stoppedForMs } from '@/lib/finish-prompt';
 import { controlsLocked } from '@/lib/hud';
 import { AUTO_PAUSE_MS } from '@/lib/live-stats';
 import { radius, space } from '@/theme/tokens';
@@ -35,10 +36,14 @@ function RecenterGlyph({ color }: { color: string }) {
 export default function HudScreen() {
   const { mode, c, type } = useTheme();
   const insets = useSafeAreaInsets();
-  const { ready, error, elapsedS, snapshot, speedKmh, paused, route, pause, resume } = useLiveDrive();
+  const { ready, error, elapsedS, snapshot, speedKmh, paused, nowMs, route, pause, resume } = useLiveDrive();
   const [following, setFollowing] = useState(true);
   const [sheetHeight, setSheetHeight] = useState(0);
   const [finishError, setFinishError] = useState<string | null>(null);
+  // "Keep recording" on the stopped-for-a-while prompt snoozes it (see finish-prompt.ts).
+  const [promptDismissedAt, setPromptDismissedAt] = useState<number | null>(null);
+
+  const askToFinish = shouldPromptFinish(paused, nowMs, promptDismissedAt);
 
   const locked = controlsLocked(speedKmh);
 
@@ -162,6 +167,18 @@ export default function HudScreen() {
           </>
         )}
       </View>
+
+      <ConfirmDialog
+        visible={askToFinish && finishError == null}
+        emphasis="confirm"
+        tag="STILL RECORDING"
+        title="Finish this drive?"
+        message={`You have been stopped for ${Math.floor(stoppedForMs(paused, nowMs) / 60_000)} min and the drive is still recording. Finish and save it, or keep recording?`}
+        cancelLabel="Keep recording"
+        confirmLabel="Finish drive"
+        onCancel={() => setPromptDismissedAt(nowMs)}
+        onConfirm={finish}
+      />
 
       <ConfirmDialog
         visible={finishError != null}
