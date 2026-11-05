@@ -72,7 +72,8 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
 - [x] 1.1 Fonts (Sora, Rajdhani, Manrope, Michroma via expo-font) + shared UI kit
       (Button, Card, Stat, Switch, Header) from tokens
       (code done 2026-11-05; on-phone check of /kit preview still to do; kit route removed under 1.12)
-- [ ] 1.2 Expo Router structure: (onboarding) stack, (tabs) Feed/Map/Record/Ranks/Profile, modal record flow
+- [x] 1.2 Expo Router structure: (onboarding) stack, (tabs) Feed/Map/Record/Ranks/Profile, modal record flow
+      (code done 2026-11-05, placeholder screens; on-phone check pending)
 - [ ] 1.3 Location permission screen (design 03) + foreground permission flow
 - [ ] 1.4 Pre-drive check screen (07): GPS signal, battery tip, car, sound toggle
 - [ ] 1.5 Driving HUD (08, v2 design): live speed (EMA), stats, Mapbox follow camera,

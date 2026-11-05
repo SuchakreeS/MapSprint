@@ -32,7 +32,10 @@ export default function RootLayout() {
           headerShadowVisible: false,
           contentStyle: { backgroundColor: c.bg },
         }}>
-        <Stack.Screen name="index" options={{ title: 'Phase 0 · Spikes' }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+        <Stack.Screen name="record" options={{ headerShown: false, presentation: 'modal' }} />
+        <Stack.Screen name="dev" options={{ title: 'Phase 0 · Spikes' }} />
         <Stack.Screen name="map" options={{ title: 'Spike 1 · Mapbox' }} />
         <Stack.Screen name="gps" options={{ title: 'Spike 2 · Background GPS' }} />
         <Stack.Screen name="h3" options={{ title: 'Spike 3 · H3 on Hermes' }} />

@@ -52,8 +52,20 @@ Branch `phase1-ui-kit` (off master). Plan: `docs/superpowers/plans/2026-11-05-fo
 - PS commits manually from now on (not uncommitted: fonts/kit/plan/handoff changes).
 - Note: after adding a route, `.expo/types/router.d.ts` is stale until Metro starts; typecheck then fails on the new href.
 
+## Session 4b (2026-11-05): task 1.2 router structure, code done (uncommitted, PS commits manually)
+- Kit screen checked on the Samsung by PS: looks good, button feedback works.
+- App now opens on `(tabs)`: Feed (`index`), Map (`world`), Record (`start`, raised yellow circle via `src/components/RecordTabButton.tsx`, opens `/record/pre-drive`), Ranks, Profile. Tab bar has text labels only, no icons.
+- Ruling: no icon library. `@expo/vector-icons` is discouraged in SDK 58 and any other lib needs a native rebuild. Revisit icons later (decide then).
+- Ruling: file names avoid clashing with spike routes: tab Map = `world.tsx` (spike keeps `/map`), onboarding profile = `about-you.tsx`.
+- `record/` is a modal stack: pre-drive, hud, saving, recap, share (placeholders with back button). `(onboarding)/`: welcome, sign-in, location, about-you, car, zones (placeholders, not linked yet; auth is Phase 2).
+- Spike hub moved from `/` to `/dev`; reach it from Profile tab → "Dev: spikes and UI kit preview". Remove with 1.12.
+- Shared `src/components/Placeholder.tsx` used by all stub screens.
+- Results: typecheck clean, eslint clean, npm test 13/13, no hex outside `src/theme`.
+- NOT yet checked: on the phone (tab bar colours dark/light, Record circle overlaps the bar nicely, modal opens/closes, Android back button).
+
 ## Next step
-Check the Kit screen on the Samsung (`npx expo start --dev-client`), then plan.md 1.2 (Expo Router structure), then the HUD.
+Check the new tabs + Record modal on the Samsung, then 1.3 (location permission screen + foreground permission flow).
+Older notes: previously "check Kit then 1.2"; both done.
 Things learned in the spikes that Phase 1 must include (also added to plan.md as 1.10 and 1.11):
 - Gap log: record every gap > 3 s (time + position) so tunnels/viaducts can be told apart from throttling.
 - "Finish this drive?" prompt: PS forgot to press Stop in run #6 and it recorded for 88 min. Prompt (notification + in-app) after being stopped for a while after a drive.
