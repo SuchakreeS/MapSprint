@@ -84,7 +84,7 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
       "Hold to finish" (800 ms), Pause, controls lock > 10 km/h, expo-keep-awake while open
 - [x] 1.6 Auto-pause (stopped > 5 min) and manual pause in recorder (code done 2026-11-05; on-phone test pending)
 - [x] 1.7 Local drive history list + local recap stats (no server yet) (code done 2026-11-05; on-phone test pending; XP/level/cells/smooth/badges left for Phase 3)
-- [ ] 1.8 Samsung/OEM battery-optimisation guide screen
+- [x] 1.8 Samsung/OEM battery-optimisation guide screen (code done 2026-11-05; on-phone test pending, steps based on dontkillmyapp.com)
 - [ ] 1.9 Field test 10 drives, compare with trip meter; tune CLEANING constants
 - [x] 1.10 Gap log: store every gap > 3 s (time + position) per drive; show max gap in debug stats
       (code done 2026-11-05; derived from stored points, shown in the recap "GPS check" card; on-phone test pending)

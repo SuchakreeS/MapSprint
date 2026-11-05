@@ -176,8 +176,18 @@ Plan: `docs/superpowers/plans/2026-11-05-pause.md`. PS asked to keep building wh
 - Results: typecheck clean, eslint clean, npm test 102/102, no hex outside `src/theme`.
 - NOT checked on phone: recap GPS check card on a real drive (numbers plausible, gap list matches what happened); stop for 15+ min with a drive running then open the HUD: dialog "Finish this drive?" appears; "Keep recording" hides it for 15 min; "Finish drive" ends it and opens the recap; leave the app mid-drive, reopen: pill "Drive in progress" on the tabs, tap opens the HUD; after finishing, the pill disappears (within 3 s); a manually paused drive asks after 30 min.
 
+## Session 4l (2026-11-05): task 1.8 battery guide screen, code done (uncommitted)
+- 1.10 + 1.11 committed by PS.
+- `src/lib/oem-guide.ts` (test-first, `tests/oem-guide.test.mts`, 109 tests total): `OEM_GUIDES` for Samsung, Xiaomi/Redmi/POCO, OPPO, Realme, Vivo, Huawei/Honor, OnePlus and stock Android/Pixel; `detectOem(manufacturer, brand)`; `orderedGuides(id)` (your phone first, unknown phones start with stock Android). Steps come from dontkillmyapp.com (read 2026-11-05 through a fetch subagent; its pages are old for some makers, so wording is soft: "older phones", "menus differ"). App name via `APP_NAME`.
+- Screen `src/app/battery-guide.tsx` (route `/battery-guide`): "Keep recording alive", intro, **Open battery settings** (Android intent `android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS`, falls back to the app settings page if it fails), **Open Mapsprint settings**, one expandable card per maker (yours open and highlighted "YOUR PHONE"), footer caveat + source. Uses `expo-device` (already installed) for `Device.manufacturer` / `Device.brand`.
+- Pre-drive battery tip row now opens this guide (was: app settings).
+- Ruling: Huawei's computer + USB (adb) workaround is NOT in the guide (not something a driver can do); the Huawei note says recordings may end early on newer phones.
+- **Unverified on a real device:** the `IGNORE_BATTERY_OPTIMIZATION_SETTINGS` intent (the fetch could not confirm it from the vendor pages; it is a documented Android settings action, so it should open the battery optimization list, but Samsung may redirect). The fallback covers failure. Also check the Samsung steps match the S-series you test on (PS's Samsung model/One UI version not yet recorded).
+- Results: typecheck clean, eslint clean, npm test 109/109, no hex outside `src/theme`.
+- NOT checked on phone: pre-drive battery row opens the guide; your Samsung is detected ("YOUR PHONE: Samsung" open first); both buttons work (battery list opens; app settings opens); other makers expand/collapse; dark + light.
+
 ## Next step
-1) PS commits 1.10 + 1.11, builds the preview APK and tests 1.5, 1.6, 1.7, 1.10, 1.11 on a real walk/drive. 2) Then plan.md 1.8 (Samsung battery guide screen), 1.12 (remove spike screens), and **1.9 the 10-drive field test** (the Phase 1 gate: distance within 2% of the car trip meter; tune `CLEANING`). The GPS check card on each recap is the tool for 1.9.
+1) PS commits 1.8, builds the preview APK and tests 1.5, 1.6, 1.7, 1.8, 1.10, 1.11 on a real walk/drive. 2) Then **1.9 the 10-drive field test** (the Phase 1 gate: distance within 2% of the car trip meter; tune `CLEANING`; the recap GPS check card is the tool) and 1.12 (remove the spike screens). Suggest doing 1.12 AFTER the first real drive passes, because the GPS spike screen is still the fallback to see/stop sessions.
 Things learned in the spikes that Phase 1 must include (also added to plan.md as 1.10 and 1.11):
 - Gap log: record every gap > 3 s (time + position) so tunnels/viaducts can be told apart from throttling.
 - "Finish this drive?" prompt: PS forgot to press Stop in run #6 and it recorded for 88 min. Prompt (notification + in-app) after being stopped for a while after a drive.

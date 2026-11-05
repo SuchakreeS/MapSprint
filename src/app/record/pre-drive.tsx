@@ -1,7 +1,7 @@
 import { Camera, LocationPuck, MapView } from '@rnmapbox/maps';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
@@ -102,11 +102,11 @@ export default function PreDriveScreen() {
               <View style={[styles.battery, { borderColor: c.gold }]} />
               <Pressable
                 accessibilityRole="button"
-                onPress={() => Linking.openSettings()}
+                onPress={() => router.push('/battery-guide')}
                 style={styles.grow}>
                 <Text style={[type.rowTitle, { color: c.text }]}>Battery: set to Unrestricted</Text>
                 <Text style={[type.caption, { color: c.muted }]}>
-                  Keeps recording going with the screen off. Tap to open settings.
+                  Keeps recording going with the screen off. Tap for the steps for your phone.
                 </Text>
               </Pressable>
               <Pressable

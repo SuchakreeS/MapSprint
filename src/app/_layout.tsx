@@ -36,6 +36,7 @@ export default function RootLayout() {
         <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
         <Stack.Screen name="record" options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="history" options={{ headerShown: false }} />
+        <Stack.Screen name="battery-guide" options={{ headerShown: false }} />
         <Stack.Screen name="dev" options={{ title: 'Phase 0 · Spikes' }} />
         <Stack.Screen name="map" options={{ title: 'Spike 1 · Mapbox' }} />
         <Stack.Screen name="gps" options={{ title: 'Spike 2 · Background GPS' }} />
