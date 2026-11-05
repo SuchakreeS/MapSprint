@@ -9,16 +9,12 @@ import { CloseGlyph } from '@/components/CloseGlyph';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { PlayGlyph } from '@/components/PlayGlyph';
 import { Switch } from '@/components/Switch';
+import { MAP_STYLE } from '@/features/map/map-style';
 import { useGpsSignal } from '@/features/recording/use-gps-signal';
 import { getSoundOn, hideBatteryTip, isBatteryTipHidden, setSoundOn } from '@/features/settings/prefs';
 import { needsSignalConfirm, type SignalQuality } from '@/lib/gps-signal';
 import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
-
-const MAP_STYLE = {
-  dark: 'mapbox://styles/mapbox/dark-v11',
-  light: 'mapbox://styles/mapbox/light-v11',
-};
 
 // Design 07 shows "Strong"; we keep Weak and Searching so the driver knows before starting.
 const SIGNAL_LABEL: Record<SignalQuality, string> = {

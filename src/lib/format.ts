@@ -8,9 +8,9 @@ export function formatSpeedKmh(kmh: number | null | undefined): string {
   return isUsable(kmh) ? String(Math.round(kmh)) : '--';
 }
 
-/** Metres to km with 2 decimals. Bad input shows as 0.00. */
-export function formatDistanceKm(meters: number): string {
-  return ((isUsable(meters) ? meters : 0) / 1000).toFixed(2);
+/** Metres to km (2 decimals by default, the HUD uses 1). Bad input shows as zero. */
+export function formatDistanceKm(meters: number, decimals = 2): string {
+  return ((isUsable(meters) ? meters : 0) / 1000).toFixed(decimals);
 }
 
 /** M:SS under an hour, H:MM:SS from one hour. Bad input shows as 0:00. */

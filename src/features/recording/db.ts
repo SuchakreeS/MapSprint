@@ -81,6 +81,23 @@ export function getPoints(sessionId: number): GpsPoint[] {
   );
 }
 
+/** Points with `ts` after `afterTs` (ms), oldest first. Pass 0 for the whole session. */
+export function getPointsSince(sessionId: number, afterTs: number): GpsPoint[] {
+  return getDb().getAllSync<GpsPoint>(
+    'SELECT ts, lat, lng, speed, accuracy, heading FROM points WHERE session_id = ? AND ts > ? ORDER BY ts',
+    sessionId,
+    afterTs,
+  );
+}
+
+export function getSessionStartedAt(sessionId: number): number | null {
+  const row = getDb().getFirstSync<{ started_at: number }>(
+    'SELECT started_at FROM sessions WHERE id = ?',
+    sessionId,
+  );
+  return row ? row.started_at : null;
+}
+
 export interface SessionRow {
   id: number;
   started_at: number;

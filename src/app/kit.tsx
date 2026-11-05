@@ -7,6 +7,7 @@ import { PlayGlyph } from '@/components/PlayGlyph';
 import { APP_NAME } from '@/constants/app';
 import { Card } from '@/components/Card';
 import { Header } from '@/components/Header';
+import { SpeedGauge } from '@/components/SpeedGauge';
 import { Stat } from '@/components/Stat';
 import { Switch } from '@/components/Switch';
 import { formatDistanceKm, formatDuration, formatSpeedKmh } from '@/lib/format';
@@ -34,6 +35,14 @@ export default function KitPreview() {
         <Switch label="Sound" value={sound} onValueChange={setSound} />
       </Card>
 
+      {/* Gauge edge cases: unknown speed, normal, into the red band, beyond full scale. */}
+      <Card style={styles.gauges}>
+        <SpeedGauge kmh={null} />
+        <SpeedGauge kmh={64} />
+        <SpeedGauge kmh={150} />
+        <SpeedGauge kmh={200} />
+      </Card>
+
       <Button label="Start drive" size="lg" onPress={() => {}} leading={(color) => <PlayGlyph color={color} />} />
       <Button label="Continue" onPress={() => {}} />
       <Button label="Pause" variant="secondary" onPress={() => {}} />
@@ -47,4 +56,5 @@ export default function KitPreview() {
 const styles = StyleSheet.create({
   wrap: { padding: space.lg, gap: space.md },
   card: { gap: space.md },
+  gauges: { gap: space.lg, alignItems: 'center' },
 });

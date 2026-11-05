@@ -122,8 +122,19 @@ Compared UI kit, tab bar, screen 03 and 07 with `design/`; PS approved the diffe
 - Results: typecheck clean, eslint clean, npm test 44/44.
 - Gotcha again: stale `.expo/types/router.d.ts` makes typecheck fail on `"/"`; delete it and start Metro once.
 
+## Session 4g (2026-11-05): task 1.5b HUD screen with live data, code done (uncommitted)
+- 1.5a committed by PS. HUD plan: `docs/superpowers/plans/2026-11-05-driving-hud.md`.
+- `src/app/record/hud.tsx` now matches design 08 minus the Level/XP card and the district / new-cells chips (fake data must not ship; Phase 3). Full-screen Mapbox map (follow camera zoom 16, puck with course bearing, route line = casing 16 px at 18% + 5 px line in `c.primary`), recenter button, bottom sheet with gauge, 3 stats, Pause + Hold to finish.
+- `use-live-drive.ts`: starts recording on mount (`startRecording()` returns the active session, so reopening resumes), loads existing points, then polls SQLite every 1 s through the live stats engine. Unmount stops polling only, never the recording. Added `getPointsSince` and `getSessionStartedAt` to `db.ts`.
+- `SpeedGauge` (View-drawn 240-degree arc, 80 segments, fill = speed/160, red band from 85%, `--` when speed unknown), `HudStat`, `PauseGlyph`, shared `src/features/map/map-style.ts` (pre-drive uses it too). `hudNumber` is now 84/84, new `hudStat` 26/28. `formatDistanceKm(m, decimals = 2)`; HUD shows 1 decimal like the design.
+- Gauge test strip (null, 64, 150, 200 km/h) added to the Kit preview screen.
+- Still inert on purpose: **Pause (disabled until 1.6) and Hold to finish (does nothing until 1.5c)**. There is no way to stop a recording from the HUD yet: stop it from the GPS spike screen (`/dev` -> Spike 2) after testing.
+- Ruling: recenter button is always visible like the design (it does nothing visible while already following).
+- Results: typecheck clean, eslint clean, npm test 45/45, no hex outside `src/theme`.
+- NOT yet checked on phone: see "What to test" in the chat for 1.5b.
+
 ## Next step
-1) PS commits 1.5a. 2) Do 1.5b (HUD screen with live data: `getPointsSince`, `useLiveDrive`, `SpeedGauge`, `HudStat`, Mapbox follow map + route line) per the plan file, then 1.5c (hold-to-finish, lock, keep-awake, back-block, resume via Record button). Pause stays disabled until 1.6.
+1) PS checks 1.5b on the Samsung and commits. 2) Do 1.5c: `HoldToFinishButton` (800 ms), speed lock above 10 km/h, keep-awake, block back button / swipe, finish -> `stopRecording()` -> `/record/saving`, and Record button returns to the HUD when a drive is already recording. Then tick 1.5 in plan.md. Pause stays disabled until 1.6.
 Things learned in the spikes that Phase 1 must include (also added to plan.md as 1.10 and 1.11):
 - Gap log: record every gap > 3 s (time + position) so tunnels/viaducts can be told apart from throttling.
 - "Finish this drive?" prompt: PS forgot to press Stop in run #6 and it recorded for 88 min. Prompt (notification + in-app) after being stopped for a while after a drive.

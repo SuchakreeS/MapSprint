@@ -84,7 +84,8 @@ export interface TextStyleToken {
 }
 
 export const type = {
-  hudNumber: { fontFamily: fonts.displayBold, fontSize: 96, lineHeight: 100 },
+  hudNumber: { fontFamily: fonts.displayBold, fontSize: 84, lineHeight: 84 },
+  hudStat: { fontFamily: fonts.displayBold, fontSize: 26, lineHeight: 28 },
   statNumber: { fontFamily: fonts.display, fontSize: 32, lineHeight: 36 },
   title: { fontFamily: fonts.heading, fontSize: 26, lineHeight: 31 },
   sheetTitle: { fontFamily: fonts.heading, fontSize: 24, lineHeight: 29 },

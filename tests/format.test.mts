@@ -51,3 +51,10 @@ test('speed with one decimal, or -- when unknown', () => {
   assert.equal(formatKmh1(-1), '--');
   assert.equal(formatKmh1(NaN), '--');
 });
+
+test('distance can show one decimal (HUD)', () => {
+  assert.equal(formatDistanceKm(12_700, 1), '12.7');
+  assert.equal(formatDistanceKm(12_749, 1), '12.7');
+  assert.equal(formatDistanceKm(0, 1), '0.0');
+  assert.equal(formatDistanceKm(NaN, 1), '0.0');
+});
