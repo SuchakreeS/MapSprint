@@ -1,0 +1,45 @@
+// Run with: npm test
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+
+import { formatDistanceKm, formatDuration, formatSpeedKmh } from '../src/lib/format.ts';
+
+test('speed rounds to a whole number', () => {
+  assert.equal(formatSpeedKmh(42.4), '42');
+  assert.equal(formatSpeedKmh(0), '0');
+});
+
+test('speed shows -- when unknown, negative or not a number', () => {
+  assert.equal(formatSpeedKmh(null), '--');
+  assert.equal(formatSpeedKmh(undefined), '--');
+  assert.equal(formatSpeedKmh(-1), '--');
+  assert.equal(formatSpeedKmh(NaN), '--');
+});
+
+test('distance is km with 2 decimals', () => {
+  assert.equal(formatDistanceKm(0), '0.00');
+  assert.equal(formatDistanceKm(2370), '2.37');
+  assert.equal(formatDistanceKm(9410.4), '9.41');
+});
+
+test('distance falls back to 0.00 for negative or NaN', () => {
+  assert.equal(formatDistanceKm(-5), '0.00');
+  assert.equal(formatDistanceKm(NaN), '0.00');
+});
+
+test('duration is M:SS under an hour', () => {
+  assert.equal(formatDuration(0), '0:00');
+  assert.equal(formatDuration(65), '1:05');
+  assert.equal(formatDuration(3599), '59:59');
+});
+
+test('duration rolls over to H:MM:SS from one hour', () => {
+  assert.equal(formatDuration(3600), '1:00:00');
+  assert.equal(formatDuration(5327), '1:28:47');
+  assert.equal(formatDuration(40000), '11:06:40');
+});
+
+test('duration falls back to 0:00 for negative or NaN', () => {
+  assert.equal(formatDuration(-3), '0:00');
+  assert.equal(formatDuration(NaN), '0:00');
+});

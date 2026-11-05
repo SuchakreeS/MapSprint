@@ -42,7 +42,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node --experimental-strip-types --no-warnings --test tests/geo.test.mts",
+    "test": "node --experimental-strip-types --no-warnings --test tests/geo.test.mts tests/format.test.mts",
     "typecheck": "tsc --noEmit"
   },
   "private": true
