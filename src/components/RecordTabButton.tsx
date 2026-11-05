@@ -1,3 +1,4 @@
+import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -13,7 +14,10 @@ export function RecordTabButton() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Start recording"
-        onPress={() => router.push('/record/pre-drive')}
+        onPress={async () => {
+          const granted = (await Location.getForegroundPermissionsAsync()).granted;
+          router.push(granted ? '/record/pre-drive' : '/location?next=record');
+        }}
         style={({ pressed }) => [
           styles.circle,
           { backgroundColor: c.accentFill, borderColor: c.bg, opacity: pressed ? 0.85 : 1 },

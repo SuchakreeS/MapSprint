@@ -63,9 +63,19 @@ Branch `phase1-ui-kit` (off master). Plan: `docs/superpowers/plans/2026-11-05-fo
 - Results: typecheck clean, eslint clean, npm test 13/13, no hex outside `src/theme`.
 - NOT yet checked: on the phone (tab bar colours dark/light, Record circle overlaps the bar nicely, modal opens/closes, Android back button).
 
+## Session 4c (2026-11-05): task 1.3 location permission, code done (uncommitted)
+- 1.2 checked on the Samsung by PS ("works") and committed.
+- `src/lib/permission.ts` `permissionState()` -> granted / can-ask / blocked, 6 tests in `tests/permission.test.mts` (RED then GREEN).
+- `src/features/permissions/use-location-permission.ts` hook (re-reads when app returns from settings).
+- Screen `src/app/(onboarding)/location.tsx` (route `/location`, optional `?next=record`): explains why, "Allow location", blocked state -> "Open settings", "Not now" -> tabs. No design 03 mockup existed; PS said design it from the theme.
+- Record circle (`RecordTabButton`) now checks permission: granted -> `/record/pre-drive`, else `/location?next=record`.
+- Ruling: "Not now" is allowed (browse without location); recording is blocked at the Record button. PS did not answer whether location should be required; change if wanted.
+- `recorder.ts` `ensureForegroundPermission` left as-is (still asks inline as a safety net).
+- Results: typecheck clean, eslint clean, npm test 19/19, no hex outside `src/theme`.
+- NOT yet checked on phone: first-time prompt, deny once then Record again, deny with "don't ask again" -> Open settings -> allow -> back in app, granted path goes to pre-drive. To retest: Android Settings > Apps > Mapsprint > Permissions > Location > Don't allow.
+
 ## Next step
-Check the new tabs + Record modal on the Samsung, then 1.3 (location permission screen + foreground permission flow).
-Older notes: previously "check Kit then 1.2"; both done.
+Check 1.3 on the Samsung, then 1.4 pre-drive check screen (GPS signal, battery tip, car, sound toggle).
 Things learned in the spikes that Phase 1 must include (also added to plan.md as 1.10 and 1.11):
 - Gap log: record every gap > 3 s (time + position) so tunnels/viaducts can be told apart from throttling.
 - "Finish this drive?" prompt: PS forgot to press Stop in run #6 and it recorded for 88 min. Prompt (notification + in-app) after being stopped for a while after a drive.

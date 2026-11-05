@@ -74,7 +74,8 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
       (code done 2026-11-05; on-phone check of /kit preview still to do; kit route removed under 1.12)
 - [x] 1.2 Expo Router structure: (onboarding) stack, (tabs) Feed/Map/Record/Ranks/Profile, modal record flow
       (code done 2026-11-05, placeholder screens; on-phone check pending)
-- [ ] 1.3 Location permission screen (design 03) + foreground permission flow
+- [x] 1.3 Location permission screen (design 03) + foreground permission flow
+      (code done 2026-11-05, designed from tokens since no mockup; on-phone check pending)
 - [ ] 1.4 Pre-drive check screen (07): GPS signal, battery tip, car, sound toggle
 - [ ] 1.5 Driving HUD (08, v2 design): live speed (EMA), stats, Mapbox follow camera,
       "Hold to finish" (800 ms), Pause, controls lock > 10 km/h, expo-keep-awake while open
