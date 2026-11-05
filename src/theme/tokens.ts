@@ -87,6 +87,8 @@ export const type = {
   hudNumber: { fontFamily: fonts.displayBold, fontSize: 84, lineHeight: 84 },
   hudStat: { fontFamily: fonts.displayBold, fontSize: 26, lineHeight: 28 },
   statNumber: { fontFamily: fonts.display, fontSize: 32, lineHeight: 36 },
+  headline: { fontFamily: fonts.heading, fontSize: 30, lineHeight: 34 },
+  statTile: { fontFamily: fonts.displayBold, fontSize: 28, lineHeight: 31 },
   title: { fontFamily: fonts.heading, fontSize: 26, lineHeight: 31 },
   sheetTitle: { fontFamily: fonts.heading, fontSize: 24, lineHeight: 29 },
   heading: { fontFamily: fonts.heading, fontSize: 20, lineHeight: 26 },

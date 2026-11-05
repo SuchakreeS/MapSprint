@@ -13,6 +13,7 @@ import { PauseGlyph } from '@/components/PauseGlyph';
 import { PlayGlyph } from '@/components/PlayGlyph';
 import { SpeedGauge } from '@/components/SpeedGauge';
 import { MAP_STYLE } from '@/features/map/map-style';
+import { getActiveSessionId } from '@/features/recording/db';
 import { stopRecording } from '@/features/recording/recorder';
 import { useLiveDrive } from '@/features/recording/use-live-drive';
 import { formatDistanceKm, formatDuration, formatKmh1 } from '@/lib/format';
@@ -51,8 +52,9 @@ export default function HudScreen() {
 
   const finish = async () => {
     try {
+      const id = getActiveSessionId(); // stopRecording clears it
       await stopRecording();
-      router.replace('/record/saving');
+      router.replace(id == null ? '/' : { pathname: '/record/recap', params: { id: String(id) } });
     } catch (e) {
       setFinishError(e instanceof Error ? e.message : 'Could not stop the recording.');
     }

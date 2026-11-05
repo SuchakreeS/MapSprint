@@ -83,7 +83,7 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
 - [x] 1.5 Driving HUD (08, v2 design) (code done 2026-11-05 in 3 parts 1.5a/b/c; on-phone test pending; Pause disabled until 1.6): live speed (EMA), stats, Mapbox follow camera,
       "Hold to finish" (800 ms), Pause, controls lock > 10 km/h, expo-keep-awake while open
 - [x] 1.6 Auto-pause (stopped > 5 min) and manual pause in recorder (code done 2026-11-05; on-phone test pending)
-- [ ] 1.7 Local drive history list + local recap stats (no server yet)
+- [x] 1.7 Local drive history list + local recap stats (no server yet) (code done 2026-11-05; on-phone test pending; XP/level/cells/smooth/badges left for Phase 3)
 - [ ] 1.8 Samsung/OEM battery-optimisation guide screen
 - [ ] 1.9 Field test 10 drives, compare with trip meter; tune CLEANING constants
 - [ ] 1.10 Gap log: store every gap > 3 s (time + position) per drive; show max gap in debug stats

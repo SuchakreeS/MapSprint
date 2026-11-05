@@ -144,6 +144,13 @@ export function getSessionStartedAt(sessionId: number): number | null {
   return row ? row.started_at : null;
 }
 
+export function getSession(sessionId: number): { id: number; started_at: number; ended_at: number | null } | null {
+  return getDb().getFirstSync<{ id: number; started_at: number; ended_at: number | null }>(
+    'SELECT id, started_at, ended_at FROM sessions WHERE id = ?',
+    sessionId,
+  );
+}
+
 export interface SessionRow {
   id: number;
   started_at: number;

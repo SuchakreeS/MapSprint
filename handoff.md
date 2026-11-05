@@ -154,8 +154,22 @@ Plan: `docs/superpowers/plans/2026-11-05-pause.md`. PS asked to keep building wh
 - Results: typecheck clean, eslint clean, npm test 65/65, no hex outside `src/theme`.
 - NOT checked on phone: Pause/Resume on the HUD, auto-pause after 5 min stopped (try a 6 min stop), auto-resume when moving, pause then leave app and reopen (same Time, still paused), Hold to finish while paused.
 
+## Session 4j (2026-11-05): task 1.7 local drive history + recap, code done (uncommitted)
+- 1.6 committed by PS. Designs read: `design/screens/dark/10-drive-recap-full-scroll.png`, `21-drive-history.png`, `design/source/Recap2.dc.html`, `ScrDriveHistory.dc.html`.
+- Pure logic, test-first (85 tests total): `src/lib/route-art.ts` (`fitRoute` keeps aspect, centred, north up; `simplifyRoute` Douglas-Peucker; `simplifyToMax`), `src/lib/drive-format.ts` (`driveTitle`, `formatDriveDay`, `monthLabel`, `formatDateTimeRange`, `formatDriveCount`, `groupByMonth`).
+- `src/features/recording/drive-history.ts`: `loadDrive(id)` and `loadDrives()` (finished sessions with a usable track, newest first, skips the active one); uses `summarize(points, pauseEvents)`, so recap numbers respect pauses. `getSession` added to `db.ts`.
+- `src/components/RouteArt.tsx`: route on a blueprint grid drawn with Views (no SVG library), optional glow and start/end markers.
+- Recap `src/app/record/recap.tsx` (design 10): Done, "Drive complete", date + time range + minutes, route card, 4 real tiles (Distance 2 decimals, Moving time, Moving avg, Overall avg). **Hold to finish now goes here** (`/record/recap?id=`) instead of the Saving placeholder. Done goes to the tabs, or back to the list when opened from history (`from=history`).
+- History `src/app/history.tsx` (design 21, route `/history`, button on the Profile tab): grouped by month with counts, thumbnail, auto title ("Morning drive" etc. from the start time), "Tue 3 · 18.4 km", drive time on the right. Tap opens the recap.
+- Left out on purpose (Phase 3 / Phase 2 data, no fake data): XP card, level, new cells, smooth score, badges, "Share to feed", car filter chips, "Signature drive" label.
+- Rulings: recap distance shows 2 decimals (design shows 1) so the field test (1.9) can compare with the trip meter; right-hand value on a history row is drive time where the design has XP; sessions without `ended_at` (app killed mid-drive) are hidden until 1.11 handles them.
+- New tokens: `type.headline` 30/34, `type.statTile` 28/31.
+- Known: `loadDrives` reads every session's points once when the history screen opens (fine for tens of drives; cache or store summaries when it gets slow). Route pictures use all points with accuracy <= 25 m; a teleport spike would show.
+- Results: typecheck clean, eslint clean, npm test 85/85, no hex outside `src/theme`.
+- NOT checked on phone: finish a drive and see the recap (route picture, 4 numbers, date/time, minutes); Done goes to the app; Profile > Drive history lists the drive with thumbnail, title, day, km, time; tap it opens the recap and Done goes back; empty state with no drives; dark + light; recap numbers match the HUD at the moment of finishing (distance within rounding).
+
 ## Next step
-1) PS commits 1.6, builds the preview APK and tests 1.5 + 1.6 on a real walk/drive. 2) Then plan.md 1.7 (local history + recap), 1.10 gap log (rawMaxGapS now excludes manual-pause gaps), 1.11 "Finish this drive?" prompt, 1.8 battery guide, 1.12 remove spikes. 1.9 is the 10-drive field test.
+1) PS commits 1.7, builds the preview APK and tests 1.5, 1.6, 1.7 on a real walk/drive. 2) Then plan.md 1.10 gap log (rawMaxGapS now excludes manual-pause gaps; show max gap in the recap debug stats), 1.11 "Finish this drive?" prompt (also surfaces sessions with no `ended_at`), 1.8 battery guide, 1.12 remove spikes. 1.9 is the 10-drive field test.
 Things learned in the spikes that Phase 1 must include (also added to plan.md as 1.10 and 1.11):
 - Gap log: record every gap > 3 s (time + position) so tunnels/viaducts can be told apart from throttling.
 - "Finish this drive?" prompt: PS forgot to press Stop in run #6 and it recorded for 88 min. Prompt (notification + in-app) after being stopped for a while after a drive.
