@@ -74,8 +74,20 @@ Branch `phase1-ui-kit` (off master). Plan: `docs/superpowers/plans/2026-11-05-fo
 - Results: typecheck clean, eslint clean, npm test 19/19, no hex outside `src/theme`.
 - NOT yet checked on phone: first-time prompt, deny once then Record again, deny with "don't ask again" -> Open settings -> allow -> back in app, granted path goes to pre-drive. To retest: Android Settings > Apps > Mapsprint > Permissions > Location > Don't allow.
 
+## Session 4d (2026-11-05): task 1.4 pre-drive check, code done (uncommitted)
+- 1.3 checked on the Samsung by PS and committed.
+- `src/lib/gps-signal.ts` `signalQuality(accuracyM)`: searching (null/NaN/negative) / excellent <=5 m / good <=15 m / weak >15 m. 5 tests in `tests/gps-signal.test.mts` (RED then GREEN).
+- `src/features/recording/use-gps-signal.ts` hook (watchPositionAsync while screen open, cleans up).
+- `src/features/settings/prefs.ts`: sound on/off and "battery tip hidden" via `expo-sqlite/kv-store` (sync API).
+- `src/app/record/pre-drive.tsx`: signal row, Samsung battery tip (Open settings opens the app's settings page, not the battery page directly; "Got it" hides it for good), placeholder "My car" row, Sound switch (saved), Start drive -> `/record/hud` (HUD is still a placeholder, recorder is NOT started yet: wire `startRecording()` in 1.5).
+- Ruling: Start stays enabled even on weak signal (tunnels/car parks are normal), BUT (PS request, same session) weak or searching now shows a confirm dialog ("Wait" / "Start anyway") saying distance and route may be wrong. Rule is `needsSignalConfirm()` in `src/lib/gps-signal.ts`, 2 more tests (26 total). Not yet checked on phone (test indoors).
+- Ruling: signal thresholds 5 m / 15 m are my guess; tune in field tests (1.9). geo.ts drops points over 25 m.
+- Results: typecheck clean, eslint clean, npm test 24/24, no hex outside `src/theme`.
+- Gotcha: if typecheck complains a route like "/" is missing, delete `.expo/types/router.d.ts` and start Metro once; the file is generated and was stale.
+- NOT yet checked on phone: signal row updates outdoors, battery tip dismiss persists after restart, sound toggle persists, Start goes to HUD placeholder.
+
 ## Next step
-Check 1.3 on the Samsung, then 1.4 pre-drive check screen (GPS signal, battery tip, car, sound toggle).
+Check 1.4 on the Samsung, then 1.5 driving HUD (the big one: live speed EMA, stats, Mapbox follow camera, hold-to-finish 800 ms, pause, controls lock > 10 km/h, keep-awake). 1.5 is large: brainstorm and split it first.
 Things learned in the spikes that Phase 1 must include (also added to plan.md as 1.10 and 1.11):
 - Gap log: record every gap > 3 s (time + position) so tunnels/viaducts can be told apart from throttling.
 - "Finish this drive?" prompt: PS forgot to press Stop in run #6 and it recorded for 88 min. Prompt (notification + in-app) after being stopped for a while after a drive.

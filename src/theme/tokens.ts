@@ -18,6 +18,8 @@ export interface Palette {
   gold: string;
   success: string;
   danger: string;
+  /** Dimmed backdrop behind dialogs. */
+  scrim: string;
 }
 
 export const palettes: Record<Mode, Palette> = {
@@ -36,6 +38,7 @@ export const palettes: Record<Mode, Palette> = {
     gold: '#C9B37E',
     success: '#5BD48A',
     danger: '#FF6B5E',
+    scrim: 'rgba(0,0,0,0.72)',
   },
   light: {
     bg: '#F5F3EE',
@@ -52,6 +55,7 @@ export const palettes: Record<Mode, Palette> = {
     gold: '#7A5F1E',
     success: '#1E7F45',
     danger: '#B3261E',
+    scrim: 'rgba(14,14,14,0.55)',
   },
 };
 
