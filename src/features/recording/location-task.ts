@@ -5,7 +5,7 @@ import * as TaskManager from 'expo-task-manager';
 
 import type { GpsPoint } from '@/lib/geo';
 
-import { getActiveSessionId, insertPoints } from './db';
+import { getActiveSessionId, getManualPauseSince, insertPoints } from './db';
 
 export const LOCATION_TASK = 'mapsprint-location';
 
@@ -27,5 +27,11 @@ TaskManager.defineTask<{ locations: LocationObject[] }>(LOCATION_TASK, async ({ 
   }
   const sessionId = getActiveSessionId();
   if (sessionId == null || !data?.locations?.length) return;
-  insertPoints(sessionId, data.locations.map(toGpsPoint));
+  // While the driver has Pause on, nothing is stored. Points stamped before the pause began
+  // (Android sometimes delivers them late, in a batch) are still kept.
+  const pausedSince = getManualPauseSince();
+  const locations =
+    pausedSince == null ? data.locations : data.locations.filter((l) => l.timestamp < pausedSince);
+  if (!locations.length) return;
+  insertPoints(sessionId, locations.map(toGpsPoint));
 });

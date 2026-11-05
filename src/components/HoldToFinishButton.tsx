@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { radius, space } from '@/theme/tokens';
@@ -31,7 +31,7 @@ function FlagGlyph({ color }: { color: string }) {
 
 export function HoldToFinishButton({ onFinish, locked, label = 'Hold to finish', style }: Props) {
   const { c, type } = useTheme();
-  const progress = useRef(new Animated.Value(0)).current;
+  const [progress] = useState(() => new Animated.Value(0));
   const busy = useRef(false);
 
   const reset = () => {

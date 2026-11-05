@@ -28,11 +28,19 @@ export function getDb(): SQLite.SQLiteDatabase {
     );
     CREATE INDEX IF NOT EXISTS idx_points_session_ts ON points (session_id, ts);
     CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS pause_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id INTEGER NOT NULL,
+      ts INTEGER NOT NULL,
+      type TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_pause_session ON pause_events (session_id, id);
   `);
   return db;
 }
 
 const ACTIVE_KEY = 'active_session';
+const PAUSE_KEY = 'manual_pause_since';
 
 export function getActiveSessionId(): number | null {
   const row = getDb().getFirstSync<{ v: string }>('SELECT v FROM kv WHERE k = ?', ACTIVE_KEY);
@@ -44,6 +52,7 @@ export function startSession(now: number): number {
   const res = d.runSync('INSERT INTO sessions (started_at) VALUES (?)', now);
   const id = Number(res.lastInsertRowId);
   d.runSync('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', ACTIVE_KEY, String(id));
+  d.runSync('DELETE FROM kv WHERE k = ?', PAUSE_KEY); // never inherit a stale pause
   return id;
 }
 
@@ -53,6 +62,43 @@ export function endActiveSession(now: number): void {
   const d = getDb();
   d.runSync('UPDATE sessions SET ended_at = ? WHERE id = ?', now, id);
   d.runSync('DELETE FROM kv WHERE k = ?', ACTIVE_KEY);
+  d.runSync('DELETE FROM kv WHERE k = ?', PAUSE_KEY);
+}
+
+/** When the driver pressed Pause (ms), or null while not manually paused. The location task reads this. */
+export function getManualPauseSince(): number | null {
+  const row = getDb().getFirstSync<{ v: string }>('SELECT v FROM kv WHERE k = ?', PAUSE_KEY);
+  return row ? Number(row.v) : null;
+}
+
+export function setManualPauseSince(ts: number | null): void {
+  const d = getDb();
+  if (ts == null) d.runSync('DELETE FROM kv WHERE k = ?', PAUSE_KEY);
+  else d.runSync('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', PAUSE_KEY, String(ts));
+}
+
+export interface PauseEventRow {
+  id: number;
+  ts: number;
+  type: 'pause' | 'resume';
+}
+
+export function insertPauseEvent(sessionId: number, ts: number, type: 'pause' | 'resume'): void {
+  getDb().runSync(
+    'INSERT INTO pause_events (session_id, ts, type) VALUES (?, ?, ?)',
+    sessionId,
+    ts,
+    type,
+  );
+}
+
+/** Pause events of a session with id greater than `afterId`, oldest first. Pass 0 for all. */
+export function getPauseEventsSince(sessionId: number, afterId: number): PauseEventRow[] {
+  return getDb().getAllSync<PauseEventRow>(
+    'SELECT id, ts, type FROM pause_events WHERE session_id = ? AND id > ? ORDER BY id',
+    sessionId,
+    afterId,
+  );
 }
 
 export function insertPoints(sessionId: number, points: GpsPoint[]): void {

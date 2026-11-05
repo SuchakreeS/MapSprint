@@ -46,7 +46,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node --experimental-strip-types --no-warnings --test tests/geo.test.mts tests/format.test.mts tests/permission.test.mts tests/gps-signal.test.mts tests/live-stats.test.mts tests/hud.test.mts tests/route-line.test.mts",
+    "test": "node --experimental-strip-types --no-warnings --test tests/geo.test.mts tests/format.test.mts tests/permission.test.mts tests/gps-signal.test.mts tests/live-stats.test.mts tests/hud.test.mts tests/route-line.test.mts tests/pause.test.mts",
     "typecheck": "tsc --noEmit"
   },
   "private": true

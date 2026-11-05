@@ -6,7 +6,14 @@ import * as Location from 'expo-location';
 
 import { APP_NAME } from '@/constants/app';
 
-import { endActiveSession, getActiveSessionId, startSession } from './db';
+import {
+  endActiveSession,
+  getActiveSessionId,
+  getManualPauseSince,
+  insertPauseEvent,
+  setManualPauseSince,
+  startSession,
+} from './db';
 import { LOCATION_TASK } from './location-task';
 
 export async function ensureForegroundPermission(): Promise<boolean> {
@@ -45,6 +52,26 @@ export async function startRecording(): Promise<number> {
     },
   });
   return id;
+}
+
+/**
+ * Manual pause: stops the clock and, until resumed, the location task stores no points.
+ * The foreground service keeps running. Does nothing if there is no drive or it is already paused.
+ */
+export function pauseRecording(): void {
+  const sessionId = getActiveSessionId();
+  if (sessionId == null || getManualPauseSince() != null) return;
+  const now = Date.now();
+  setManualPauseSince(now);
+  insertPauseEvent(sessionId, now, 'pause');
+}
+
+/** Ends a manual pause, or an auto-pause (the engine ignores it if the drive is running). */
+export function resumeRecording(): void {
+  const sessionId = getActiveSessionId();
+  if (sessionId == null) return;
+  setManualPauseSince(null);
+  insertPauseEvent(sessionId, Date.now(), 'resume');
 }
 
 export async function stopRecording(): Promise<void> {

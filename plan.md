@@ -80,9 +80,9 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
       (the mockup exists now: design/screens 03. Its copy is outdated: ask for "while using the app" only. See 1.13)
 - [x] 1.4 Pre-drive check screen (07): GPS signal, battery tip, car, sound toggle
       (code done 2026-11-05; car row is a placeholder until Phase 2; on-phone check pending)
-- [ ] 1.5 Driving HUD (08, v2 design): live speed (EMA), stats, Mapbox follow camera,
+- [x] 1.5 Driving HUD (08, v2 design) (code done 2026-11-05 in 3 parts 1.5a/b/c; on-phone test pending; Pause disabled until 1.6): live speed (EMA), stats, Mapbox follow camera,
       "Hold to finish" (800 ms), Pause, controls lock > 10 km/h, expo-keep-awake while open
-- [ ] 1.6 Auto-pause (stopped > 5 min) and manual pause in recorder
+- [x] 1.6 Auto-pause (stopped > 5 min) and manual pause in recorder (code done 2026-11-05; on-phone test pending)
 - [ ] 1.7 Local drive history list + local recap stats (no server yet)
 - [ ] 1.8 Samsung/OEM battery-optimisation guide screen
 - [ ] 1.9 Field test 10 drives, compare with trip meter; tune CLEANING constants

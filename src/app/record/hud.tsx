@@ -10,12 +10,14 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { HoldToFinishButton } from '@/components/HoldToFinishButton';
 import { HudStat } from '@/components/HudStat';
 import { PauseGlyph } from '@/components/PauseGlyph';
+import { PlayGlyph } from '@/components/PlayGlyph';
 import { SpeedGauge } from '@/components/SpeedGauge';
 import { MAP_STYLE } from '@/features/map/map-style';
 import { stopRecording } from '@/features/recording/recorder';
 import { useLiveDrive } from '@/features/recording/use-live-drive';
 import { formatDistanceKm, formatDuration, formatKmh1 } from '@/lib/format';
 import { controlsLocked } from '@/lib/hud';
+import { AUTO_PAUSE_MS } from '@/lib/live-stats';
 import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
@@ -32,7 +34,7 @@ function RecenterGlyph({ color }: { color: string }) {
 export default function HudScreen() {
   const { mode, c, type } = useTheme();
   const insets = useSafeAreaInsets();
-  const { ready, error, elapsedS, snapshot, speedKmh, route } = useLiveDrive();
+  const { ready, error, elapsedS, snapshot, speedKmh, paused, route, pause, resume } = useLiveDrive();
   const [following, setFollowing] = useState(true);
   const [sheetHeight, setSheetHeight] = useState(0);
   const [finishError, setFinishError] = useState<string | null>(null);
@@ -132,20 +134,25 @@ export default function HudScreen() {
               <HudStat label="Time" value={formatDuration(elapsedS)} />
             </View>
 
-            {locked && (
+            {(locked || paused) && (
               <Text style={[type.caption, styles.lockNote, { color: c.muted }]}>
-                Controls are locked while you are moving.
+                {locked
+                  ? 'Controls are locked while you are moving.'
+                  : paused?.kind === 'auto'
+                    ? `Paused: stopped for ${Math.round(AUTO_PAUSE_MS / 60_000)} min. Moving again resumes the drive.`
+                    : 'Paused. Nothing is recorded until you resume.'}
               </Text>
             )}
-            {/* Pause stays disabled until task 1.6 (auto-pause and manual pause in the recorder). */}
             <View style={styles.actions}>
               <Button
-                label="Pause"
+                label={paused ? 'Resume' : 'Pause'}
                 variant="secondary"
                 size="lg"
-                disabled
-                onPress={() => {}}
-                leading={(color) => <PauseGlyph color={color} />}
+                disabled={locked || !ready}
+                onPress={paused ? resume : pause}
+                leading={(color) =>
+                  paused ? <PlayGlyph color={color} /> : <PauseGlyph color={color} />
+                }
                 style={styles.pause}
               />
               <HoldToFinishButton locked={locked} onFinish={finish} style={styles.finish} />
