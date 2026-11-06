@@ -20,6 +20,8 @@ export interface Palette {
   danger: string;
   /** Dimmed backdrop behind dialogs. */
   scrim: string;
+  /** Dark, mostly opaque pill laid over the map (both themes) so `danger` text reads on any map colour. */
+  overlayPill: string;
 }
 
 export const palettes: Record<Mode, Palette> = {
@@ -39,6 +41,7 @@ export const palettes: Record<Mode, Palette> = {
     success: '#5BD48A',
     danger: '#FF6B5E',
     scrim: 'rgba(0,0,0,0.72)',
+    overlayPill: 'rgba(10,10,10,0.9)',
   },
   light: {
     bg: '#F5F3EE',
@@ -56,6 +59,7 @@ export const palettes: Record<Mode, Palette> = {
     success: '#1E7F45',
     danger: '#B3261E',
     scrim: 'rgba(14,14,14,0.55)',
+    overlayPill: 'rgba(10,10,10,0.9)',
   },
 };
 

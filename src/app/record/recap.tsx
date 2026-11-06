@@ -66,7 +66,7 @@ export default function RecapScreen() {
           <Text accessibilityRole="header" style={[type.headline, { color: c.text }]}>
             Drive complete
           </Text>
-          <Text style={[type.small, { color: c.muted }]}>{formatDateTimeRange(drive.startedAt, drive.endedAt)}</Text>
+          <Text style={[type.small, { color: c.muted }]}>{formatDateTimeRange(drive.startedAt, drive.endedAt, s.elapsedS)}</Text>
         </View>
 
         <View style={[styles.map, { backgroundColor: c.bg, borderColor: c.line }]}>

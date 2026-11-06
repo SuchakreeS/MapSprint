@@ -50,12 +50,32 @@ export function monthLabel(ts: number): string {
   return `${MONTHS[d.getMonth()].toUpperCase()} ${d.getFullYear()}`;
 }
 
-/** "Tue 3 Nov · 07:12 → 07:44 · 32 min" */
-export function formatDateTimeRange(startedAt: number, endedAt: number): string {
+/** Drives shorter than this are test taps, not drives: hidden from the history list. */
+export const MIN_LISTED_DRIVE_M = 100;
+
+export function isJunkDrive(distanceM: number): boolean {
+  return !(distanceM >= MIN_LISTED_DRIVE_M);
+}
+
+function activeClock(s: number): string {
+  const t = Math.max(0, Math.round(s));
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  const sec = t % 60;
+  return `${h > 0 ? `${h}:${String(m).padStart(2, '0')}` : m}:${String(sec).padStart(2, '0')}`;
+}
+
+/**
+ * "Tue 3 Nov · 07:12 → 07:44 · 32 min". Pass `activeS` (engine active time) to append
+ * "· 28:10 active" when stops (auto-pause) made it at least a minute shorter than the wall clock.
+ */
+export function formatDateTimeRange(startedAt: number, endedAt: number, activeS?: number): string {
   const month = MONTHS[new Date(startedAt).getMonth()].slice(0, 3);
   const span = endedAt - startedAt;
   const length = span < 60_000 ? '<1 min' : `${Math.round(span / 60_000)} min`;
-  return `${formatDriveDay(startedAt)} ${month} · ${hhmm(startedAt)} → ${hhmm(endedAt)} · ${length}`;
+  const showActive = activeS != null && span / 1000 - activeS >= 60;
+  const active = showActive ? ` · ${activeClock(activeS)} active` : '';
+  return `${formatDriveDay(startedAt)} ${month} · ${hhmm(startedAt)} → ${hhmm(endedAt)} · ${length}${active}`;
 }
 
 /** "1 drive" / "2 drives" */

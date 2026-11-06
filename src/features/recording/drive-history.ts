@@ -1,5 +1,6 @@
 // Reads finished drives back from SQLite for the history list and the recap.
 import { CLEANING, type DriveSummary } from '@/lib/geo';
+import { isJunkDrive } from '@/lib/drive-format';
 import { findGaps, type GpsGap } from '@/lib/gaps';
 import { summarize, type PauseEvent } from '@/lib/live-stats';
 import { simplifyToMax } from '@/lib/route-art';
@@ -57,7 +58,7 @@ export function loadDrives(limit = 100): DriveItem[] {
   for (const row of listSessions(limit)) {
     if (row.ended_at == null || row.id === active || row.points < 2) continue;
     const drive = loadDrive(row.id);
-    if (drive && drive.summary.acceptedPoints >= 2) drives.push(drive);
+    if (drive && drive.summary.acceptedPoints >= 2 && !isJunkDrive(drive.summary.distanceM)) drives.push(drive);
   }
   return drives;
 }

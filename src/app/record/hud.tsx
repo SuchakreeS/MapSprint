@@ -34,7 +34,7 @@ function RecenterGlyph({ color }: { color: string }) {
 }
 
 export default function HudScreen() {
-  const { mode, c, type } = useTheme();
+  const { mode, c, fonts, type } = useTheme();
   const insets = useSafeAreaInsets();
   const { ready, error, elapsedS, snapshot, speedKmh, paused, nowMs, route, pause, resume } = useLiveDrive();
   const [following, setFollowing] = useState(true);
@@ -79,6 +79,7 @@ export default function HudScreen() {
         <Camera
           followUserLocation={following}
           followZoomLevel={16}
+          followPadding={{ paddingBottom: sheetHeight, paddingTop: 0, paddingLeft: 0, paddingRight: 0 }}
           onUserTrackingModeChange={(e) => {
             if (!e.nativeEvent.payload.followUserLocation) setFollowing(false);
           }}
@@ -99,6 +100,17 @@ export default function HudScreen() {
         )}
         <LocationPuck puckBearingEnabled puckBearing="course" pulsing={{ isEnabled: true }} />
       </MapView>
+
+      {locked && (
+        <View
+          pointerEvents="none"
+          accessibilityRole="alert"
+          style={[styles.lockPill, { top: insets.top + space.sm, backgroundColor: c.overlayPill }]}>
+          <Text style={[type.caption, { fontFamily: fonts.bodyBold, color: c.danger }]}>
+            Controls locked while moving
+          </Text>
+        </View>
+      )}
 
       {sheetHeight > 0 && (
         <Pressable
@@ -141,13 +153,11 @@ export default function HudScreen() {
               <HudStat label="Time" value={formatDuration(elapsedS)} />
             </View>
 
-            {(locked || paused) && (
+            {paused && (
               <Text style={[type.caption, styles.lockNote, { color: c.muted }]}>
-                {locked
-                  ? 'Controls are locked while you are moving.'
-                  : paused?.kind === 'auto'
-                    ? `Paused: stopped for ${Math.round(AUTO_PAUSE_MS / 60_000)} min. Moving again resumes the drive.`
-                    : 'Paused. Nothing is recorded until you resume.'}
+                {paused.kind === 'auto'
+                  ? `Paused: stopped for ${Math.round(AUTO_PAUSE_MS / 60_000)} min. Moving again resumes the drive.`
+                  : 'Paused. Nothing is recorded until you resume.'}
               </Text>
             )}
             <View style={styles.actions}>
@@ -209,6 +219,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  lockPill: {
+    position: 'absolute',
+    alignSelf: 'center',
+    paddingHorizontal: space.lg,
+    paddingVertical: space.sm,
+    borderRadius: radius.lg,
   },
   glyph: { width: 22, height: 22, alignItems: 'center', justifyContent: 'center' },
   glyphRing: { position: 'absolute', width: 16, height: 16, borderRadius: 8, borderWidth: 2 },

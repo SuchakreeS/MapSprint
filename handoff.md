@@ -34,6 +34,7 @@ Phase 0 (Spikes) — **all three spikes done: Spike 1 (Mapbox) PASS, Spike 2 (GP
   - Revised rule used: **>= 95% point coverage, no repeated long gaps, service survives with screen off.** All four runs meet it. PS reviewed the verdict and asked to record it (2026-11-05).
   - Why it is considered OK: the service survived 88 min of screen-off recording; the long gaps happened in the pocket, walking, indoors, or under the BTS viaduct (GPS blocked), not as a repeating pattern; the one drive in clean conditions had a 2 s gap. During the ~hour at the office in #6 no phantom distance was added, so the stopped (< 3 km/h) and accuracy rules work.
   - Still to confirm: #5 distance 9.41 km vs the car trip meter / Google Maps (PS has not answered yet). A literal 30 min+ drive with max gap <= 5 s is still nice to have; every Phase 1 field-test drive will show it anyway.
+- 2026-11-05 evening, standalone preview APK, real drive Thu 5 Nov 17:55 -> 18:37 (42 min wall clock): recap GPS check card says **2,500 of 2,507 points used, longest gap 2 s, gaps over 3 s: 0**. This is a clean pass of the ORIGINAL Spike 2 rule (30 min+ AND max gap <= 5 s), so the "revised rule" above is no longer needed. Spike 2 = **PASS (literal)**.
 
 ## Dev notes
 - The dev build loads JS from Metro. Run `npx expo start --dev-client` (add `--tunnel` if the phone can't see the PC). "Unable to load script" = Metro not running.
@@ -186,7 +187,27 @@ Plan: `docs/superpowers/plans/2026-11-05-pause.md`. PS asked to keep building wh
 - Results: typecheck clean, eslint clean, npm test 109/109, no hex outside `src/theme`.
 - NOT checked on phone: pre-drive battery row opens the guide; your Samsung is detected ("YOUR PHONE: Samsung" open first); both buttons work (battery list opens; app settings opens); other makers expand/collapse; dark + light.
 
+## Session 5 (2026-11-06): PS on-phone test of the evening drive on 2026-11-05 (standalone APK)
+PS tested the HUD (1.5), recap and history (1.7) and the GPS check card (1.10) on a real drive: "everything works fine", with one UI problem (below). What the screens showed:
+- Drive Thu 5 Nov 17:55 -> 18:37: Distance 7.86 km, Moving time 21:25, Moving avg 22.0 km/h, Overall avg 12.9 km/h. HUD at 15 km/h showed Pause and Hold to finish dimmed with the lock message (lock works). History listed the drive with thumbnail, title, day, km and time.
+- First field-test data point (1.9): same commute route measured 7.91 km on Tue 3 Nov (spike run #4) and 7.86 km on Thu 5 Nov, 0.6% apart. Still no car trip meter comparison.
+- **Open UI problem (PS feedback) -> plan task 1.5d:** "Controls are locked while you are moving." is rendered inside the bottom sheet (`src/app/record/hud.tsx` around line 147). Above 10 km/h it makes the sheet taller, so the sheet covers the user's location dot. PS wants the message moved to the TOP of the screen with RED text. Proposed: a small pill overlaid on the map under the status bar (absolute, so the sheet keeps a fixed height), colour `c.danger` on a dark mostly opaque pill (both themes), short static text, only while speed > 10 km/h. Also give the Mapbox camera bottom padding equal to the sheet height so the follow puck stays in the visible map even without the message.
+- Not a bug, but confusing: the recap header says "17:55 -> 18:37 · 42 min" (wall clock, `formatDateTimeRange`) while the stats and the history row use 36:40 (active time). Overall avg 12.9 km/h = 7.86 km / 36:40. The 5:20 difference is almost certainly auto-pause (a stop of 5+ min, no points counted). Consider showing both ("42 min · 36:40 active") or labelling the history time as active time. PS has not decided.
+- Minor: history also lists tiny junk sessions from spike tests ("0.0 km", "0:00"). Consider hiding drives under about 100 m, or adding delete.
+
+## Session 5b (2026-11-06): task 1.5d HUD lock pill, code done (uncommitted)
+- `hud.tsx`: "Controls locked while moving" is now an absolute pill at the top (`insets.top + 8`, `pointerEvents="none"`, `accessibilityRole="alert"`), text `c.danger`, background new token `overlayPill` (`rgba(10,10,10,0.9)`, same in both themes). Shown only while `controlsLocked(speedKmh)`. The sheet no longer contains the lock text, so it does not change height when locking. Pause / Hold to finish still dim and ignore touches while locked (unchanged).
+- Camera `followPadding.paddingBottom = sheetHeight`, so the follow puck sits in the map area above the sheet.
+- The PAUSED caption still lives in the sheet, so the sheet is slightly taller while paused (not while locked). Pause needs a stop, so this does not overlap with the locked state.
+- Heads-up: light-theme `danger` (#B3261E) on the dark pill is only ~3:1 contrast. Readable at bold 13 px, but check on the phone in light mode; if weak, give the pill a light-mode variant or brighten danger for overlays.
+- No src/lib logic changed, so no new tests. typecheck clean (after deleting the stale `.expo/types/router.d.ts`), eslint clean, npm test 109/109.
+- NOT checked on phone: pill appears above 10 km/h and disappears when slower, in dark and light; sheet does not jump; puck stays above the sheet; recenter still works.
+- Re-verified in a later session: typecheck clean, eslint clean, npm test 109/109. No code changed in the re-check.
+- PS chose a1 + b1 (done, uncommitted, test-first, 112 tests): recap header `formatDateTimeRange(start, end, activeS)` appends "· 36:40 active" only when active time is >= 1 min shorter than the wall clock; history hides drives under 100 m (`isJunkDrive`, `MIN_LISTED_DRIVE_M` in `drive-format.ts`, filtered in `loadDrives`; data stays in SQLite). Delete UI left for after the field tests.
+- NOT checked on phone: recap header on the 5 Nov drive shows "42 min · 36:40 active"; junk rows gone from history.
+
 ## Next step
+0) PS commits manually (suggested message: "feat(record): HUD lock pill, active time in recap header, hide junk drives"). Open choice before the next APK: icons (needs react-native-svg + one native rebuild) vs Phase 2 prep (2.1 Supabase; RLS/auth go to an Opus session).
 1) PS commits 1.8, builds the preview APK and tests 1.5, 1.6, 1.7, 1.8, 1.10, 1.11 on a real walk/drive. 2) Then **1.9 the 10-drive field test** (the Phase 1 gate: distance within 2% of the car trip meter; tune `CLEANING`; the recap GPS check card is the tool) and 1.12 (remove the spike screens). Suggest doing 1.12 AFTER the first real drive passes, because the GPS spike screen is still the fallback to see/stop sessions.
 Things learned in the spikes that Phase 1 must include (also added to plan.md as 1.10 and 1.11):
 - Gap log: record every gap > 3 s (time + position) so tunnels/viaducts can be told apart from throttling.

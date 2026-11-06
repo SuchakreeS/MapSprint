@@ -86,6 +86,7 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
 - [x] 1.7 Local drive history list + local recap stats (no server yet) (code done 2026-11-05; on-phone test pending; XP/level/cells/smooth/badges left for Phase 3)
 - [x] 1.8 Samsung/OEM battery-optimisation guide screen (code done 2026-11-05; on-phone test pending, steps based on dontkillmyapp.com)
 - [ ] 1.9 Field test 10 drives, compare with trip meter; tune CLEANING constants
+      (first data point 2026-11-05: 7.86 km vs 7.91 km on the same route 2 days earlier; 42 min drive, longest gap 2 s; still needs trip-meter comparisons)
 - [x] 1.10 Gap log: store every gap > 3 s (time + position) per drive; show max gap in debug stats
       (code done 2026-11-05; derived from stored points, shown in the recap "GPS check" card; on-phone test pending)
 - [x] 1.11 "Finish this drive?" prompt after being stopped for a while (forgot-to-stop case, spike run #6)
@@ -94,6 +95,9 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
 - [ ] 1.12 Remove the spike screens (map / gps / h3) once real screens replace them
 - [x] 1.13 Design alignment pass (code done 2026-11-05, on-phone check pending; icons still undecided): 1.1-1.4 were built before `design/` existed. Compare the UI kit, tab bar,
       location (03) and pre-drive (07) screens with `design/screens/` + `design/source/` (sizes, radii, spacing, icons) and fix differences
+- [x] 1.5d (code done 2026-11-06, on-phone check pending) HUD lock message: move "Controls are locked while you are moving." out of the bottom sheet to a pill at the TOP of the map,
+      text in `c.danger` (red) on a dark pill, bottom sheet keeps a fixed height, Mapbox camera bottom padding = sheet height so the dot
+      is never covered (PS feedback 2026-11-05, see handoff.md Session 5). Optional: show wall-clock vs active time on the recap header
 
 ## Phase 2 — Backend (≈30 h) — gate: closed test starts (12+ testers, 14 days)
 - [ ] 2.1 Supabase project (Singapore, free plan) + migrations for tables in plan doc

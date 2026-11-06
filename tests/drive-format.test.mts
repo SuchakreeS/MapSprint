@@ -8,6 +8,7 @@ import {
   formatDriveCount,
   formatDriveDay,
   groupByMonth,
+  isJunkDrive,
   monthLabel,
 } from '../src/lib/drive-format.ts';
 
@@ -59,6 +60,27 @@ test('range handles a drive shorter than a minute and one that crosses midnight'
     formatDateTimeRange(at(2026, 11, 3, 23, 50), at(2026, 11, 4, 0, 20)),
     'Tue 3 Nov · 23:50 → 00:20 · 30 min',
   );
+});
+
+test('range adds active time when auto-pause made it clearly shorter', () => {
+  assert.equal(
+    formatDateTimeRange(at(2026, 11, 5, 17, 55), at(2026, 11, 5, 18, 37), 36 * 60 + 40),
+    'Thu 5 Nov · 17:55 → 18:37 · 42 min · 36:40 active',
+  );
+});
+
+test('range leaves active time out when it matches the wall clock (within a minute)', () => {
+  assert.equal(
+    formatDateTimeRange(at(2026, 11, 3, 7, 12), at(2026, 11, 3, 7, 44), 32 * 60 - 20),
+    'Tue 3 Nov · 07:12 → 07:44 · 32 min',
+  );
+});
+
+test('drives under 100 m are junk, 100 m and more are kept', () => {
+  assert.equal(isJunkDrive(0), true);
+  assert.equal(isJunkDrive(99.9), true);
+  assert.equal(isJunkDrive(100), false);
+  assert.equal(isJunkDrive(7860), false);
 });
 
 test('drive count is singular for one', () => {
