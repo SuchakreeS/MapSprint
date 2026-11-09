@@ -100,9 +100,12 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
       is never covered (PS feedback 2026-11-05, see handoff.md Session 5). Optional: show wall-clock vs active time on the recap header
 
 ## Phase 2 — Backend (≈30 h) — gate: closed test starts (12+ testers, 14 days)
-- [ ] 2.1 Supabase project (Singapore, free plan) + migrations for tables in plan doc
+- [x] 2.1 Supabase project (Singapore, free plan) + migrations for tables in plan doc
       (profiles, vehicles, drives, explored_cells, xp_events, badges, user_badges,
       follows, kudos, comments, privacy_zones) with RLS
+      (done 2026-11-09: project Mapsprint gwcutbwcmxcwpgndaphi, 12 tables incl. drive_private, 37 pgTAP tests pass
+      local + cloud, supabase-js client in src/features/sync, Security + Performance advisors clean;
+      EAS env vars (expo.dev) still to add)
 - [ ] 2.2 Auth: Google + email/password; onboarding screens 01–06
 - [ ] 2.3 Upload: gzipped raw track to Storage, drive row; offline queue + retry (Saving screen 09)
 - [ ] 2.4 Edge Function `finalize-drive`: clean, recompute stats, simplify route
