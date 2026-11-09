@@ -6,6 +6,7 @@ import * as TaskManager from 'expo-task-manager';
 import type { GpsPoint } from '@/lib/geo';
 
 import { getActiveSessionId, getManualPauseSince, insertPoints } from './db';
+import { maybeNotifyStillRecording } from './finish-reminder';
 
 export const LOCATION_TASK = 'mapsprint-location';
 
@@ -34,4 +35,6 @@ TaskManager.defineTask<{ locations: LocationObject[] }>(LOCATION_TASK, async ({ 
     pausedSince == null ? data.locations : data.locations.filter((l) => l.timestamp < pausedSince);
   if (!locations.length) return;
   insertPoints(sessionId, locations.map(toGpsPoint));
+  // Screen off and stopped for a long time? Post the "Finish this drive?" notification (throttled inside).
+  await maybeNotifyStillRecording(sessionId);
 });

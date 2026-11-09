@@ -25,3 +25,17 @@ export function shouldPromptFinish(
   if (stoppedForMs(pause, nowMs) < limit) return false;
   return dismissedAtMs == null || nowMs - dismissedAtMs >= PROMPT_SNOOZE_MS;
 }
+
+/**
+ * For the locked-phone reminder: there are no live stats in the background task, so work out "stopped since" from
+ * stored data. A manual pause keeps its own start; otherwise the stop began at the last point that was moving
+ * (or at the start of the drive if it never moved).
+ */
+export function reminderPauseState(input: {
+  manualSince: number | null;
+  lastMovingTs: number | null;
+  sessionStartMs: number;
+}): PauseState {
+  if (input.manualSince != null) return { kind: 'manual', since: input.manualSince };
+  return { kind: 'auto', since: input.lastMovingTs ?? input.sessionStartMs };
+}

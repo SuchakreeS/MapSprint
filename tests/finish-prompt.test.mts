@@ -47,3 +47,34 @@ test('stoppedForMs is the time since the pause began, never negative', () => {
   assert.equal(stoppedForMs({ kind: 'auto', since: NOW + 5000 }, NOW), 0);
   assert.equal(stoppedForMs(null, NOW), 0);
 });
+
+// ---------- locked-phone reminder: working out "stopped since" from stored points (no live stats there) ----------
+import { reminderPauseState } from '../src/lib/finish-prompt.ts';
+
+test('reminderPauseState: a manual pause wins and keeps its own start', () => {
+  const s = reminderPauseState({ manualSince: NOW - 40 * MIN, lastMovingTs: NOW - 5 * MIN, sessionStartMs: NOW - 90 * MIN });
+  assert.deepEqual(s, { kind: 'manual', since: NOW - 40 * MIN });
+});
+
+test('reminderPauseState: otherwise stopped since the last moving point', () => {
+  const s = reminderPauseState({ manualSince: null, lastMovingTs: NOW - 20 * MIN, sessionStartMs: NOW - 90 * MIN });
+  assert.deepEqual(s, { kind: 'auto', since: NOW - 20 * MIN });
+});
+
+test('reminderPauseState: never moved means stopped since the drive started', () => {
+  const s = reminderPauseState({ manualSince: null, lastMovingTs: null, sessionStartMs: NOW - 50 * MIN });
+  assert.deepEqual(s, { kind: 'auto', since: NOW - 50 * MIN });
+});
+
+test('reminder timing end to end: 14 min stopped no, 15 min yes, then snoozed', () => {
+  const at = (stoppedMin: number, notifiedAt: number | null) =>
+    shouldPromptFinish(
+      reminderPauseState({ manualSince: null, lastMovingTs: NOW - stoppedMin * MIN, sessionStartMs: NOW - 120 * MIN }),
+      NOW,
+      notifiedAt,
+    );
+  assert.equal(at(14, null), false);
+  assert.equal(at(15, null), true);
+  assert.equal(at(40, NOW - 5 * MIN), false); // already reminded 5 min ago
+  assert.equal(at(40, NOW - 15 * MIN), true); // 15 min later, remind again
+});

@@ -40,7 +40,6 @@ Cartrava/                      repo root (Expo project root)
 ├── src/
 │   ├── app/                   ROUTES ONLY (Expo Router)
 │   │   ├── _layout.tsx        root stack, Mapbox token
-│   │   ├── index.tsx, map.tsx, gps.tsx, h3.tsx   Phase 0 spikes (remove in Phase 1)
 │   │   ├── (onboarding)/      Phase 2: welcome, sign-in, location, profile, car, zones
 │   │   ├── (tabs)/            Phase 1+: feed, map, ranks, profile (+ record button)
 │   │   └── record/            Phase 1: pre-drive, hud, saving, recap, share
@@ -92,7 +91,7 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
 - [x] 1.11 "Finish this drive?" prompt after being stopped for a while (forgot-to-stop case, spike run #6)
       (IN-APP ONLY, code done 2026-11-05: dialog on the HUD + "Drive in progress" pill on the tabs; PS decided the
       local NOTIFICATION version comes later with expo-notifications, see 4.3; on-phone test pending)
-- [ ] 1.12 Remove the spike screens (map / gps / h3) once real screens replace them
+- [x] 1.12 Remove the spike screens (map / gps / h3) once real screens replace them (done 2026-11-09: also the /dev hub, /kit preview and the Profile link; h3-js stays for Phase 3)
 - [x] 1.13 Design alignment pass (code done 2026-11-05, on-phone check pending; icons still undecided): 1.1-1.4 were built before `design/` existed. Compare the UI kit, tab bar,
       location (03) and pre-drive (07) screens with `design/screens/` + `design/source/` (sizes, radii, spacing, icons) and fix differences
 - [x] 1.5d (code done 2026-11-06, on-phone check pending) HUD lock message: move "Controls are locked while you are moving." out of the bottom sheet to a pill at the TOP of the map,
@@ -147,11 +146,13 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
       GATE (PS 2026-11-09): privacy zones screen (design 06: map centred on the current location + draggable pin,
       200/300/500 m) must ship BEFORE the Feed, so nobody's home/work shows on a shared route
 - [ ] 4.3 Notifications (15) + push (expo-notifications)
+      [local notification part: code done 2026-11-09 (Session 12), needs the new build + phone test F11]
       + LOCAL notification for the forgot-to-stop case ("Finish this drive?" when the phone is locked; the in-app
       version from 1.11 is done). Needs the new native library, so it triggers a rebuild. PS asked to note this (2026-11-05).
 - [ ] 4.4 Find friends (16), Other profile (24)
 - [ ] 4.5 Leaderboards (19): Distance/Explorer/Smooth × Friends/Province, pg_cron weekly reset
 - [ ] 4.6 Profile (20), History (21), Badges (22), Garage (23), Settings (26–29)
+      (partly done 2026-11-09: Garage (23), Edit profile, Settings hub + Recording + Privacy toggles + Account screen; still open: Notifications/Help/Terms rows, default visibility, blocked people, download/delete data, Profile 20 redesign, Badges 22)
 
 ## Phase 5 — Launch (≈20 h)
 - [ ] 5.1 Final name + trademark + domain; app icon (icon artwork wired in 2026-11-06, needs a native build to see; name/trademark/domain still open)

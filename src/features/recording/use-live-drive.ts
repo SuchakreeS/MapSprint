@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { getAutoPauseMs } from '@/features/settings/prefs';
 import type { DriveSummary } from '@/lib/geo';
 import { currentSpeedKmh } from '@/lib/hud';
 import { applyEvent, createLiveStats, type PauseState } from '@/lib/live-stats';
@@ -61,7 +62,7 @@ export function useLiveDrive(): LiveDrive {
       .then((sessionId) => {
         if (!alive) return;
         const startedAt = getSessionStartedAt(sessionId) ?? Date.now();
-        const stats = createLiveStats();
+        const stats = createLiveStats({ autoPauseMs: getAutoPauseMs() });
         const coords: RouteCoord[] = [];
         let lastTs = 0;
         let lastEventId = 0;

@@ -22,6 +22,7 @@
     "expo-keep-awake": "~58.0.3",
     "expo-linking": "~58.0.16",
     "expo-location": "~58.0.20",
+    "expo-notifications": "~58.1.8",
     "expo-router": "~58.0.30",
     "expo-splash-screen": "~58.0.13",
     "expo-sqlite": "~58.0.15",
@@ -53,7 +54,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node --experimental-strip-types --no-warnings --test tests/geo.test.mts tests/format.test.mts tests/permission.test.mts tests/gps-signal.test.mts tests/live-stats.test.mts tests/hud.test.mts tests/route-line.test.mts tests/pause.test.mts tests/route-art.test.mts tests/drive-format.test.mts tests/gaps.test.mts tests/finish-prompt.test.mts tests/oem-guide.test.mts tests/auth-rules.test.mts tests/vehicles.test.mts tests/garage-profile.test.mts",
+    "test": "node --experimental-strip-types --no-warnings --test tests/geo.test.mts tests/format.test.mts tests/permission.test.mts tests/gps-signal.test.mts tests/live-stats.test.mts tests/hud.test.mts tests/route-line.test.mts tests/pause.test.mts tests/route-art.test.mts tests/drive-format.test.mts tests/gaps.test.mts tests/finish-prompt.test.mts tests/oem-guide.test.mts tests/auth-rules.test.mts tests/vehicles.test.mts tests/garage-profile.test.mts tests/recording-settings.test.mts",
     "typecheck": "tsc --noEmit"
   },
   "private": true

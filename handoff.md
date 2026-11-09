@@ -326,6 +326,30 @@ PS asked for car selection before recording (design 07 row was a placeholder). P
 - For 2.3: a deleted car leaves its id on local drives (`sessions.vehicle_id`); upload must send null if the car no longer exists
   (the drives INSERT policy rejects a vehicle_id that is not yours).
 
+## Session 11 (2026-11-09): task 1.12 spike screens removed (uncommitted)
+- Deleted `src/app/{dev,map,gps,h3,kit}.tsx`, their Stack.Screen lines in `_layout.tsx` and the "Dev: spikes" link on the Profile tab.
+  `h3-js` stays (Phase 3.3). Unused leftovers, harmless, left in place: `components/Stat.tsx`, `components/GpsCheckCard.tsx`, `listSessions` in db.ts.
+- Checks: typecheck, eslint clean, 134/134 tests. testlist.md "Kit preview" section replaced by a short look-and-feel list.
+
+## Session 12 (2026-11-09, Sonnet): locked-phone "Finish this drive?" notification + Settings screens, code done (uncommitted)
+Plan file: ~/.claude/plans/bro-in-the-mean-federated-penguin.md. **Needs a NEW EAS build** (adds the native `expo-notifications`).
+- Notification: `src/features/recording/finish-reminder.ts` is called (throttled to 1/min) at the end of the location task. Screen off/app
+  not in front + stopped 15 min (30 min if manually paused) + not snoozed (15 min) + setting on -> one LOCAL notification on channel
+  "Drive reminders" (id `finish-reminder`). Tap -> root layout opens `/record/hud` (HUD shows its own finish dialog); cleared on stop.
+  Pure rule `reminderPauseState` in `src/lib/finish-prompt.ts` (tests). db.ts: `getLastMovingTs`, `get/setFinishNotifiedAt`.
+  `app.json`: expo-notifications plugin, small icon = android-icon-monochrome.png (may look small/odd: check), colour #FFC20E.
+  UNVERIFIED: posting a notification from inside the background location task on the real phone (docs do not say it is safe);
+  if nothing appears, check `adb logcat` / the "[finish-reminder]" warning first. SDK 58 API details were read from node_modules typings.
+- Settings (`src/app/settings/{index,recording,privacy,account}.tsx`, `src/components/SettingsRow.tsx`, Profile tab "Settings" button):
+  - Hub: Account and data / Privacy (signed-in only), Recording, Appearance Dark/Light/System (`Appearance.setColorScheme('auto'` for System in RN 0.88; applied at startup in `_layout.tsx`).
+  - Recording: Auto-pause on/off + 2/5/10 min (now really used by live stats, HUD text and `summarize(points, events, autoPauseMs)` so the recap matches),
+    Sound cues (same pref as Pre-drive; sounds come in 3.7), Keep screen on (HUD), extra "Remind me to finish" toggle. Voice lines hidden until 3.7.
+    Side effect (shown in the screen): changing auto-pause changes the moving time of drives already on the phone (recomputed on read).
+  - Privacy: Private account + Share max speed toggles on `profiles` (existing grants + RLS tests, optimistic, revert on error); other rows "Coming soon".
+  - Account: email, Google "Connected", Sign out; Download / Delete are disabled "Coming soon" (Edge Functions, Opus, 2.6 gate: Play requires deletion).
+- Prefs: `src/features/settings/prefs.ts` (+ `src/lib/recording-settings.ts`, tested). Checks: typecheck, eslint clean, 143/143 tests. NOT on a phone yet (testlist F11, F12).
+- Not done: Notifications settings row, Help/Terms/Privacy Policy links (need URLs, plan 5.2), Default drive visibility (needs DB column), Blocked people, Voice lines.
+
 ## Claude chat notes (2026-11-09): 4 more recorded drives (GPS only) + planning talk (nothing coded)
 Recap screenshots from PS (standalone APK, screen locked, foreground service). NO car trip meter reading was taken, so these do NOT count toward the 10-drive distance gate (1.9) until a reference exists (Google Maps route distance is a loose +-3% check; trip meter reset at Start is better; odometers often over-read 1-3%, so also compare with Maps).
 | Drive | Wall | Distance | Moving | Moving avg | Points used | Longest gap | Gaps > 3 s |

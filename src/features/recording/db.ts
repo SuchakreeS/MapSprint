@@ -47,6 +47,7 @@ export function getDb(): SQLite.SQLiteDatabase {
 const ACTIVE_KEY = 'active_session';
 const PAUSE_KEY = 'manual_pause_since';
 const OWNER_KEY = 'current_owner';
+const FINISH_NOTIFIED_KEY = 'finish_notified_at';
 
 /** The signed-in account's user id, or null for a guest / nobody. Set by the auth layer. */
 export function getCurrentOwner(): string | null {
@@ -82,6 +83,7 @@ export function startSession(now: number, vehicleId: string | null = null): numb
   const id = Number(res.lastInsertRowId);
   d.runSync('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', ACTIVE_KEY, String(id));
   d.runSync('DELETE FROM kv WHERE k = ?', PAUSE_KEY); // never inherit a stale pause
+  d.runSync('DELETE FROM kv WHERE k = ?', FINISH_NOTIFIED_KEY);
   return id;
 }
 
@@ -92,6 +94,7 @@ export function endActiveSession(now: number): void {
   d.runSync('UPDATE sessions SET ended_at = ? WHERE id = ?', now, id);
   d.runSync('DELETE FROM kv WHERE k = ?', ACTIVE_KEY);
   d.runSync('DELETE FROM kv WHERE k = ?', PAUSE_KEY);
+  d.runSync('DELETE FROM kv WHERE k = ?', FINISH_NOTIFIED_KEY);
 }
 
 /** When the driver pressed Pause (ms), or null while not manually paused. The location task reads this. */
@@ -203,4 +206,24 @@ export function listSessions(limit = 20): SessionRow[] {
      GROUP BY s.id ORDER BY s.id DESC LIMIT ?`,
     limit,
   );
+}
+
+/** Timestamp (ms) of the last point that was moving (speed at or above the stopped limit), or null if none yet. */
+export function getLastMovingTs(sessionId: number, minSpeedMs: number): number | null {
+  const row = getDb().getFirstSync<{ t: number | null }>(
+    'SELECT MAX(ts) AS t FROM points WHERE session_id = ? AND speed >= ?',
+    sessionId,
+    minSpeedMs,
+  );
+  return row?.t ?? null;
+}
+
+/** When the "Finish this drive?" notification was last posted for the active drive (snooze), or null. */
+export function getFinishNotifiedAt(): number | null {
+  const row = getDb().getFirstSync<{ v: string }>('SELECT v FROM kv WHERE k = ?', FINISH_NOTIFIED_KEY);
+  return row ? Number(row.v) : null;
+}
+
+export function setFinishNotifiedAt(ts: number): void {
+  getDb().runSync('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', FINISH_NOTIFIED_KEY, String(ts));
 }

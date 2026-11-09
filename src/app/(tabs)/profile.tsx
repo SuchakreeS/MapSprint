@@ -1,4 +1,4 @@
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -61,16 +61,12 @@ export default function ProfileTab() {
         {!guest && <Button label="Edit profile" variant="secondary" onPress={() => router.push('/edit-profile')} />}
         <Button label="Drive history" variant="secondary" onPress={() => router.push('/history')} />
         {!guest && <Button label="Garage" variant="secondary" onPress={() => router.push('/garage')} />}
+        <Button label="Settings" variant="secondary" onPress={() => router.push('/settings')} />
 
         {!guest && (
           <Button label={busy ? 'Signing out…' : 'Sign out'} variant="ghost" onPress={() => run(signOut)} disabled={busy} />
         )}
         {error ? <Text style={[type.caption, { color: c.danger }]}>{error}</Text> : null}
-
-        {/* Temporary: reach the Phase 0 spike screens and kit preview. Removed with 1.12. */}
-        <Link href="/dev" style={[type.body, { color: c.primaryText }]}>
-          Dev: spikes and UI kit preview
-        </Link>
       </ScrollView>
     </SafeAreaView>
   );

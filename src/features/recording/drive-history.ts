@@ -1,4 +1,5 @@
 // Reads finished drives back from SQLite for the history list and the recap.
+import { getAutoPauseMs } from '@/features/settings/prefs';
 import { visibleTo } from '@/lib/drive-owner';
 import { CLEANING, type DriveSummary } from '@/lib/geo';
 import { isJunkDrive } from '@/lib/drive-format';
@@ -51,7 +52,7 @@ export function loadDrive(id: number): DriveItem | null {
     startedAt: session.started_at,
     endedAt: session.ended_at,
     vehicleId: session.vehicle_id,
-    summary: summarize(points, events),
+    summary: summarize(points, events, getAutoPauseMs()),
     gaps: findGaps(points, events),
     route: simplifyToMax(coords, MAX_ROUTE_POINTS),
   };

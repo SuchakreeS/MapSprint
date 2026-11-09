@@ -17,6 +17,7 @@ import {
   setManualPauseSince,
   startSession,
 } from './db';
+import { clearFinishReminder } from './finish-reminder';
 import { LOCATION_TASK } from './location-task';
 
 export async function ensureForegroundPermission(): Promise<boolean> {
@@ -101,4 +102,5 @@ export async function stopRecording(): Promise<void> {
     await Location.stopLocationUpdatesAsync(LOCATION_TASK);
   }
   endActiveSession(Date.now());
+  void clearFinishReminder();
 }

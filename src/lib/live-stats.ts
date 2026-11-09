@@ -188,8 +188,12 @@ export function createLiveStats(options: { autoPauseMs?: number } = {}): LiveSta
  * Cleans raw points (any order) and computes drive stats. Manual pause/resume events are
  * merged in by time (an event goes before a point with the same timestamp).
  */
-export function summarize(input: GpsPoint[], pauses: PauseEvent[] = []): DriveSummary {
-  const stats = createLiveStats();
+export function summarize(
+  input: GpsPoint[],
+  pauses: PauseEvent[] = [],
+  autoPauseMs: number = AUTO_PAUSE_MS,
+): DriveSummary {
+  const stats = createLiveStats({ autoPauseMs });
   const points = [...input].sort((a, b) => a.ts - b.ts);
   const events = [...pauses].sort((a, b) => a.ts - b.ts);
   let e = 0;

@@ -143,3 +143,10 @@ test('the gap left by a manual pause is not reported as a GPS gap', () => {
   feed(stats, pts.slice(90));
   assert.equal(stats.snapshot().rawMaxGapS, 1);
 });
+
+test('summarize takes the same auto-pause setting as the live engine (recap matches the HUD)', () => {
+  const pts = trip([[40, 60], [0, 200], [40, 60]]); // a 200 s stop
+  assert.equal(summarize(pts).elapsedS, 320); // default 5 min: not paused
+  assert.equal(summarize(pts, [], 120_000).elapsedS, 119); // 2 min setting: the stop is paused away (same 119 as the 5 min case above)
+  assert.equal(summarize(pts, [], Infinity).elapsedS, 320); // auto-pause off
+});

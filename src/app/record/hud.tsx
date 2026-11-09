@@ -1,5 +1,5 @@
 import { Camera, LineLayer, LocationPuck, MapView, ShapeSource } from '@rnmapbox/maps';
-import { useKeepAwake } from 'expo-keep-awake';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -16,10 +16,10 @@ import { MAP_STYLE } from '@/features/map/map-style';
 import { getActiveSessionId } from '@/features/recording/db';
 import { stopRecording } from '@/features/recording/recorder';
 import { useLiveDrive } from '@/features/recording/use-live-drive';
+import { getAutoPauseMs, getKeepAwakeOn } from '@/features/settings/prefs';
 import { formatDistanceKm, formatDuration, formatKmh1 } from '@/lib/format';
 import { shouldPromptFinish, stoppedForMs } from '@/lib/finish-prompt';
 import { controlsLocked } from '@/lib/hud';
-import { AUTO_PAUSE_MS } from '@/lib/live-stats';
 import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
@@ -49,7 +49,11 @@ export default function HudScreen() {
 
   // Screen stays on while the HUD is open, and the Android back button does nothing:
   // the only way out is Hold to finish.
-  useKeepAwake();
+  useEffect(() => {
+    if (!getKeepAwakeOn()) return; // Settings > Recording > Keep screen on
+    void activateKeepAwakeAsync('hud');
+    return () => void deactivateKeepAwake('hud');
+  }, []);
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
     return () => sub.remove();
@@ -156,7 +160,7 @@ export default function HudScreen() {
             {paused && (
               <Text style={[type.caption, styles.lockNote, { color: c.muted }]}>
                 {paused.kind === 'auto'
-                  ? `Paused: stopped for ${Math.round(AUTO_PAUSE_MS / 60_000)} min. Moving again resumes the drive.`
+                  ? `Paused: stopped for ${Math.round(getAutoPauseMs() / 60_000)} min. Moving again resumes the drive.`
                   : 'Paused. Nothing is recorded until you resume.'}
               </Text>
             )}
