@@ -261,14 +261,14 @@ isOneToOne: false
                   ]
                 },"vehicles": {
                   Row: {
-                    "created_at": string,"id": string,"make": string | null,"model": string | null,"nickname": string,"user_id": string
+                    "colour": string,"created_at": string,"id": string,"make": string | null,"model": string | null,"nickname": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id"?: string,"make"?: string | null,"model"?: string | null,"nickname": string,"user_id"?: string
+                    "colour"?: string,"created_at"?: string,"id"?: string,"make"?: string | null,"model"?: string | null,"nickname": string,"user_id"?: string
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"make"?: string | null,"model"?: string | null,"nickname"?: string,"user_id"?: string
+                    "colour"?: string,"created_at"?: string,"id"?: string,"make"?: string | null,"model"?: string | null,"nickname"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {

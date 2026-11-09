@@ -36,11 +36,33 @@ export function getDb(): SQLite.SQLiteDatabase {
     );
     CREATE INDEX IF NOT EXISTS idx_pause_session ON pause_events (session_id, id);
   `);
+  // 2.2: which account a drive belongs to (NULL = recorded as a guest). Added to existing installs once.
+  const cols = db.getAllSync<{ name: string }>('PRAGMA table_info(sessions)');
+  if (!cols.some((c) => c.name === 'owner_id')) db.execSync('ALTER TABLE sessions ADD COLUMN owner_id TEXT');
   return db;
 }
 
 const ACTIVE_KEY = 'active_session';
 const PAUSE_KEY = 'manual_pause_since';
+const OWNER_KEY = 'current_owner';
+
+/** The signed-in account's user id, or null for a guest / nobody. Set by the auth layer. */
+export function getCurrentOwner(): string | null {
+  const row = getDb().getFirstSync<{ v: string }>('SELECT v FROM kv WHERE k = ?', OWNER_KEY);
+  return row ? row.v : null;
+}
+
+export function setCurrentOwner(userId: string | null): void {
+  const d = getDb();
+  if (userId == null) d.runSync('DELETE FROM kv WHERE k = ?', OWNER_KEY);
+  else d.runSync('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', OWNER_KEY, userId);
+}
+
+/** Guest drives on this phone become the account's (PS rule: the next account to sign up or log in). */
+export function claimGuestSessions(userId: string): number {
+  const res = getDb().runSync('UPDATE sessions SET owner_id = ? WHERE owner_id IS NULL', userId);
+  return res.changes;
+}
 
 export function getActiveSessionId(): number | null {
   const row = getDb().getFirstSync<{ v: string }>('SELECT v FROM kv WHERE k = ?', ACTIVE_KEY);
@@ -49,7 +71,7 @@ export function getActiveSessionId(): number | null {
 
 export function startSession(now: number): number {
   const d = getDb();
-  const res = d.runSync('INSERT INTO sessions (started_at) VALUES (?)', now);
+  const res = d.runSync('INSERT INTO sessions (started_at, owner_id) VALUES (?, ?)', now, getCurrentOwner());
   const id = Number(res.lastInsertRowId);
   d.runSync('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', ACTIVE_KEY, String(id));
   d.runSync('DELETE FROM kv WHERE k = ?', PAUSE_KEY); // never inherit a stale pause
@@ -144,9 +166,16 @@ export function getSessionStartedAt(sessionId: number): number | null {
   return row ? row.started_at : null;
 }
 
-export function getSession(sessionId: number): { id: number; started_at: number; ended_at: number | null } | null {
-  return getDb().getFirstSync<{ id: number; started_at: number; ended_at: number | null }>(
-    'SELECT id, started_at, ended_at FROM sessions WHERE id = ?',
+export interface SessionInfo {
+  id: number;
+  started_at: number;
+  ended_at: number | null;
+  owner_id: string | null;
+}
+
+export function getSession(sessionId: number): SessionInfo | null {
+  return getDb().getFirstSync<SessionInfo>(
+    'SELECT id, started_at, ended_at, owner_id FROM sessions WHERE id = ?',
     sessionId,
   );
 }
@@ -155,12 +184,13 @@ export interface SessionRow {
   id: number;
   started_at: number;
   ended_at: number | null;
+  owner_id: string | null;
   points: number;
 }
 
 export function listSessions(limit = 20): SessionRow[] {
   return getDb().getAllSync<SessionRow>(
-    `SELECT s.id, s.started_at, s.ended_at, COUNT(p.id) AS points
+    `SELECT s.id, s.started_at, s.ended_at, s.owner_id, COUNT(p.id) AS points
      FROM sessions s LEFT JOIN points p ON p.session_id = s.id
      GROUP BY s.id ORDER BY s.id DESC LIMIT ?`,
     limit,

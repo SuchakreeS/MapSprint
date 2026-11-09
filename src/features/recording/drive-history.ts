@@ -1,4 +1,5 @@
 // Reads finished drives back from SQLite for the history list and the recap.
+import { visibleTo } from '@/lib/drive-owner';
 import { CLEANING, type DriveSummary } from '@/lib/geo';
 import { isJunkDrive } from '@/lib/drive-format';
 import { findGaps, type GpsGap } from '@/lib/gaps';
@@ -8,6 +9,7 @@ import { appendRoutePoint, type RouteCoord } from '@/lib/route-line';
 
 import {
   getActiveSessionId,
+  getCurrentOwner,
   getPauseEventsSince,
   getPoints,
   getSession,
@@ -28,10 +30,11 @@ export interface DriveItem {
   route: RouteCoord[];
 }
 
-/** A finished drive, or null if it does not exist or has not ended yet. */
+/** A finished drive, or null if it does not exist, has not ended yet, or belongs to another account. */
 export function loadDrive(id: number): DriveItem | null {
   const session = getSession(id);
   if (!session || session.ended_at == null) return null;
+  if (!visibleTo(session.owner_id, getCurrentOwner())) return null;
 
   const points = getPoints(id);
   const events: PauseEvent[] = getPauseEventsSince(id, 0).map(({ ts, type }) => ({ ts, type }));
@@ -54,9 +57,11 @@ export function loadDrive(id: number): DriveItem | null {
 /** Finished drives with a usable track, newest first. */
 export function loadDrives(limit = 100): DriveItem[] {
   const active = getActiveSessionId();
+  const owner = getCurrentOwner();
   const drives: DriveItem[] = [];
   for (const row of listSessions(limit)) {
     if (row.ended_at == null || row.id === active || row.points < 2) continue;
+    if (!visibleTo(row.owner_id, owner)) continue;
     const drive = loadDrive(row.id);
     if (drive && drive.summary.acceptedPoints >= 2 && !isJunkDrive(drive.summary.distanceM)) drives.push(drive);
   }

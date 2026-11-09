@@ -22,6 +22,8 @@ export interface Palette {
   scrim: string;
   /** Dark, mostly opaque pill laid over the map (both themes) so `danger` text reads on any map colour. */
   overlayPill: string;
+  /** Wide "explored road" band behind the route on the welcome art (design 01). */
+  explored: string;
 }
 
 export const palettes: Record<Mode, Palette> = {
@@ -42,6 +44,7 @@ export const palettes: Record<Mode, Palette> = {
     danger: '#FF6B5E',
     scrim: 'rgba(0,0,0,0.72)',
     overlayPill: 'rgba(10,10,10,0.9)',
+    explored: '#1A1A1A',
   },
   light: {
     bg: '#F5F3EE',
@@ -60,8 +63,26 @@ export const palettes: Record<Mode, Palette> = {
     danger: '#B3261E',
     scrim: 'rgba(14,14,14,0.55)',
     overlayPill: 'rgba(10,10,10,0.9)',
+    explored: '#E6E2D9',
   },
 };
+
+/**
+ * Car colours (design 05, ScrAddCar). Keys are stored in public.vehicles.colour (DB check constraint),
+ * so keep this list and the migration in sync. Same in both themes: it is the car's paint.
+ */
+export const carColours = {
+  pearl_white: { label: 'Pearl white', hex: '#F2F0EB' },
+  onyx_black: { label: 'Onyx black', hex: '#151515' },
+  silver: { label: 'Silver', hex: '#B8B8B8' },
+  gunmetal: { label: 'Gunmetal', hex: '#4A4F55' },
+  sport_yellow: { label: 'Sport yellow', hex: '#FFC20E' },
+  racing_red: { label: 'Racing red', hex: '#C62828' },
+  deep_blue: { label: 'Deep blue', hex: '#1F3A93' },
+  forest_green: { label: 'Forest green', hex: '#1E4D2B' },
+} as const;
+
+export type CarColour = keyof typeof carColours;
 
 export const radius = { sm: 12, notice: 14, md: 16, button: 18, lg: 20, xl: 28 } as const;
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;

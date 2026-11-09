@@ -47,7 +47,20 @@
           "locationWhenInUsePermission": "Mapsprint uses your location to record your drives and fill in your map."
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.888394550731-kdqskcqrosfiqtlcftcvlopgn8m0om5t"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

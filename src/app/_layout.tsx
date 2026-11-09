@@ -2,8 +2,10 @@ import Mapbox from '@rnmapbox/maps';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
+import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
+import { OnboardingGuard } from '@/features/auth/onboarding-guard';
 import { useAppFonts } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
 
@@ -13,14 +15,26 @@ Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? null);
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <RootStack />
+    </AuthProvider>
+  );
+}
+
+function RootStack() {
   const { mode, c } = useTheme();
-  const { ready } = useAppFonts();
+  const { ready: fontsReady } = useAppFonts();
+  const { ready: authReady } = useAuth();
+  // Only the FIRST load gates the UI. Later auth changes (sign-in, sign-out) must not unmount the navigator.
+  const [started, setStarted] = useState(false);
+  if (fontsReady && authReady && !started) setStarted(true); // latch during render (React "derived state" pattern)
 
   useEffect(() => {
-    if (ready) SplashScreen.hideAsync();
-  }, [ready]);
+    if (started) SplashScreen.hideAsync();
+  }, [started]);
 
-  if (!ready) return null;
+  if (!started) return null;
 
   return (
     <>
@@ -43,6 +57,7 @@ export default function RootLayout() {
         <Stack.Screen name="h3" options={{ title: 'Spike 3 · H3 on Hermes' }} />
         <Stack.Screen name="kit" options={{ title: 'UI kit preview' }} />
       </Stack>
+      <OnboardingGuard />
     </>
   );
 }

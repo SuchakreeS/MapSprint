@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { APP_NAME } from '@/constants/app';
+import { useAuth } from '@/features/auth/auth-provider';
 import { useLocationPermission } from '@/features/permissions/use-location-permission';
 import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
@@ -23,8 +24,17 @@ export default function LocationScreen() {
   const { c, type, fonts } = useTheme();
   const { next, step, of } = useLocalSearchParams<{ next?: string; step?: string; of?: string }>();
   const { state, request, openSettings } = useLocationPermission();
+  const { markLocationDone } = useAuth();
 
-  const done = () => router.replace(next === 'record' ? '/record/pre-drive' : '/');
+  // During onboarding, '/' hands over to the onboarding guard, which opens the next step (or the app).
+  const done = () => {
+    markLocationDone();
+    router.replace(next === 'record' ? '/record/pre-drive' : '/');
+  };
+  const notNow = () => {
+    markLocationDone();
+    router.replace('/');
+  };
 
   const onContinue = async () => {
     if ((await request()) === 'granted') done();
@@ -33,9 +43,9 @@ export default function LocationScreen() {
   const blocked = state === 'blocked';
   const granted = state === 'granted';
 
-  // Progress bar only when the onboarding flow passes ?step=3&of=6 (Phase 2).
+  // Progress bar only when the onboarding flow passes ?step=3&of=5.
   const stepNo = Number(step);
-  const stepTotal = Number(of) || 6;
+  const stepTotal = Number(of) || 5;
   const showProgress = Number.isInteger(stepNo) && stepNo > 0;
 
   return (
@@ -110,7 +120,7 @@ export default function LocationScreen() {
           ) : (
             <Button label="Continue" onPress={onContinue} disabled={state === null} />
           )}
-          {!granted && <Button label="Not now" variant="ghost" onPress={() => router.replace('/')} />}
+          {!granted && <Button label="Not now" variant="ghost" onPress={notNow} />}
         </View>
       </ScrollView>
     </SafeAreaView>

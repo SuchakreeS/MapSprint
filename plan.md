@@ -106,12 +106,19 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
       (done 2026-11-09: project Mapsprint gwcutbwcmxcwpgndaphi, 12 tables incl. drive_private, 37 pgTAP tests pass
       local + cloud, supabase-js client in src/features/sync, Security + Performance advisors clean;
       EAS env vars (expo.dev) still to add)
-- [ ] 2.2 Auth: Google + email/password; onboarding screens 01–06
+- [x] 2.2 Auth + onboarding (code done 2026-11-09; needs `db push --remote` + a native EAS build + on-phone test).
+      Spec `docs/superpowers/specs/2026-11-09-auth-onboarding-design.md`. GOOGLE-ONLY for now (email screens built but
+      off: `EMAIL_AUTH_ENABLED`), guest mode, onboarding 01 → 03 → 04 → 05 (06 privacy zones moved to Phase 4),
+      guest drives move to the next account, tab-bar icons (react-native-svg)
 - [ ] 2.3 Upload: gzipped raw track to Storage, drive row; offline queue + retry (Saving screen 09)
 - [ ] 2.4 Edge Function `finalize-drive`: clean, recompute stats, simplify route
       (Douglas–Peucker 5 m), privacy-zone trimming, anti-cheat flags
 - [ ] 2.5 Weekly DB backup GitHub Action
 - [ ] 2.6 Play Console: app, foreground-service declaration, internal → closed test
+      GATES before the closed test (from 2.2): in-app account deletion (Play policy; also delete the user's
+      `avatars/<uid>/` files, which do not cascade) + a privacy policy URL; Google Auth Platform: add the testers as
+      test users or publish the app (basic scopes, no review); add the Play App Signing SHA-1 as another Android
+      OAuth client and append its ID to Supabase's Google Client IDs
 
 ## Phase 3 — Game (≈65 h; was 50, +4 for spike 3.0, +10 for replay 3.9, my estimates)
 - [ ] 3.0 Map style spike (do BEFORE 3.4; decision PS 2026-11-06): try Mapbox **Standard** style (built-in 3D buildings,
@@ -135,6 +142,8 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
 ## Phase 4 — Social (≈45 h)
 - [ ] 4.1 Follows (private accounts, requests) + Followers screen (25)
 - [ ] 4.2 Feed (12), Drive detail (13), Comments (14), kudos
+      GATE (PS 2026-11-09): privacy zones screen (design 06: map centred on the current location + draggable pin,
+      200/300/500 m) must ship BEFORE the Feed, so nobody's home/work shows on a shared route
 - [ ] 4.3 Notifications (15) + push (expo-notifications)
       + LOCAL notification for the forgot-to-stop case ("Finish this drive?" when the phone is locked; the in-app
       version from 1.11 is done). Needs the new native library, so it triggers a rebuild. PS asked to note this (2026-11-05).
@@ -145,6 +154,8 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
 ## Phase 5 — Launch (≈20 h)
 - [ ] 5.1 Final name + trademark + domain; app icon (icon artwork wired in 2026-11-06, needs a native build to see; name/trademark/domain still open)
 - [ ] 5.2 Privacy policy (PDPA), terms (traffic-law disclaimer), delete/export data
+      + email sign-up (from 2.2): email service + domain, 6-digit confirmation code, password reset; then turn on
+      `EMAIL_AUTH_ENABLED` AND re-enable the Email provider + "Confirm email" in Supabase together
 - [ ] 5.3 Store listing (English), screenshots, production release
 
 ## Update 1 — Premium (after launch, ≈58 h; was 40, +10 for U1.5, +8 for U1.6, my estimates)

@@ -2,6 +2,7 @@ import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { RecordIcon } from '@/components/icons';
 import { isRecording } from '@/features/recording/recorder';
 import { useTheme } from '@/theme/use-theme';
 
@@ -27,7 +28,7 @@ export function RecordTabButton() {
           styles.circle,
           { backgroundColor: c.accentFill, borderColor: c.surface },
         ]}>
-        <View style={[styles.dot, { backgroundColor: c.onAccent }]} />
+        <RecordIcon color={c.onAccent} />
       </View>
       <Text style={{ color: c.text, fontFamily: fonts.bodyBold, fontSize: 12 }}>Record</Text>
     </Pressable>
@@ -47,5 +48,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     elevation: 6,
   },
-  dot: { width: 22, height: 22, borderRadius: 11 },
 });

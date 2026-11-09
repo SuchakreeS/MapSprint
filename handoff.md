@@ -238,8 +238,81 @@ PS built the SQL by pasting my blocks (guided mode, Claude did not run the DB st
 - Notes for 2.2+: Auth providers (Google + email), leaked-password protection and email confirmation are Auth settings, not done. Server writes (2.3/2.4) must use the service role from an Edge Function only. Edge Function `finalize-drive` must trim routes by privacy zones (zones table is owner-only, service role reads it). Feed display of max speed when "Share max speed" is on is undecided (4.2).
 - Phase 2 is security-sensitive: the next steps (2.2 auth, 2.4 anti-cheat) belong in an Opus session per CLAUDE.md.
 
+## Session 8 (2026-11-09, Opus): task 2.2 auth + guest mode + onboarding, code done (uncommitted)
+Brainstormed with PS → spec `docs/superpowers/specs/2026-11-09-auth-onboarding-design.md` (builder-checked) → plan
+`docs/superpowers/plans/2026-11-09-auth-onboarding.md`.
+- PS decisions: guest mode ("Continue as guest"; guests record, HUD, stats recap, history; locked: 3D replay, badges, Feed,
+  Ranks, following); guest drives move to the NEXT account that signs up/logs in; sign-out returns to Welcome and hides that
+  account's local drives until it logs back in; no email confirmation for now → **GOOGLE-ONLY** (with confirmation off,
+  Supabase auto-links a later Google sign-in into a pre-registered email account = hijack risk); photo optional (letter
+  avatar default); tab icons in the same native rebuild; privacy zones (06) moved to Phase 4 as a gate before the Feed.
+- Google OAuth set up by PS: Cloud project "Mapsprint", Google Auth Platform External/Testing (PS's Gmail = test user),
+  Web client (secret only in the Supabase dashboard) + Android client (package com.suchakree.mapsprint, SHA-1
+  5D:49:C5:…:6A:31, same for EAS preview + development). Supabase Google provider: Client IDs `WEB,ANDROID`, nonce check off.
+  PS keeps a `client_secret_*.json` in the repo folder: git-ignored (.gitignore line 53), never committed; suggested moving it
+  out and optionally rotating the secret (it appeared in chat).
+- DB: migration `*_vehicles_colour_and_avatars.sql` (`vehicles.colour`, 8 keys = `carColours` in tokens.ts; private
+  `avatars` bucket 1 MB jpeg/png/webp, write only in `<uid>/`, read for signed-in users). pgTAP now 44 tests, PASS locally.
+  **NOT yet pushed to the cloud.**
+- Pure logic test-first (`tests/auth-rules.test.mts`, 14 tests): `src/lib/username.ts`, `avatar.ts`, `password.ts`,
+  `onboarding.ts` (`nextRoute`), `drive-owner.ts` (`visibleTo`, `claimable`). npm test 126/126.
+- Local ownership: `sessions.owner_id` (ALTER on existing installs), kv `current_owner`, `claimGuestSessions`;
+  `startSession` stamps the owner; `loadDrive`/`loadDrives` filter with `visibleTo`. Old Phase 1 drives (owner NULL) go to
+  the first account that signs in. Sign-out is blocked while recording.
+- Auth: `src/features/auth/` — `auth-provider.tsx` (session, guest flag, profile + offline cache, onboarding route; state
+  derived in render to satisfy the React Compiler lint), `onboarding-guard.tsx` (redirects per `nextRoute`; `location`
+  stays reachable for the Record button), `google.ts` (lazy native import; `signInWithIdToken`), `avatar-photo.ts`
+  (picker square crop → 512×512 JPEG → upload; signed URLs), `onboarding-flags.ts`. Root layout latches "started" once
+  so later auth changes never unmount the navigator.
+- Screens: welcome (01, SVG art from the design, "Continue as guest", copy says "Track your drives" not speed),
+  sign-in (02, built, redirects to welcome while the flag is off), location (03 now marks the step done, "Step 3 of 5"),
+  about-you (04, debounced username check + unique constraint, Google name pre-filled, optional photo), car (05, colour
+  swatches + top-down car), Feed/Ranks `LockedFeature` for guests, Profile (account header / guest "Create account" /
+  Sign out). New components: icons.tsx (react-native-svg, from design/source), TextField, Avatar, StepHeader, LockedFeature.
+  Record button now shows the steering-wheel icon. Tab bar has icons.
+- Native: `@react-native-google-signin/google-signin` 17 (plugin MUST have `iosUrlScheme`, otherwise it runs in Firebase
+  mode and the Android build fails; current value = reversed WEB client ID as a placeholder, replace with the iOS client's
+  when iOS starts), `expo-image-picker` (camera + microphone permissions disabled), `expo-image-manipulator`,
+  `react-native-svg`. `expo install --fix` aligned 4 patch versions. `npx expo config --type prebuild` OK.
+- Env: `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in `.env` + `.env.example`.
+- Results: typecheck clean, eslint clean, npm test 126/126, pgTAP 44/44 local, no hex outside src/theme.
+- Known/open: no Terms/Privacy footer on Welcome (no policy exists yet; gate at 2.6). Step 04 has no back button (my call:
+  signed-in users can't go back to Welcome without signing out). Feed/Ranks for signed-in users are still placeholders.
+  Nonce: none sent; if Supabase rejects Google tokens, pass a nonce or enable "Skip nonce check".
+- **Code review (subagent, end of 2.2): "ready with fixes", no criticals. Fixed (claims checked in supabase-js 2.119
+  source first):** (1) offline cold start with an expired token returned "no session" → signed-in drivers landed on
+  Welcome: now `offlineUserId` falls back to the stored `current_owner` on `AuthRetryableFetchError`, and the owner kv is
+  no longer wiped before the stored session is read; (2) sign-out now `scope: 'local'` (default 'global' signed out the
+  user's other phones and did nothing offline); (3) email sign-up off is now also in `supabase/config.toml`
+  (`[auth.email] enabled = false`; local probe returns `email_provider_disabled`); (4) a failed photo upload no longer
+  blocks step 04; plus: username check never says "available" on a network error, sign-in buttons stay locked until the
+  guard moves on, avatar resize keeps aspect ratio, Google errors are logged and DEVELOPER_ERROR (code 10) gets its own
+  message, `justSignedIn` only reset by the live fetch, new DB check `profiles.avatar_url` = own `<uid>/avatar.jpg` only,
+  pgTAP 47/47 (own-avatar check, foreign avatar rejected, anon can't list photos).
+- **Deferred (noted, not fixed):** returning user whose first profile fetch fails sees step 04 with an empty field and
+  could overwrite their own username (retry state later); car insert not idempotent (duplicate car on a retried save);
+  fixed avatar path + upsert may show a cached old photo when "change photo" is built (use a versioned file name then);
+  dev GPS screen lists all accounts' sessions (removed in 1.12); `claimable()` tested but SQL hard-codes the rule;
+  after a guest upgrades they land on Feed, not "back where they were"; profile cache of a signed-out account stays on the
+  phone (username/display name/avatar path only); pgTAP has no avatar-delete or PDPA-avatar test (2.6 gate);
+  Expo Router `Stack.Protected` could replace the effect guard (removes a first-frame tab flash).
+
 ## Next step
-0) PS commits manually: the notification-permission fix (`ensureNotificationPermission` in recorder.ts, suggested message "fix(record): ask for notification permission so the recording notification shows") and, separately, 2.1 ("feat(db): Supabase schema, RLS, badge seed, pgTAP tests and app client"). The notification fix is not yet checked on the phone: it needs a new preview APK (also carries the Supabase client JS).
+**Before testing 2.2 (PS):**
+1. `npx supabase db push --remote` (1 new migration) then `npx supabase test db --remote` (expect 47/47).
+2. Supabase dashboard → Authentication → Providers → **Email: disable** (closes the hijack path at the API). Then ask
+   Claude to probe the cloud signup endpoint (should answer `email_provider_disabled`; probing BEFORE disabling would
+   create a junk user).
+3. expo.dev env vars (preview + development): `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+   `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`.
+4. Commit, then `npx eas-cli@latest build --profile preview -p android` (native rebuild: Google sign-in, picker, svg).
+5. Phone test: fresh install → Welcome → Continue as guest → location → tabs (Feed/Ranks locked, record a short drive, it
+   shows in history) → Profile → Create account with Google → step 4 (taken/available username, optional photo) → step 5
+   (car colour, or skip) → tabs; guest drive now listed; Sign out → Welcome, history empty; sign back in → drive back,
+   straight to tabs (no steps); recording notification still shows; tab icons dark + light.
+   Review-driven extras: airplane mode, wait > 1 h (or move the clock forward 2 h), cold start → still signed in, tabs, can
+   record; sign out while offline → Welcome; if you have two phones: sign out on one, the other stays signed in.
+0) Committed and pushed by PS (2026-11-09): the notification-permission fix (d2fb361, `ensureNotificationPermission` in recorder.ts) and 2.1 (Supabase schema, RLS, tests, app client). The notification fix is not yet checked on the phone: it needs a new preview APK (also carries the Supabase client JS).
    Add `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` on expo.dev (preview + development) BEFORE building that APK.
    Open choices: icons (needs react-native-svg + one native rebuild) vs going on with Phase 2 (2.2 auth + onboarding 01-06, security-sensitive, Opus session).
 1) Phase 1 testing is done except 1.9 (PS records app km vs car trip meter on real drives and reports them) and 1.12. 2) Then **1.9 the 10-drive field test** (the Phase 1 gate: distance within 2% of the car trip meter; tune `CLEANING`; the recap GPS check card is the tool) and 1.12 (remove the spike screens). Suggest doing 1.12 AFTER the first real drive passes, because the GPS spike screen is still the fallback to see/stop sessions.
