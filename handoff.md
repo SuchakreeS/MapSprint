@@ -224,7 +224,7 @@ App icon: winding road + tach dial (design/logo/), wired in app.json, needs a na
 - NOT checked on phone: press Start drive -> Android asks "Allow Mapsprint to send notifications?" -> Allow -> "Recording your drive" shows in the drawer during the drive. If the dialog never appears, the notification permission was already refused twice: turn it on in Settings > Apps > Mapsprint > Notifications.
 - 1.9: PS will record trip-meter vs app distance on the next drives and report them; don't ask again until PS brings them.
 
-## Session 7 (2026-11-09): task 2.1 Supabase backend, done (uncommitted)
+## Session 7 (2026-11-09): task 2.1 Supabase backend, done and committed (ea0aadd)
 PS built the SQL by pasting my blocks (guided mode, Claude did not run the DB steps); I wrote files only for the test fix, `supabase.ts`, env and types. Plan was written in plan mode (`C:\Users\PS\.claude\plans\bro-in-the-mean-federated-penguin.md`, partly outdated: PS created the cloud project himself, CLI v3 needs `--remote`).
 - Cloud project **Mapsprint**, ref `gwcutbwcmxcwpgndaphi`, Singapore, free plan. Dashboard settings: Data API on, "auto expose new tables" OFF (we grant by hand), "automatic RLS" ON.
 - `supabase/migrations/`: `*_init_schema.sql` (12 tables: profiles, vehicles, drives, drive_private, follows, kudos, comments, privacy_zones, explored_cells, xp_events, badges, user_badges; RLS on all; column-level GRANTs so the app can never write stats, XP, level, plan, status, cells or badges; `private` schema helpers `can_view`, `can_view_drive`, `is_accepted_follower`; triggers `handle_new_user` and `follows_set_status`), `*_seed_badges.sql` (10 badges, xp_reward 0 until 3.6), `*_service_role_grants.sql` (server role grants, explicit).
@@ -238,7 +238,7 @@ PS built the SQL by pasting my blocks (guided mode, Claude did not run the DB st
 - Notes for 2.2+: Auth providers (Google + email), leaked-password protection and email confirmation are Auth settings, not done. Server writes (2.3/2.4) must use the service role from an Edge Function only. Edge Function `finalize-drive` must trim routes by privacy zones (zones table is owner-only, service role reads it). Feed display of max speed when "Share max speed" is on is undecided (4.2).
 - Phase 2 is security-sensitive: the next steps (2.2 auth, 2.4 anti-cheat) belong in an Opus session per CLAUDE.md.
 
-## Session 8 (2026-11-09, Opus): task 2.2 auth + guest mode + onboarding, code done (uncommitted)
+## Session 8 (2026-11-09, Opus): task 2.2 auth + guest mode + onboarding, code done, committed (fedd1a3 db, 577f783 app); NOT yet tested on a phone
 Brainstormed with PS → spec `docs/superpowers/specs/2026-11-09-auth-onboarding-design.md` (builder-checked) → plan
 `docs/superpowers/plans/2026-11-09-auth-onboarding.md`.
 - PS decisions: guest mode ("Continue as guest"; guests record, HUD, stats recap, history; locked: 3D replay, badges, Feed,
@@ -297,25 +297,71 @@ Brainstormed with PS → spec `docs/superpowers/specs/2026-11-09-auth-onboarding
   phone (username/display name/avatar path only); pgTAP has no avatar-delete or PDPA-avatar test (2.6 gate);
   Expo Router `Stack.Protected` could replace the effect guard (removes a first-frame tab flash).
 
+## Session 9 (2026-11-09, Sonnet): car picker on the Pre-drive screen, code done (uncommitted, JS only)
+PS asked for car selection before recording (design 07 row was a placeholder). Plan file: ~/.claude/plans/bro-in-the-mean-federated-penguin.md.
+- Decisions (PS): guests get no car; tapping the row opens a sheet to pick a car or add one; last-used car remembered per account.
+  **My call:** the guest row has no sign-in button (just says to make an account from the Profile tab), so the Google flow never interrupts the record screen.
+- Files: `src/lib/vehicles.ts` (+ `tests/vehicles.test.mts`, in `npm test`), `src/features/auth/vehicles.ts` (`useVehicles`: Supabase list
+  filtered by `user_id` + offline cache), `src/features/settings/prefs.ts` (selected id + cache per account), `src/components/CarForm.tsx`
+  (extracted from onboarding step 5), `src/components/CarPickerSheet.tsx`, `src/app/record/pre-drive.tsx`, `src/app/(onboarding)/car.tsx`,
+  `src/features/recording/db.ts` (`sessions.vehicle_id`, safe ALTER) + `recorder.ts` (stamps the selected car at start).
+- Security note: the `vehicles` SELECT policy is `using (true)` (any signed-in user can read all cars, by design for friends' garages), so the app
+  MUST always filter `.eq('user_id', ...)`. Done in `useVehicles`. No DB change this session.
+- Checks: typecheck clean, eslint clean, 130/130 tests. NOT tested on a phone yet (JS only, no native rebuild; it rides in the same APK as 2.2
+  if you have not built yet). Test items: testlist.md section F9.
+- Not done: Garage screen (4.6), edit/delete car, default-car flag, upload of `vehicle_id` (2.3 must send it with the drive).
+
+## Session 10 (2026-11-09): Garage (23) + Edit profile, code done (uncommitted)
+- Garage `src/app/garage.tsx`: car cards (icon, nickname, "Default" = the car Pre-drive starts with, colour + make/model, edit pencil),
+  DISTANCE / DRIVES from drives on this phone (`carStats`, `DriveItem.vehicleId`), AVG SMOOTH shows "–" until 3.5. Dashed "Add a car".
+  `src/app/garage-car.tsx` (`?id=` edit, no id = add): shared `CarForm` (now has edit mode), "Use as default car", "Delete car" with confirm.
+- Edit profile `src/app/edit-profile.tsx`: photo, username (same live check as step 4, moved to `src/features/auth/use-username-field.ts`),
+  display name. Profile tab got "Edit profile" and "Garage" buttons (signed-in only).
+- Photo fix: each upload is now `avatars/<uid>/avatar-<ms>.jpg` (old fixed name showed a cached old photo after a change); old file removed
+  after the profile points at the new one. **Migration `20261109120000_avatar_versioned_paths.sql`** widens `profiles_avatar_url_own`
+  (still own folder only, regex). pgTAP 50 (3 new) PASS locally. Same rule in `src/lib/avatar.ts` `isOwnAvatarPath` (tested).
+- **PS must run before testing the new APK:** `npx supabase db push --remote` then `npx supabase test db --remote` (expect 50 PASS).
+  Without it every photo upload fails the DB check.
+- Checks: typecheck clean, eslint clean, 134/134 tests. Not tested on a phone (testlist F10). JS only, no native rebuild.
+- For 2.3: a deleted car leaves its id on local drives (`sessions.vehicle_id`); upload must send null if the car no longer exists
+  (the drives INSERT policy rejects a vehicle_id that is not yours).
+
+## Claude chat notes (2026-11-09): 4 more recorded drives (GPS only) + planning talk (nothing coded)
+Recap screenshots from PS (standalone APK, screen locked, foreground service). NO car trip meter reading was taken, so these do NOT count toward the 10-drive distance gate (1.9) until a reference exists (Google Maps route distance is a loose +-3% check; trip meter reset at Start is better; odometers often over-read 1-3%, so also compare with Maps).
+| Drive | Wall | Distance | Moving | Moving avg | Points used | Longest gap | Gaps > 3 s |
+|---|---|---|---|---|---|---|---|
+| Thu 5 Nov 17:55 | 42 min (36:40 active) | 7.86 km | 21:25 | 22.0 km/h | 2500 / 2507 | 2 s | 0 |
+| Fri 6 Nov 17:43 | 36 min | 7.90 km | 26:37 | 17.8 km/h | 2165 / 2165 | 1 s | 0 |
+| Sat 7 Nov 10:47 | 44 min | 17.27 km | 32:39 | 31.7 km/h | 2604 / 2655 | 2 s | 0 |
+| Sat 7 Nov 14:09 | 22 min | 9.74 km | 15:28 | 37.8 km/h | 1317 / 1317 | 2 s | 0 |
+- Recording is solid: no gap over 3 s on any drive. The Sat 10:47 drive dropped 51 points (1.9%, probably accuracy > 25 m).
+- Open questions for PS: was Fri 6 Nov the same trip as Thu 5 Nov (routes drawn differently, distances within 0.5%)? On both Saturday drives the recap route line extends a bit past the start circle, and on the 10:47 drive the end dot sits mid-route (out-and-back, or a U-turn / parking-lot start?). Could be a recap map marker issue, check later.
+- Still to do for 1.9: trip-meter (or Maps) reference on each drive. Prefer drives of 10 km or more (meter shows 0.1 km steps).
+- NEW field test: record while Google Maps navigation is the app on screen (the expected real-world use in Thailand). Check no gap over 3 s, normal points count, sane distance. Some Samsung phones kill background apps aggressively.
+- Logo: JPG copy saved as `design/logo/icon.jpg` (full icon on #0A0A0A, 1024x1024). Not for the Android adaptive icon (needs the transparent PNGs).
+- Planning talk (no code): 3D replay free / live 3D + 3D car premium (see "3D map decision" above), caravan, turn-by-turn navigation (out), Android Auto (not possible), music controls (skip), Mapbox free tiers. All parked in plan.md under "Later ideas" and "Mapbox free tiers".
+
 ## Next step
-**Before testing 2.2 (PS):**
-1. `npx supabase db push --remote` (1 new migration) then `npx supabase test db --remote` (expect 47/47).
-2. Supabase dashboard → Authentication → Providers → **Email: disable** (closes the hijack path at the API). Then ask
-   Claude to probe the cloud signup endpoint (should answer `email_provider_disabled`; probing BEFORE disabling would
-   create a junk user).
-3. expo.dev env vars (preview + development): `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
-   `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`.
-4. Commit, then `npx eas-cli@latest build --profile preview -p android` (native rebuild: Google sign-in, picker, svg).
-5. Phone test: fresh install → Welcome → Continue as guest → location → tabs (Feed/Ranks locked, record a short drive, it
-   shows in history) → Profile → Create account with Google → step 4 (taken/available username, optional photo) → step 5
-   (car colour, or skip) → tabs; guest drive now listed; Sign out → Welcome, history empty; sign back in → drive back,
-   straight to tabs (no steps); recording notification still shows; tab icons dark + light.
-   Review-driven extras: airplane mode, wait > 1 h (or move the clock forward 2 h), cold start → still signed in, tabs, can
-   record; sign out while offline → Welcome; if you have two phones: sign out on one, the other stays signed in.
-0) Committed and pushed by PS (2026-11-09): the notification-permission fix (d2fb361, `ensureNotificationPermission` in recorder.ts) and 2.1 (Supabase schema, RLS, tests, app client). The notification fix is not yet checked on the phone: it needs a new preview APK (also carries the Supabase client JS).
-   Add `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` on expo.dev (preview + development) BEFORE building that APK.
-   Open choices: icons (needs react-native-svg + one native rebuild) vs going on with Phase 2 (2.2 auth + onboarding 01-06, security-sensitive, Opus session).
-1) Phase 1 testing is done except 1.9 (PS records app km vs car trip meter on real drives and reports them) and 1.12. 2) Then **1.9 the 10-drive field test** (the Phase 1 gate: distance within 2% of the car trip meter; tune `CLEANING`; the recap GPS check card is the tool) and 1.12 (remove the spike screens). Suggest doing 1.12 AFTER the first real drive passes, because the GPS spike screen is still the fallback to see/stop sessions.
+**State (2026-11-09):** Phase 1 is tested on the phone except 1.9 and 1.12. 2.1 is done (cloud DB has all migrations incl. avatars,
+47/47 pgTAP on the cloud). 2.2 is coded and committed; PS added the 3 `EXPO_PUBLIC_*` vars on expo.dev and is building the preview APK
+(Google sign-in, image picker, svg: native rebuild). PS will come back with the results of `testlist.md` section F.
+1. **PS: confirm the Email provider is disabled** in the Supabase dashboard (Authentication > Providers > Email). Then Claude probes the
+   CLOUD signup endpoint (`POST /auth/v1/signup` with the publishable key; expect `email_provider_disabled`). Never probe before it is
+   disabled: an open endpoint would create a junk user.
+2. **PS: install the APK over the old one** (do not uninstall: keeps the Phase 1 drives) and run `testlist.md` section F.
+   Likely first failures: Google "developer error" (code 10) = SHA-1 / package / client ID mismatch (SHA-1 5D:49:C5:...:6A:31 must
+   belong to the EAS keystore that signed the build; do NOT let EAS generate a new keystore); "Google sign-in needs the latest version"
+   = the old APK is still installed; Supabase rejecting the token = nonce (pass one, or turn on "Skip nonce check").
+3. Then, in order of value: **1.9 the 10-drive field test** (PS notes app km vs car trip meter for each drive; Phase 1 gate: within 2%),
+   then 1.12 (remove the spike screens, after the first real drive passes), then **2.3 upload** (gzipped raw track to Storage + drive
+   row, offline queue; guests' drives upload only after they sign in; `drive_private` and `avatars/<uid>/` rules already exist) and
+   **2.4 `finalize-drive`** (Edge Function: recompute stats, clean, Douglas-Peucker 5 m, privacy-zone trimming, anti-cheat; writes
+   with the service role). 2.3/2.4 are security-sensitive: Opus session.
+4. Open choice still with PS: none blocking.
+Reminders: Google Auth Platform is in Testing (only PS's Gmail can sign in; add testers or publish before 2.6). The Google Client
+secret lives only in the Supabase dashboard; `client_secret_*.json` in the repo folder is git-ignored but should be moved out of the
+folder (and optionally rotated). Email sign-up stays off until a domain + email service + confirmation code exist (plan 5.2).
+
 Things learned in the spikes that Phase 1 must include (also added to plan.md as 1.10 and 1.11):
 - Gap log: record every gap > 3 s (time + position) so tunnels/viaducts can be told apart from throttling.
 - "Finish this drive?" prompt: PS forgot to press Stop in run #6 and it recorded for 88 min. Prompt (notification + in-app) after being stopped for a while after a drive.

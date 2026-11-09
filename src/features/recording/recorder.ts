@@ -6,10 +6,12 @@ import * as Location from 'expo-location';
 import { PermissionsAndroid, Platform } from 'react-native';
 
 import { APP_NAME } from '@/constants/app';
+import { getSelectedVehicleId } from '@/features/settings/prefs';
 
 import {
   endActiveSession,
   getActiveSessionId,
+  getCurrentOwner,
   getManualPauseSince,
   insertPauseEvent,
   setManualPauseSince,
@@ -53,7 +55,9 @@ export async function startRecording(): Promise<number> {
     if (active != null) return active;
   }
   await ensureNotificationPermission();
-  const id = startSession(Date.now());
+  // The car chosen on the pre-drive screen (per account; guests have none).
+  const owner = getCurrentOwner();
+  const id = startSession(Date.now(), owner ? getSelectedVehicleId(owner) : null);
   await Location.startLocationUpdatesAsync(LOCATION_TASK, {
     accuracy: Location.Accuracy.BestForNavigation,
     timeInterval: 1000,

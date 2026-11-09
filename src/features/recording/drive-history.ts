@@ -23,6 +23,8 @@ export interface DriveItem {
   id: number;
   startedAt: number;
   endedAt: number;
+  /** Car picked on the pre-drive screen (public.vehicles id), or null. */
+  vehicleId: string | null;
   summary: DriveSummary;
   /** Every stretch with no GPS point for more than 3 s (manual pauses excluded). */
   gaps: GpsGap[];
@@ -48,6 +50,7 @@ export function loadDrive(id: number): DriveItem | null {
     id,
     startedAt: session.started_at,
     endedAt: session.ended_at,
+    vehicleId: session.vehicle_id,
     summary: summarize(points, events),
     gaps: findGaps(points, events),
     route: simplifyToMax(coords, MAX_ROUTE_POINTS),

@@ -7,3 +7,13 @@ export function avatarInitial(displayName: string | null | undefined, username: 
   }
   return '?';
 }
+
+// Photo files: avatars/<uid>/avatar-<ms>.jpg. A new name per upload, so a changed photo never shows a cached
+// old one. Same rule as the database check profiles_avatar_url_own (keep both in sync).
+export const avatarPath = (userId: string, version: number): string => `${userId}/avatar-${version}.jpg`;
+
+export function isOwnAvatarPath(userId: string, path: string): boolean {
+  const prefix = `${userId}/`;
+  if (!path.startsWith(prefix)) return false;
+  return /^avatar(-[0-9]{1,16})?\.jpg$/.test(path.slice(prefix.length));
+}

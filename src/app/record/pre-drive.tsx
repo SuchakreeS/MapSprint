@@ -5,13 +5,16 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { CarPickerSheet, colourOf } from '@/components/CarPickerSheet';
 import { CloseGlyph } from '@/components/CloseGlyph';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { PlayGlyph } from '@/components/PlayGlyph';
 import { Switch } from '@/components/Switch';
+import { useVehicles } from '@/features/auth/vehicles';
 import { MAP_STYLE } from '@/features/map/map-style';
 import { useGpsSignal } from '@/features/recording/use-gps-signal';
 import { getSoundOn, hideBatteryTip, isBatteryTipHidden, setSoundOn } from '@/features/settings/prefs';
+import { carSubtitle } from '@/lib/vehicles';
 import { needsSignalConfirm, type SignalQuality } from '@/lib/gps-signal';
 import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
@@ -31,6 +34,8 @@ export default function PreDriveScreen() {
   const [sound, setSound] = useState(getSoundOn);
   const [tipHidden, setTipHidden] = useState(isBatteryTipHidden);
   const [warnVisible, setWarnVisible] = useState(false);
+  const [carSheet, setCarSheet] = useState(false);
+  const { signedIn, cars, selected, select, refresh } = useVehicles();
 
   const start = () => router.replace('/record/hud');
   const onStart = () => (needsSignalConfirm(quality) ? setWarnVisible(true) : start());
@@ -122,14 +127,32 @@ export default function PreDriveScreen() {
             </View>
           )}
 
-          <View style={[styles.row, styles.rowLast, { minHeight: 56 }]}>
-            <View style={[styles.carDot, { backgroundColor: c.accentFill, borderColor: c.line }]} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={selected ? `Car: ${selected.nickname}. Tap to change car` : 'Add your car'}
+            disabled={!signedIn}
+            onPress={() => setCarSheet(true)}
+            style={[styles.row, styles.rowLast, { minHeight: 56 }]}>
+            <View
+              style={[
+                styles.carDot,
+                { backgroundColor: selected ? colourOf(selected.colour).hex : c.surface, borderColor: c.line },
+              ]}
+            />
             <View style={styles.grow}>
-              <Text style={[type.rowTitle, { color: c.text }]}>My car</Text>
-              <Text style={[type.caption, { color: c.muted }]}>Choosing a car comes with sign-up later.</Text>
+              <Text style={[type.rowTitle, { color: c.text }]}>
+                {selected ? selected.nickname : signedIn ? 'Add your car' : 'No car'}
+              </Text>
+              <Text style={[type.caption, { color: c.muted }]}>
+                {selected
+                  ? carSubtitle(selected, colourOf(selected.colour).label)
+                  : signedIn
+                    ? 'Optional. Tap to add one.'
+                    : 'Make an account from the Profile tab to add your car.'}
+              </Text>
             </View>
-            <Text style={{ color: c.muted, fontSize: 22 }}>›</Text>
-          </View>
+            {signedIn ? <Text style={{ color: c.muted, fontSize: 22 }}>›</Text> : null}
+          </Pressable>
         </View>
 
         <Switch
@@ -149,6 +172,15 @@ export default function PreDriveScreen() {
           leading={(color) => <PlayGlyph color={color} />}
         />
       </View>
+
+      <CarPickerSheet
+        visible={carSheet}
+        cars={cars}
+        selectedId={selected?.id ?? null}
+        onSelect={select}
+        onAdded={(car) => void refresh(car.id)}
+        onClose={() => setCarSheet(false)}
+      />
 
       <ConfirmDialog
         visible={warnVisible}

@@ -104,12 +104,36 @@ export const CheckIcon = (p: IconProps) => (
 );
 
 /** Top-down car (design 05): body in the car's colour, windows in the background colour. */
-export function CarTopIcon({ body, outline, glass }: { body: string; outline: string; glass: string }) {
+export function CarTopIcon({
+  body,
+  outline,
+  glass,
+  height = 88,
+}: {
+  body: string;
+  outline: string;
+  glass: string;
+  height?: number;
+}) {
   return (
-    <Svg width={64} height={88} viewBox="0 0 64 88">
+    <Svg width={(height * 64) / 88} height={height} viewBox="0 0 64 88">
       <Rect x="10" y="4" width="44" height="80" rx="18" fill={body} stroke={outline} strokeWidth={1.5} />
       <Rect x="16" y="20" width="32" height="16" rx="6" fill={glass} fillOpacity={0.75} />
       <Rect x="16" y="58" width="32" height="12" rx="5" fill={glass} fillOpacity={0.75} />
     </Svg>
   );
 }
+
+/** Edit (design 23, ScrGarage). */
+export const PencilIcon = (p: IconProps) => (
+  <Line size={20} {...p}>
+    <Path d="M4 20h4L19 9l-4-4L4 16z" />
+  </Line>
+);
+
+export const PlusIcon = (p: IconProps) => (
+  <Line size={20} {...p}>
+    <Path d="M12 5v14" />
+    <Path d="M5 12h14" />
+  </Line>
+);

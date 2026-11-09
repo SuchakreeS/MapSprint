@@ -1,8 +1,9 @@
 // Profile photo (design 04): pick from the gallery (square crop) -> 512x512 JPEG -> Supabase Storage
-// bucket "avatars" at <user_id>/avatar.jpg (RLS: only your own folder; tested in supabase/tests/rls_test.sql).
+// bucket "avatars" at <user_id>/avatar-<ms>.jpg (RLS: only your own folder; tested in supabase/tests/rls_test.sql).
 import { useEffect, useState } from 'react';
 
 import { supabase } from '@/features/sync/supabase';
+import { avatarPath, isOwnAvatarPath } from '@/lib/avatar';
 
 const BUCKET = 'avatars';
 const SIZE = 512;
@@ -29,9 +30,12 @@ export async function pickAvatarPhoto(): Promise<string | null> {
   return saved.uri;
 }
 
-/** Uploads (replacing any old photo) and stores the path on the profile. Returns the storage path. */
-export async function uploadAvatar(userId: string, localUri: string): Promise<string> {
-  const path = `${userId}/avatar.jpg`;
+/**
+ * Uploads a new photo under a new file name, points the profile at it, then removes the old file.
+ * `oldPath`: the profile's current avatar_url (removed only after the profile points at the new one).
+ */
+export async function uploadAvatar(userId: string, localUri: string, oldPath?: string | null): Promise<string> {
+  const path = avatarPath(userId, Date.now());
   const body = await (await fetch(localUri)).arrayBuffer();
   const { error: upErr } = await supabase.storage
     .from(BUCKET)
@@ -39,7 +43,14 @@ export async function uploadAvatar(userId: string, localUri: string): Promise<st
   if (upErr) throw new Error('Could not upload the photo. Check your connection and try again.');
 
   const { error: dbErr } = await supabase.from('profiles').update({ avatar_url: path }).eq('id', userId);
-  if (dbErr) throw new Error('Photo uploaded, but saving it to your profile failed. Try again.');
+  if (dbErr) {
+    void supabase.storage.from(BUCKET).remove([path]); // do not leave an unused file behind
+    throw new Error('Photo uploaded, but saving it to your profile failed. Try again.');
+  }
+  // Best effort: a leftover old file only costs storage (account deletion clears the whole folder, 2.6 gate).
+  if (oldPath && oldPath !== path && isOwnAvatarPath(userId, oldPath)) {
+    void supabase.storage.from(BUCKET).remove([oldPath]);
+  }
   return path;
 }
 

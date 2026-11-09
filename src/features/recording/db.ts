@@ -39,6 +39,8 @@ export function getDb(): SQLite.SQLiteDatabase {
   // 2.2: which account a drive belongs to (NULL = recorded as a guest). Added to existing installs once.
   const cols = db.getAllSync<{ name: string }>('PRAGMA table_info(sessions)');
   if (!cols.some((c) => c.name === 'owner_id')) db.execSync('ALTER TABLE sessions ADD COLUMN owner_id TEXT');
+  // Car picker: which car (public.vehicles id) was driven. NULL = none chosen. Sent with the drive on upload (2.3).
+  if (!cols.some((c) => c.name === 'vehicle_id')) db.execSync('ALTER TABLE sessions ADD COLUMN vehicle_id TEXT');
   return db;
 }
 
@@ -69,9 +71,14 @@ export function getActiveSessionId(): number | null {
   return row ? Number(row.v) : null;
 }
 
-export function startSession(now: number): number {
+export function startSession(now: number, vehicleId: string | null = null): number {
   const d = getDb();
-  const res = d.runSync('INSERT INTO sessions (started_at, owner_id) VALUES (?, ?)', now, getCurrentOwner());
+  const res = d.runSync(
+    'INSERT INTO sessions (started_at, owner_id, vehicle_id) VALUES (?, ?, ?)',
+    now,
+    getCurrentOwner(),
+    vehicleId,
+  );
   const id = Number(res.lastInsertRowId);
   d.runSync('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', ACTIVE_KEY, String(id));
   d.runSync('DELETE FROM kv WHERE k = ?', PAUSE_KEY); // never inherit a stale pause
@@ -171,11 +178,12 @@ export interface SessionInfo {
   started_at: number;
   ended_at: number | null;
   owner_id: string | null;
+  vehicle_id: string | null;
 }
 
 export function getSession(sessionId: number): SessionInfo | null {
   return getDb().getFirstSync<SessionInfo>(
-    'SELECT id, started_at, ended_at, owner_id FROM sessions WHERE id = ?',
+    'SELECT id, started_at, ended_at, owner_id, vehicle_id FROM sessions WHERE id = ?',
     sessionId,
   );
 }

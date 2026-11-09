@@ -5,7 +5,7 @@ set local role postgres;
 create extension if not exists pgtap with schema extensions;
 set local search_path to extensions, public;
 
-select plan(47);
+select plan(50);
 
 
 -- =====================================================================
@@ -139,7 +139,7 @@ select lives_ok($$delete from public.comments where id = 'c1000000-0000-0000-000
 select is_empty('select * from public.comments', 'the comment is gone');
 
 -- =====================================================================
--- 2.2: car colour + avatar photos  [7]  (still signed in as A)
+-- 2.2: car colour + avatar photos  [10]  (still signed in as A)
 -- =====================================================================
 select lives_ok($$insert into public.vehicles (nickname, colour) values ('Daily driver', 'racing_red')$$,
   'owner can add a car with a design colour');
@@ -158,6 +158,15 @@ select lives_ok($$update public.profiles set avatar_url = '11111111-1111-1111-11
 select throws_ok($$update public.profiles set avatar_url = '22222222-2222-2222-2222-222222222222/avatar.jpg'
                    where id = '11111111-1111-1111-1111-111111111111'$$,
   '23514', null, 'user cannot use someone else''s photo as their avatar');
+select lives_ok($$update public.profiles set avatar_url = '11111111-1111-1111-1111-111111111111/avatar-1731100000000.jpg'
+                  where id = '11111111-1111-1111-1111-111111111111'$$,
+  'user can point their profile at a new versioned photo of their own');
+select throws_ok($$update public.profiles set avatar_url = '22222222-2222-2222-2222-222222222222/avatar-1731100000000.jpg'
+                   where id = '11111111-1111-1111-1111-111111111111'$$,
+  '23514', null, 'user cannot use someone else''s versioned photo');
+select throws_ok($$update public.profiles set avatar_url = '11111111-1111-1111-1111-111111111111/avatar-1.jpg/../x.jpg'
+                   where id = '11111111-1111-1111-1111-111111111111'$$,
+  '23514', null, 'avatar path tricks are rejected');
 
 set local role anon;
 select is_empty($$select 1 from storage.objects where bucket_id = 'avatars'$$, 'signed-out visitors cannot list photos');

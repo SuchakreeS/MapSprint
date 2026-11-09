@@ -58,7 +58,9 @@ export default function ProfileTab() {
           </View>
         )}
 
+        {!guest && <Button label="Edit profile" variant="secondary" onPress={() => router.push('/edit-profile')} />}
         <Button label="Drive history" variant="secondary" onPress={() => router.push('/history')} />
+        {!guest && <Button label="Garage" variant="secondary" onPress={() => router.push('/garage')} />}
 
         {!guest && (
           <Button label={busy ? 'Signing out…' : 'Sign out'} variant="ghost" onPress={() => run(signOut)} disabled={busy} />

@@ -107,6 +107,8 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
       local + cloud, supabase-js client in src/features/sync, Security + Performance advisors clean;
       EAS env vars (expo.dev) still to add)
 - [x] 2.2 Auth + onboarding (code done 2026-11-09; needs `db push --remote` + a native EAS build + on-phone test).
+      Follow-up 2026-11-09: car picker on Pre-drive (07) done in code, drive stamped with `vehicle_id` locally; 2.3 must upload it. Phone test pending (testlist F9).
+      Follow-up 2026-11-09: Garage (23) + Edit profile done in code (part of 4.6 pulled forward); avatar versioned-path migration needs `db push --remote`. Phone test pending (testlist F10).
       Spec `docs/superpowers/specs/2026-11-09-auth-onboarding-design.md`. GOOGLE-ONLY for now (email screens built but
       off: `EMAIL_AUTH_ENABLED`), guest mode, onboarding 01 → 03 → 04 → 05 (06 privacy zones moved to Phase 4),
       guest drives move to the next account, tab-bar icons (react-native-svg)
@@ -168,3 +170,40 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
 - [ ] U1.6 3D car (PREMIUM): rule "if the map is 3D (live 3D mode), the car is 3D". Mapbox 3D model puck (glTF).
       Generic low-poly cars only (no real brand models: trademark risk). Later: match the Garage car, skins/colours
       (ties into U1.2). Premium users also get the 3D car in the replay (free users keep the dot).
+
+## Later ideas (parked, NOT scheduled; PS decision 2026-11-09: stabilise the core app first)
+- [ ] L.1 Caravan / group drive: invite friends, everyone records, members see each other live on the map; alerts when someone
+      falls behind, stops too long or goes off route. Realtime positions are temporary (Supabase Realtime), not stored.
+      Why parked: needs Phase 2 backend and friends first, costs money (Realtime message limits on the free plan: check
+      current limits), and live location sharing needs a PDPA/privacy review (Opus). Safety rules if built: glanceable or
+      voice alerts only, no chat, no speed ranking, HUD lock rule applies, invite-only, opt-in each time, auto-end when
+      recording stops, privacy zones respected, group cap ~8-10. Open questions: friends-only or link/code, leader with
+      destination or leaderless, free vs premium, live map vs group recap + XP first. Ideas: group recap on one map, shared
+      explored cells, "stay together" XP, meeting-point pin.
+      Pricing discussion (2026-11-09, PROPOSED, NOT decided): host pays. Anyone can JOIN a caravan for free, only premium users can
+      CREATE one (cost follows the host, joiners must install the app = growth). Alternatives: all premium; all free; free small
+      caravan (~3 people, short) + premium bigger (~8) with group recap and meeting pin. Cost-saving: send a position every ~5 s,
+      skip when not moving, stop when recording stops, temporary messages only (nothing in the DB), cap ~8. Supabase Realtime
+      limits on free vs paid: unverified, check pricing before building. Rough maths: 6 people x 1 h ~ 30k messages.
+- [ ] L.2 Photoreal 3D (Google Photorealistic 3D Tiles via Cesium in a WebView): judged over-engineering for now
+      (second map engine, Google billing and strict terms, battery). Revisit only if Mapbox Standard 3D (task 3.0) looks poor.
+- [ ] L.3 Turn-by-turn navigation: DECIDED OUT (PS 2026-11-09). Thai users will use Google Maps / Waze for navigation and our app
+      for records. Mapbox Navigation SDK v3 free tier is only 100 MAU + 1,000 trips/month (after that: per-MAU + per-trip fee,
+      amounts not checked), it would also compete with our foreground-service recorder, and as far as I know `@rnmapbox/maps` is
+      the map only (turn-by-turn would need another, less mature library; unverified). Possible cheap extras after launch:
+      a "Navigate" button that opens Google Maps / Waze (free), and a route preview with the Directions API (100k free requests/month).
+- [ ] L.4 Android Auto / car screen: NOT POSSIBLE for our app type. Google only allows media, messaging/calling, navigation, POI
+      (parking/charging/fuel), IoT, weather (parked-only: video, games, browsers). Fitness/tracker apps are not allowed. Do not fake a
+      media or navigation app to get onto the car screen (Play review risk). The phone is the HUD. Car-friendly part we can do: audio
+      voice lines through the car speakers (task 3.7, expo-speech).
+- [ ] L.5 Music controls in the HUD (PS 2026-11-09: low priority, probably skip). If ever built: send media key events only
+      (play/pause/next/previous, works with any player, no permission, small native module = rebuild). No notification-access
+      permission (heavy, privacy/PDPA, review risk). Per-service SDK (e.g. Spotify) only if really wanted. Conflict: the HUD locks
+      controls above 10 km/h; steering-wheel buttons, Android Auto/Bluetooth and the lock screen already control music.
+- [ ] L.6 Map Matching API (100k free requests/month): could snap the recap route / fog cells to roads later. Not for the distance
+      number (that is what task 1.9 tests). I believe a request takes ~100 points, so simplify the track first (unverified, check docs).
+
+## Mapbox free tiers (PS checked the Mapbox pricing page, 2026-11-09)
+Maps SDKs for Mobile: free up to 25,000 monthly active users (price after that not checked). Navigation SDK v3: 100 MAU + 1,000 trips.
+Directions, Map Matching, Optimization, Matrix, Isochrone: 100,000 requests (matrix: elements) each per month. Our map cost is
+free for a long time; the Navigation SDK is the only tight limit, and it is out (L.3).
