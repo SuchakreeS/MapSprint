@@ -5,7 +5,7 @@ set local role postgres;
 create extension if not exists pgtap with schema extensions;
 set local search_path to extensions, public;
 
-select plan(37);
+select plan(47);
 
 
 -- =====================================================================
@@ -137,6 +137,42 @@ select lives_ok($$update public.drives set visibility = 'private' where id = 'd1
 select lives_ok($$delete from public.comments where id = 'c1000000-0000-0000-0000-000000000001'$$,
   'drive owner can delete a comment on their drive');
 select is_empty('select * from public.comments', 'the comment is gone');
+
+-- =====================================================================
+-- 2.2: car colour + avatar photos  [7]  (still signed in as A)
+-- =====================================================================
+select lives_ok($$insert into public.vehicles (nickname, colour) values ('Daily driver', 'racing_red')$$,
+  'owner can add a car with a design colour');
+select throws_ok($$insert into public.vehicles (nickname, colour) values ('Pinky', 'hot_pink')$$,
+  '23514', null, 'colour must be one of the 8 design colours');
+select lives_ok($$insert into storage.objects (bucket_id, name)
+                  values ('avatars', '11111111-1111-1111-1111-111111111111/avatar.jpg')$$,
+  'user can upload a photo into their own folder');
+select throws_ok($$insert into storage.objects (bucket_id, name)
+                   values ('avatars', '22222222-2222-2222-2222-222222222222/avatar.jpg')$$,
+  '42501', null, 'user cannot upload into someone else''s folder');
+
+select lives_ok($$update public.profiles set avatar_url = '11111111-1111-1111-1111-111111111111/avatar.jpg'
+                  where id = '11111111-1111-1111-1111-111111111111'$$,
+  'user can point their profile at their own photo');
+select throws_ok($$update public.profiles set avatar_url = '22222222-2222-2222-2222-222222222222/avatar.jpg'
+                   where id = '11111111-1111-1111-1111-111111111111'$$,
+  '23514', null, 'user cannot use someone else''s photo as their avatar');
+
+set local role anon;
+select is_empty($$select 1 from storage.objects where bucket_id = 'avatars'$$, 'signed-out visitors cannot list photos');
+set local role authenticated;
+
+set local request.jwt.claims to '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}';
+select is((select count(*)::int from storage.objects
+           where bucket_id = 'avatars' and name = '11111111-1111-1111-1111-111111111111/avatar.jpg'),
+  1, 'signed-in users can see other people''s photos');
+select lives_ok($$update storage.objects set name = '22222222-2222-2222-2222-222222222222/stolen.jpg'
+                  where bucket_id = 'avatars' and name = '11111111-1111-1111-1111-111111111111/avatar.jpg'$$,
+  'moving someone else''s photo runs but should change nothing');
+select is((select count(*)::int from storage.objects
+           where bucket_id = 'avatars' and name = '11111111-1111-1111-1111-111111111111/avatar.jpg'),
+  1, 'cannot move or overwrite someone else''s photo');
 
 -- =====================================================================
 -- PDPA: deleting the account removes everything  [3]
