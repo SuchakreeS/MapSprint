@@ -206,6 +206,24 @@ PS tested the HUD (1.5), recap and history (1.7) and the GPS check card (1.10) o
 - PS chose a1 + b1 (done, uncommitted, test-first, 112 tests): recap header `formatDateTimeRange(start, end, activeS)` appends "· 36:40 active" only when active time is >= 1 min shorter than the wall clock; history hides drives under 100 m (`isJunkDrive`, `MIN_LISTED_DRIVE_M` in `drive-format.ts`, filtered in `loadDrives`; data stays in SQLite). Delete UI left for after the field tests.
 - NOT checked on phone: recap header on the 5 Nov drive shows "42 min · 36:40 active"; junk rows gone from history.
 
+## App icon (2026-11-06)
+App icon: winding road + tach dial (design/logo/), wired in app.json, needs a native build to appear. Verified paths and sizes; splash `imageWidth` is 76, proposed 200 (artwork is only ~59% of the PNG width), not changed yet. expo-doctor: only dependency patch-version mismatches (`npx expo install --check`), no icon or asset errors.
+
+## 3D map decision (2026-11-06, PS, discussion only, nothing coded)
+- FREE: 3D replay of a drive on the recap (plan 3.9). Explored cells = 3D buildings, unexplored = flat blueprint. Car = a dot.
+- PREMIUM (Update 1): live 3D driving mode (U1.5) and the 3D car (U1.6). Rule: 3D map in live mode means a 3D car.
+- Before building the fog (3.4), run the map style spike 3.0 (Mapbox Standard vs current style), because the fog
+  and the 3D buildings must work in the same style. Not part of Phase 1; does not change the Phase 1 gate.
+- Not designed yet: the replay UI on the recap and the premium 3D screens.
+
+## Session 6 (2026-11-09): on-phone tests PASS
+- PS tested everything pending on the phone (1.1-1.8, 1.10, 1.11, 1.13, 1.5d, recap header, junk-drive filter) and did ~4 test drives: "all the things work fine".
+- Only gap: "the notification is not shown yet". Asked PS which one: (a) "Finish this drive?" when locked = expected, not built (in-app only by PS decision, notification is 4.3); (b) the foreground-service "Recording your drive" notification = likely Android 13+ POST_NOTIFICATIONS not granted (expo-location does not request it; recording still works). PS answered: BOTH are missing.
+- (a) is expected (not built, 4.3). (b) root cause: `POST_NOTIFICATIONS` is declared in app.json but the app never REQUESTED it at runtime (nothing in `src/` asked), and on Android 13+ it is off until asked, so Android hides the foreground-service notification while the service keeps recording.
+- Fix (uncommitted): `ensureNotificationPermission()` in `recorder.ts`, called by `startRecording()` before the session starts. Uses core RN `PermissionsAndroid` (no new library, permission already in the manifest, so no native rebuild is needed in principle; the standalone APK still needs a new preview build to get the JS). Android < 13 skipped; refusal never blocks recording. No unit test (platform glue, no src/lib logic). typecheck clean, eslint clean, npm test 112/112.
+- NOT checked on phone: press Start drive -> Android asks "Allow Mapsprint to send notifications?" -> Allow -> "Recording your drive" shows in the drawer during the drive. If the dialog never appears, the notification permission was already refused twice: turn it on in Settings > Apps > Mapsprint > Notifications.
+- 1.9: PS will record trip-meter vs app distance on the next drives and report them; don't ask again until PS brings them.
+
 ## Next step
 0) PS commits manually (suggested message: "feat(record): HUD lock pill, active time in recap header, hide junk drives"). Open choice before the next APK: icons (needs react-native-svg + one native rebuild) vs Phase 2 prep (2.1 Supabase; RLS/auth go to an Opus session).
 1) PS commits 1.8, builds the preview APK and tests 1.5, 1.6, 1.7, 1.8, 1.10, 1.11 on a real walk/drive. 2) Then **1.9 the 10-drive field test** (the Phase 1 gate: distance within 2% of the car trip meter; tune `CLEANING`; the recap GPS check card is the tool) and 1.12 (remove the spike screens). Suggest doing 1.12 AFTER the first real drive passes, because the GPS spike screen is still the fallback to see/stop sessions.

@@ -110,7 +110,12 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
 - [ ] 2.5 Weekly DB backup GitHub Action
 - [ ] 2.6 Play Console: app, foreground-service declaration, internal → closed test
 
-## Phase 3 — Game (≈50 h)
+## Phase 3 — Game (≈65 h; was 50, +4 for spike 3.0, +10 for replay 3.9, my estimates)
+- [ ] 3.0 Map style spike (do BEFORE 3.4; decision PS 2026-11-06): try Mapbox **Standard** style (built-in 3D buildings,
+      day/dusk/night light presets) vs our current style. Check on the Samsung: can the blueprint fog (3.4) be layered
+      on Standard (slots / custom layers), can 3D buildings be shown only inside explored cells (unexplored = flat
+      blueprint), building-height coverage in Bangkok vs Pathum Thani, FPS and phone heat with pitch ~60°. Confirm
+      Mapbox mobile billing is per MAU (3D should not add cost). Record the result in handoff.md, then pick the style.
 - [ ] 3.1 XP rules (10/km, 25/new cell, smooth ×1.0–1.5, +50 first drive) — TDD in src/lib
 - [ ] 3.2 Levels: XP for next level = 100 × level^1.5
 - [ ] 3.3 H3 cells res 9 + gridPathCells; explored_cells upsert server-side
@@ -119,6 +124,10 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
 - [ ] 3.6 Badges (10 listed in plan doc) + Drive Recap screen (10) + Share drive (11)
 - [ ] 3.7 Sounds (expo-audio) + voice lines (expo-speech, English)
 - [ ] 3.8 Explore map (17) + Districts (18) with OSM boundaries for 4 launch provinces
+- [ ] 3.9 3D drive replay (FREE, PS decision 2026-11-06): on the Drive Recap, a camera flyover along the route in 3D
+      (pitched camera following the route bearing). Explored cells show 3D buildings, unexplored stay flat blueprint
+      ("reveal the city"). The car is a **dot** (route line drawing itself + glowing dot at its tip), NOT a 3D car.
+      Replay only, never during a live drive. Needs 3.0 and 3.4. Design for this screen not made yet.
 
 ## Phase 4 — Social (≈45 h)
 - [ ] 4.1 Follows (private accounts, requests) + Followers screen (25)
@@ -131,10 +140,17 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
 - [ ] 4.6 Profile (20), History (21), Badges (22), Garage (23), Settings (26–29)
 
 ## Phase 5 — Launch (≈20 h)
-- [ ] 5.1 Final name + trademark + domain; app icon
+- [ ] 5.1 Final name + trademark + domain; app icon (icon artwork wired in 2026-11-06, needs a native build to see; name/trademark/domain still open)
 - [ ] 5.2 Privacy policy (PDPA), terms (traffic-law disclaimer), delete/export data
 - [ ] 5.3 Store listing (English), screenshots, production release
 
-## Update 1 — Premium (after launch, ≈40 h)
+## Update 1 — Premium (after launch, ≈58 h; was 40, +10 for U1.5, +8 for U1.6, my estimates)
 - [ ] U1.1 RevenueCat paywall, U1.2 Customise (car icons, map themes, badge frames),
       U1.3 Deeper stats, U1.4 Manage subscription
+- [ ] U1.5 Live 3D driving mode (PREMIUM, PS decision 2026-11-06): "driver view" camera behind and above the car
+      (pitch ~60°, course bearing, puck low on screen), 3D buildings. 2D stays the default; the 2D/3D switch follows the
+      HUD lock rule (only when stopped or < 10 km/h). Freeze camera bearing below 3 km/h (GPS course is noise).
+      Glanceable only: no animations or popups while driving. Fall back to 2D on low battery / overheating.
+- [ ] U1.6 3D car (PREMIUM): rule "if the map is 3D (live 3D mode), the car is 3D". Mapbox 3D model puck (glTF).
+      Generic low-poly cars only (no real brand models: trademark risk). Later: match the Garage car, skins/colours
+      (ties into U1.2). Premium users also get the 3D car in the replay (free users keep the dot).
