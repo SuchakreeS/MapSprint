@@ -113,8 +113,15 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
       off: `EMAIL_AUTH_ENABLED`), guest mode, onboarding 01 → 03 → 04 → 05 (06 privacy zones moved to Phase 4),
       guest drives move to the next account, tab-bar icons (react-native-svg)
 - [ ] 2.3 Upload: gzipped raw track to Storage, drive row; offline queue + retry (Saving screen 09)
+      DESIGNED 2026-11-10 (Opus, with PS): spec `docs/superpowers/specs/2026-11-10-drive-upload-finalize-design.md`,
+      task list `docs/superpowers/plans/2026-11-10-drive-upload-finalize.md` (6 steps; Sonnet codes, Opus reviews steps 1 + 4).
+      Decided: recap waits for the server and shows final numbers only; no signal = "Waiting to upload" in History;
+      travel MODES Car / Motorbike / Other picked on Pre-drive (Garage holds cars + motorbikes); one shared map, every
+      mode uncovers cells, Other earns the same XP; not verified (like Strava), server drops only impossible data.
 - [ ] 2.4 Edge Function `finalize-drive`: clean, recompute stats, simplify route
-      (Douglas–Peucker 5 m), privacy-zone trimming, anti-cheat flags
+      (Douglas–Peucker 5 m), privacy-zone trimming, anti-cheat flags (see 2.3 note + spec)
+      2.6 GATE added: deleting a drive/account must also delete its raw track file in the `tracks` bucket.
+      XP rules for 3.1 (PS 2026-11-10): same XP for every mode, daily XP cap, less XP for repeated roads.
 - [ ] 2.5 Weekly DB backup GitHub Action
 - [ ] 2.6 Play Console: app, foreground-service declaration, internal → closed test
       GATES before the closed test (from 2.2): in-app account deletion (Play policy; also delete the user's

@@ -5,7 +5,7 @@ set local role postgres;
 create extension if not exists pgtap with schema extensions;
 set local search_path to extensions, public;
 
-select plan(50);
+select plan(79);
 
 
 -- =====================================================================
@@ -28,11 +28,13 @@ update public.follows set status = 'accepted'
   where follower_id = '33333333-3333-3333-3333-333333333333'
     and followee_id = '44444444-4444-4444-4444-444444444444';
 
+-- A's processed drives must not overlap in time (2.3: exclusion constraint), so they are staggered.
+-- d1 -5h..-4h, d2 -4h..-3h (back to back is allowed), d4 -2h..-1h. d3/d6 are 'uploading' and may overlap.
 insert into public.drives (id, user_id, started_at, ended_at, visibility, status) values
-  ('d1000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', now() - interval '1 hour', now(), 'followers', 'processed'),
-  ('d1000000-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', now() - interval '1 hour', now(), 'private',   'processed'),
+  ('d1000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', now() - interval '5 hours', now() - interval '4 hours', 'followers', 'processed'),
+  ('d1000000-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', now() - interval '4 hours', now() - interval '3 hours', 'private',   'processed'),
   ('d1000000-0000-0000-0000-000000000003', '11111111-1111-1111-1111-111111111111', now() - interval '1 hour', now(), 'followers', 'uploading'),
-  ('d1000000-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111', now() - interval '1 hour', now(), 'public',    'processed'),
+  ('d1000000-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111', now() - interval '2 hours', now() - interval '1 hour', 'public',    'processed'),
   ('d1000000-0000-0000-0000-000000000005', '44444444-4444-4444-4444-444444444444', now() - interval '1 hour', now(), 'public',    'processed');
 
 insert into public.drive_private (drive_id, user_id, max_kmh)
@@ -167,6 +169,100 @@ select throws_ok($$update public.profiles set avatar_url = '22222222-2222-2222-2
 select throws_ok($$update public.profiles set avatar_url = '11111111-1111-1111-1111-111111111111/avatar-1.jpg/../x.jpg'
                    where id = '11111111-1111-1111-1111-111111111111'$$,
   '23514', null, 'avatar path tricks are rejected');
+
+-- =====================================================================
+-- 2.3: travel modes + raw track uploads  [29]  (still signed in as A)
+--   d1 -5h..-4h, d2 -4h..-3h, d4 -2h..-1h processed; d3 uploading. A's car: 'Daily driver'.
+-- =====================================================================
+select lives_ok($$insert into public.vehicles (nickname, kind) values ('Scooter', 'motorbike')$$,
+  'owner can add a motorbike');
+select throws_ok($$insert into public.vehicles (nickname, kind) values ('Tank', 'tank')$$,
+  '23514', null, 'vehicle kind must be car or motorbike');
+select throws_ok($$update public.vehicles set kind = 'motorbike' where nickname = 'Daily driver'$$,
+  '42501', null, 'a vehicle cannot change kind after it is added');
+
+select is((select mode from public.drives where id = 'd1000000-0000-0000-0000-000000000006'),
+  'car', 'a drive uploaded without a mode is a car drive');
+select throws_ok($$insert into public.drives (id, started_at, ended_at, mode)
+                   values ('d1000000-0000-0000-0000-000000000007', now() - interval '3 hours', now() - interval '2 hours', 'plane')$$,
+  '23514', null, 'mode must be car, motorbike or other');
+select lives_ok($$insert into public.drives (id, started_at, ended_at, mode, vehicle_id)
+                  values ('d1000000-0000-0000-0000-000000000008', now() - interval '3 hours', now() - interval '2 hours', 'motorbike',
+                          (select id from public.vehicles where nickname = 'Scooter'))$$,
+  'a motorbike drive can use a motorbike');
+select throws_ok($$insert into public.drives (id, started_at, ended_at, mode, vehicle_id)
+                   values ('d1000000-0000-0000-0000-000000000009', now() - interval '3 hours', now() - interval '2 hours', 'car',
+                           (select id from public.vehicles where nickname = 'Scooter'))$$,
+  '42501', null, 'a car drive cannot use a motorbike');
+select throws_ok($$insert into public.drives (id, started_at, ended_at, mode, vehicle_id)
+                   values ('d1000000-0000-0000-0000-00000000000a', now() - interval '3 hours', now() - interval '2 hours', 'other',
+                           (select id from public.vehicles where nickname = 'Daily driver'))$$,
+  '42501', null, 'an Other drive has no vehicle');
+select lives_ok($$insert into public.drives (id, started_at, ended_at, mode)
+                  values ('d1000000-0000-0000-0000-00000000000b', now() - interval '3 hours', now() - interval '2 hours', 'other')$$,
+  'an Other drive without a vehicle is fine');
+
+-- Editing mode/vehicle: only after the drive is counted (processed), and the pair must stay valid.
+select lives_ok($$update public.drives set mode = 'motorbike', vehicle_id = (select id from public.vehicles where nickname = 'Scooter')
+                  where id = 'd1000000-0000-0000-0000-000000000004'$$,
+  'owner can switch a counted drive to motorbike and pick the motorbike in one update');
+select throws_ok($$update public.drives set mode = 'car' where id = 'd1000000-0000-0000-0000-000000000004'$$,
+  '42501', null, 'switching to car while the motorbike is still attached is refused');
+select lives_ok($$update public.drives set mode = 'other', vehicle_id = null where id = 'd1000000-0000-0000-0000-000000000004'$$,
+  'owner can switch a counted drive to Other and drop the vehicle in one update');
+select lives_ok($$update public.drives set mode = 'other' where id = 'd1000000-0000-0000-0000-000000000003'$$,
+  'editing a drive that is not counted yet runs but changes nothing');
+select is((select mode from public.drives where id = 'd1000000-0000-0000-0000-000000000003'),
+  'car', 'a drive that is still uploading keeps its mode');
+select throws_ok($$update public.drives set started_at = now() - interval '9 hours' where id = 'd1000000-0000-0000-0000-000000000004'$$,
+  '42501', null, 'owner cannot move a drive in time');
+
+-- Raw track files: write only your own uploading drive's file, never read, replace or delete.
+select lives_ok($$insert into storage.objects (bucket_id, name)
+                  values ('tracks', '11111111-1111-1111-1111-111111111111/d1000000-0000-0000-0000-000000000003.json.gz')$$,
+  'owner can upload the track of their own uploading drive');
+select throws_ok($$insert into storage.objects (bucket_id, name)
+                   values ('tracks', '11111111-1111-1111-1111-111111111111/d1000000-0000-0000-0000-000000000003.json.gz')$$,
+  '23505', null, 'a track cannot be uploaded twice (no overwrite)');
+select throws_ok($$insert into storage.objects (bucket_id, name)
+                   values ('tracks', '11111111-1111-1111-1111-111111111111/d1000000-0000-0000-0000-000000000004.json.gz')$$,
+  '42501', null, 'no track upload for a drive that is already counted');
+select throws_ok($$insert into storage.objects (bucket_id, name)
+                   values ('tracks', '11111111-1111-1111-1111-111111111111/d1000000-0000-0000-0000-0000000000ff.json.gz')$$,
+  '42501', null, 'no track upload for a drive that does not exist');
+select throws_ok($$insert into storage.objects (bucket_id, name)
+                   values ('tracks', '22222222-2222-2222-2222-222222222222/d1000000-0000-0000-0000-000000000003.json.gz')$$,
+  '42501', null, 'no track upload into someone else''s folder');
+select throws_ok($$insert into storage.objects (bucket_id, name)
+                   values ('tracks', '11111111-1111-1111-1111-111111111111/random-name.json.gz')$$,
+  '42501', null, 'track files must be named after the drive id');
+select is_empty($$select 1 from storage.objects where bucket_id = 'tracks'$$,
+  'the owner cannot read the raw track back (only the server can)');
+select throws_ok($$delete from storage.objects where bucket_id = 'tracks'$$,
+  '42501', null, 'a track cannot be deleted by the owner (Supabase blocks direct deletes in storage tables)');
+select lives_ok($$update storage.objects set name = '11111111-1111-1111-1111-111111111111/moved.json.gz' where bucket_id = 'tracks'$$,
+  'replacing a track runs but changes nothing (no update policy)');
+
+-- Server side (postgres = what the Edge Function can do): the exclusion constraint on counted drives.
+set local role postgres;
+select is((select count(*)::int from storage.objects where bucket_id = 'tracks'
+             and name = '11111111-1111-1111-1111-111111111111/d1000000-0000-0000-0000-000000000003.json.gz'),
+  1, 'the uploaded track is still there, untouched');
+select throws_ok($$update public.drives set status = 'processed', started_at = now() - interval '90 minutes'
+                   where id = 'd1000000-0000-0000-0000-000000000003'$$,
+  '23P01', null, 'two counted drives of the same person cannot overlap in time');
+select lives_ok($$insert into public.drives (id, user_id, started_at, ended_at, status)
+                  values ('d1000000-0000-0000-0000-00000000000c', '11111111-1111-1111-1111-111111111111',
+                          now() - interval '4 hours 30 minutes', now() - interval '4 hours', 'rejected')$$,
+  'a rejected drive does not block anything');
+select lives_ok($$insert into public.drives (id, user_id, started_at, ended_at, status)
+                  values ('d1000000-0000-0000-0000-00000000000d', '22222222-2222-2222-2222-222222222222',
+                          now() - interval '5 hours', now() - interval '4 hours', 'processed')$$,
+  'different people can drive at the same time');
+select lives_ok($$update public.drives set status = 'processed' where id = 'd1000000-0000-0000-0000-000000000003'$$,
+  'back-to-back counted drives are fine (d4 ends when d3 starts)');
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
 
 set local role anon;
 select is_empty($$select 1 from storage.objects where bucket_id = 'avatars'$$, 'signed-out visitors cannot list photos');

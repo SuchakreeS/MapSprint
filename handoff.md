@@ -413,6 +413,31 @@ is 'background' (RN AppStateModule), so the "app on screen" skip did not block i
 - Results: typecheck clean, eslint clean, npm test 148/148 (5 new). Not checked on the phone: testlist F13.
 - **Needs a new EAS preview build** (JS change; no new native code). No OTA updates in this project.
 
+## Session 14 (2026-11-10, Opus + chat with PS): 2.3 / 2.4 DESIGN written (docs only, no code)
+- PS started the EAS preview build (includes the Session 13 fix) and is waiting to test testlist F13.
+- Design agreed in chat, written to `docs/superpowers/specs/2026-11-10-drive-upload-finalize-design.md` (reviewed by a
+  builder subagent; its answers are in the spec section "Rules settled after the builder check") and
+  `docs/superpowers/plans/2026-11-10-drive-upload-finalize.md` (6 steps). plan.md 2.3/2.4 updated.
+- Key decisions (PS): recap waits for the server, final numbers only; no signal = wait, History "Waiting to upload";
+  modes Car / Motorbike / Other; Garage holds motorbikes; ONE shared map for all modes; Other earns the same XP; no
+  proof of driving (trust, like Strava).
+- The builder-check answers (mode edits only when processed, exclusion constraint for overlaps, failure classes, 12 h /
+  60k point limits, null route when trimmed away) were settled by Claude and are NOT yet reviewed by Opus: the Opus
+  security review (plan step 6) must confirm them.
+- Next: PS tests F13 on the new build. Then a Sonnet session starts the plan at step 1 (migration + pgTAP).
+- **Step 1 WRITTEN, NOT YET RUN (Sonnet, 2026-11-10):** `supabase/migrations/20261110120000_drive_modes_and_tracks.sql`
+  (drives.mode, vehicles.kind, vehicle/mode insert+update policies, update only when processed, btree_gist exclusion
+  constraint on processed drives, private `tracks` bucket + insert-only policy) and `supabase/tests/rls_test.sql`
+  (29 new tests, `plan(79)`; A's fixture drives were re-timed so counted drives don't overlap). Docker does not start on
+  this PC and the rolled-back cloud dry run was declined, so NOTHING was executed. To verify:
+  `npx supabase db push --remote` then `npx supabase test db --remote` (expect 79 ok). Things most likely to need a fix:
+  the exclusion constraint syntax (btree_gist in the `extensions` schema), the storage insert policy referencing
+  `public.drives`, and whether the Storage API's real upload needs more than INSERT (docs say only upsert needs
+  SELECT+UPDATE; confirm with a real upload in step 3). `src/features/sync/database.types.ts` is not regenerated yet.
+  **Update:** PS pushed the migration (on the cloud) and ran `test db --remote`: 78/79; the one failure was a wrong test
+  (Supabase's `storage.protect_delete` trigger makes a direct DELETE on storage.objects raise 42501 instead of deleting 0 rows).
+  Test 66 now expects the error (still 79 tests). Needs one more `npx supabase test db --remote` run to confirm 79/79.
+
 ## Next step
 **State (2026-11-09):** Phase 1 is tested on the phone except 1.9 and 1.12. 2.1 is done (cloud DB has all migrations incl. avatars,
 47/47 pgTAP on the cloud). 2.2 is coded and committed; PS added the 3 `EXPO_PUBLIC_*` vars on expo.dev and is building the preview APK
