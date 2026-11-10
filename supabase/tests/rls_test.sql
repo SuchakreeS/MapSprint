@@ -5,7 +5,7 @@ set local role postgres;
 create extension if not exists pgtap with schema extensions;
 set local search_path to extensions, public;
 
-select plan(79);
+select plan(80);
 
 
 -- =====================================================================
@@ -171,7 +171,7 @@ select throws_ok($$update public.profiles set avatar_url = '11111111-1111-1111-1
   '23514', null, 'avatar path tricks are rejected');
 
 -- =====================================================================
--- 2.3: travel modes + raw track uploads  [29]  (still signed in as A)
+-- 2.3: travel modes + raw track uploads  [30]  (still signed in as A)
 --   d1 -5h..-4h, d2 -4h..-3h, d4 -2h..-1h processed; d3 uploading. A's car: 'Daily driver'.
 -- =====================================================================
 select lives_ok($$insert into public.vehicles (nickname, kind) values ('Scooter', 'motorbike')$$,
@@ -183,6 +183,8 @@ select throws_ok($$update public.vehicles set kind = 'motorbike' where nickname 
 
 select is((select mode from public.drives where id = 'd1000000-0000-0000-0000-000000000006'),
   'car', 'a drive uploaded without a mode is a car drive');
+select is((select visibility from public.drives where id = 'd1000000-0000-0000-0000-000000000006'),
+  'private', 'a newly uploaded drive is private until the owner chooses to share it');
 select throws_ok($$insert into public.drives (id, started_at, ended_at, mode)
                    values ('d1000000-0000-0000-0000-000000000007', now() - interval '3 hours', now() - interval '2 hours', 'plane')$$,
   '23514', null, 'mode must be car, motorbike or other');

@@ -353,3 +353,8 @@ export function listUnqueuedFinishedSessions(owner: string): { id: number; start
 export function makeQueuedUploadsDue(): void {
   getDb().runSync("UPDATE uploads SET next_attempt_at = 0 WHERE state = 'queued'");
 }
+
+/** The driver corrected how this drive was travelled (recap). Local copy of the server change. */
+export function setSessionMode(sessionId: number, mode: TravelMode, vehicleId: string | null): void {
+  getDb().runSync('UPDATE sessions SET mode = ?, vehicle_id = ? WHERE id = ?', mode, vehicleId, sessionId);
+}

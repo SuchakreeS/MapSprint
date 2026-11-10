@@ -13,7 +13,7 @@ import { PauseGlyph } from '@/components/PauseGlyph';
 import { PlayGlyph } from '@/components/PlayGlyph';
 import { SpeedGauge } from '@/components/SpeedGauge';
 import { MAP_STYLE } from '@/features/map/map-style';
-import { getActiveSessionId } from '@/features/recording/db';
+import { getActiveSessionId, getCurrentOwner } from '@/features/recording/db';
 import { stopRecording } from '@/features/recording/recorder';
 import { useLiveDrive } from '@/features/recording/use-live-drive';
 import { getAutoPauseMs, getKeepAwakeOn } from '@/features/settings/prefs';
@@ -62,8 +62,12 @@ export default function HudScreen() {
   const finish = async () => {
     try {
       const id = getActiveSessionId(); // stopRecording clears it
+      const signedIn = getCurrentOwner() != null;
       await stopRecording();
-      router.replace(id == null ? '/' : { pathname: '/record/recap', params: { id: String(id) } });
+      // Signed in: the Saving screen uploads the drive and the recap opens with the server's final numbers. Guests: local recap.
+      router.replace(
+        id == null ? '/' : { pathname: signedIn ? '/record/saving' : '/record/recap', params: { id: String(id) } },
+      );
     } catch (e) {
       setFinishError(e instanceof Error ? e.message : 'Could not stop the recording.');
     }

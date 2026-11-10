@@ -69,6 +69,12 @@ test('parseTrackPayload refuses anything that is not a well-formed version 1 tra
   assert.equal(parseTrackPayload({ ...good, pauses: [{ ts: 1, type: 'stop' }] }), null);
 });
 
+test('parseTrackPayload refuses a track with an absurd number of points before looping over it', () => {
+  const huge = new Array(TRACK_LIMITS.maxPoints * 3).fill(1);
+  const bomb = { v: 1, mode: 'car', startedAt: 1, endedAt: 2, autoPauseMs: null, points: { ts: huge, lat: huge, lng: huge, speed: huge, accuracy: huge, heading: huge }, pauses: [] };
+  assert.equal(parseTrackPayload(bomb), null);
+});
+
 test('trackLimitProblem: ok for a normal drive, refuses too many points or a drive over 12 hours', () => {
   assert.equal(trackLimitProblem(base([P(1000), P(2000)])), null);
   const many = Array.from({ length: TRACK_LIMITS.maxPoints + 1 }, (_, i) => P(1000 + i));

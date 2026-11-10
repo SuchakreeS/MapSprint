@@ -24,6 +24,7 @@ import {
 } from '@/features/recording/db';
 import { supabase } from '@/features/sync/supabase';
 import { isJunkDrive } from '@/lib/drive-format';
+import type { UploadPhase } from '@/lib/saving';
 import { buildTrackPayload, TRACK_LIMITS, trackLimitProblem } from '@/lib/track-format';
 import {
   afterFailure,
@@ -38,6 +39,10 @@ import { vehicleIdForDrive } from '@/lib/travel-mode';
 import { notifyDriveCounted } from './counted-notification';
 
 const TAG = '[upload]';
+
+/** Where the drive being uploaded is right now (in memory only): the Saving screen reads it to move its ring. */
+const phases = new Map<number, UploadPhase>();
+export const getUploadPhase = (sessionId: number): UploadPhase | null => phases.get(sessionId) ?? null;
 const FINALIZE_FUNCTION = 'finalize-drive';
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -88,6 +93,7 @@ async function uploadOne(row: UploadRecord, owner: string): Promise<'next' | 'st
   if (gz.length > TRACK_LIMITS.maxBytes) return fail('permanent', 'too_long');
 
   updateUpload(row.sessionId, { state: 'uploading' });
+  phases.set(row.sessionId, 'preparing');
 
   // 1. The drive row. A vehicle that was deleted on the server (or no longer fits the mode) must not block the drive.
   const vehicleId = vehicleIdForDrive(readCachedCars(owner), session.mode, session.vehicle_id);
@@ -99,6 +105,7 @@ async function uploadOne(row: UploadRecord, owner: string): Promise<'next' | 'st
       ended_at: new Date(endedAt).toISOString(),
       mode: session.mode,
     });
+  phases.set(row.sessionId, 'row');
   let ins = await insertRow(vehicleId);
   if (ins.error && vehicleId && (ins.error.code === '42501' || ins.error.code === '23503')) {
     console.warn(TAG, `vehicle refused for drive ${row.sessionId}, uploading without it`);
@@ -112,20 +119,35 @@ async function uploadOne(row: UploadRecord, owner: string): Promise<'next' | 'st
     }
   }
 
-  // 2. The track file.
-  const up = await supabase.storage
-    .from('tracks')
-    .upload(`${owner}/${row.driveUuid}.json.gz`, gz, { contentType: 'application/gzip', upsert: false });
-  if (up.error) {
-    const status = 'status' in up.error && typeof up.error.status === 'number' ? up.error.status : null;
-    const cls = classify(status);
-    if (cls !== 'already-done') {
-      console.warn(TAG, 'track upload failed:', status, up.error.message);
-      return fail(cls, 'invalid');
+  // 2. The track file. If the row already existed, an earlier try may have got further: when the server has already decided the drive
+  // (its answer was lost on the way back), Storage would refuse a second upload (policy: only 'uploading' drives), so skip it and
+  // ask finalize-drive, which is idempotent and returns the stored answer.
+  let skipUpload = false;
+  if (ins.error) {
+    const cur = await supabase.from('drives').select('status').eq('id', row.driveUuid).maybeSingle();
+    if (cur.error) return fail('transient');
+    skipUpload = cur.data != null && cur.data.status !== 'uploading';
+  }
+  if (!skipUpload) {
+    phases.set(row.sessionId, 'track');
+    const up = await supabase.storage
+      .from('tracks')
+      .upload(`${owner}/${row.driveUuid}.json.gz`, gz, { contentType: 'application/gzip', upsert: false });
+    if (up.error) {
+      const e = up.error as { status?: number; statusCode?: string; code?: string };
+      const status = typeof e.status === 'number' ? e.status : null;
+      // Older Storage versions answer HTTP 400 with the real code only in the body: read that too.
+      const duplicate = e.statusCode === '409' || e.code === 'ResourceAlreadyExists';
+      const cls = duplicate ? 'already-done' : classify(status);
+      if (cls !== 'already-done') {
+        console.warn(TAG, 'track upload failed:', status, up.error.message);
+        return fail(cls, 'invalid');
+      }
     }
   }
 
   // 3. The server checks and counts it.
+  phases.set(row.sessionId, 'server');
   const res = await supabase.functions.invoke(FINALIZE_FUNCTION, { body: { driveId: row.driveUuid } });
   if (res.error) {
     const ctx = (res.error as { context?: unknown }).context;
@@ -165,7 +187,13 @@ export async function runUploadQueue(): Promise<void> {
     for (;;) {
       const next = pickNext(listUploads(owner), Date.now());
       if (!next) break;
-      if ((await uploadOne(next, owner)) === 'stop') break;
+      let result: 'next' | 'stop';
+      try {
+        result = await uploadOne(next, owner);
+      } finally {
+        phases.delete(next.sessionId);
+      }
+      if (result === 'stop') break;
     }
   } catch (e) {
     // Never let the queue crash the app: the drive stays on the phone and the next run tries again.

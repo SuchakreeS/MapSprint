@@ -23,8 +23,8 @@ import { parseTrackPayload, TRACK_LIMITS } from './lib/track-format.ts';
 
 const TAG = '[finalize-drive]';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-/** Decompressed JSON cap: a 60k-point track is about 3 MB, so this is generous but stops a zip bomb. */
-const MAX_JSON_BYTES = 24 * 1024 * 1024;
+/** Decompressed JSON cap: a 60k-point track is about 3 MB, so this is generous but stops a zip bomb (memory limit 256 MB). */
+const MAX_JSON_BYTES = 8 * 1024 * 1024;
 const REASONS: readonly string[] = ['overlap', 'times_mismatch', 'unreadable', 'too_long', 'too_few_points', 'invalid'];
 
 function secretKey(): string {
@@ -157,7 +157,7 @@ async function handle(req: Request): Promise<Response> {
   if (decided) return decided;
 
   // The track: path built from the verified user id + the validated drive id.
-  const path = `${uid}/${driveId}.json.gz`;
+  const path = `${uid}/${drive.id}.json.gz`; // drive.id = the stored (lowercase) id, which is what the upload used
   const dl = await admin.storage.from('tracks').download(path);
   if (dl.error || !dl.data) return json(503, { error: 'track_unavailable' }); // maybe not uploaded yet: the app retries
   const gz = new Uint8Array(await dl.data.arrayBuffer());

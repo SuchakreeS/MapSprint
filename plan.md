@@ -122,6 +122,13 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
       (Douglas–Peucker 5 m), privacy-zone trimming, anti-cheat flags (see 2.3 note + spec)
       CODE DONE 2026-11-10 (Opus): `supabase/functions/finalize-drive/` + pure rules `src/lib/finalize.ts` (tests); NOT DEPLOYED yet:
       `npx supabase functions deploy finalize-drive --use-api` (no Docker needed), then run testlist F16. Opus security review pending.
+      Reviewed by a fresh reviewer agent 2026-11-10: no cross-user hole; fixed: retry-after-server-decided path, drives default PRIVATE
+      (migration `20261110130000_drives_default_private.sql`: routes stay private until zones exist), date bounds, pause-event bounds,
+      8 MB JSON cap, bounded route simplification. STEP 5 (Saving screen + recap with server numbers + mode correction) code done.
+      PHASE 3 GATES from the review (before XP counts for anything): (a) no double counting by delete + re-upload or shifting the
+      timestamps: store a content hash (e.g. sha256 of the rounded lat/lng sequence) per user in drive_private that survives drive
+      deletion, or make XP ignore repeated geometry; (b) a limit on open `uploading` rows / files per user and a retry cap; (c) a past-date
+      window (e.g. 60 days) so made-up "days" cannot dodge daily XP caps; (d) zones added later re-trim old routes.
       2.6 GATE added: deleting a drive/account must also delete its raw track file in the `tracks` bucket.
       XP rules for 3.1 (PS 2026-11-10): same XP for every mode, daily XP cap, less XP for repeated roads.
 - [ ] 2.5 Weekly DB backup GitHub Action

@@ -86,6 +86,9 @@ export function parseTrackPayload(json: unknown): TrackPayload | null {
   if (!isNumOrNull(o.autoPauseMs)) return null;
   const p = o.points as Record<string, unknown> | undefined;
   if (typeof p !== 'object' || p === null) return null;
+  // Refuse an absurd size before looping over it (a decompression bomb of tiny numbers). Up to 2x the limit still gets a proper
+  // 'too_long' answer from the server.
+  if (Array.isArray(p.ts) && p.ts.length > TRACK_LIMITS.maxPoints * 2) return null;
   if (!allOf(p.ts, isNum) || !allOf(p.lat, isNum) || !allOf(p.lng, isNum)) return null;
   if (!allOf(p.speed, isNumOrNull) || !allOf(p.accuracy, isNumOrNull) || !allOf(p.heading, isNumOrNull)) return null;
   const n = p.ts.length;

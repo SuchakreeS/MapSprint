@@ -19,6 +19,12 @@ export const TIMES_TOLERANCE_MS = 120_000;
 const AUTO_PAUSE_CHOICES_MS = [120_000, 300_000, 600_000];
 const DEFAULT_AUTO_PAUSE_MS = 300_000;
 const ROUTE_TOLERANCE_M = 5;
+/** Douglas-Peucker is quadratic in the worst case: above this many route points the line is thinned first (bounded work). */
+const MAX_DP_POINTS = 8000;
+/** No drive can start before the app existed (poison dates would also make the server write fail and the phone retry forever). */
+export const MIN_VALID_TS = Date.UTC(2024, 0, 1);
+/** A little clock drift is fine; more means a made-up date. */
+export const MAX_FUTURE_MS = 5 * 60_000;
 const ROUTE_MIN_STEP_M = 5;
 
 export interface Zone {
@@ -134,6 +140,11 @@ export function cleanRoute(input: GpsPoint[]): RouteCoord[] {
 /** Douglas-Peucker with the tolerance in metres (the coordinates are projected to a local flat map first). */
 export function simplifyMeters(coords: RouteCoord[], toleranceM: number): RouteCoord[] {
   if (coords.length <= 2) return [...coords];
+  if (coords.length > MAX_DP_POINTS) {
+    const stride = Math.ceil(coords.length / MAX_DP_POINTS);
+    const last = coords.length - 1;
+    coords = coords.filter((_, i) => i % stride === 0 || i === last);
+  }
   const lat0 = coords.reduce((s, c) => s + c[1], 0) / coords.length;
   const lng0 = coords.reduce((s, c) => s + c[0], 0) / coords.length;
   const mPerDegLat = 111_195;
@@ -161,7 +172,7 @@ export function routeToEwkt(coords: RouteCoord[]): string | null {
  * Everything finalize-drive decides from the uploaded track. Overlap with other drives needs the database: the caller checks it
  * with the returned start/end (and the DB exclusion constraint backs it up).
  */
-export function finalizeTrack(payload: TrackPayload, row: RowTimes, zones: Zone[]): FinalizeOutcome {
+export function finalizeTrack(payload: TrackPayload, row: RowTimes, zones: Zone[], nowMs: number = Date.now()): FinalizeOutcome {
   const n = payload.points.ts.length;
   if (n > TRACK_LIMITS.maxPoints) return rejected('too_long'); // before any heavy work
   for (let i = 0; i < n; i++) {
@@ -177,6 +188,7 @@ export function finalizeTrack(payload: TrackPayload, row: RowTimes, zones: Zone[
     if (ts < startMs) startMs = ts;
     if (ts > endMs) endMs = ts;
   }
+  if (startMs < MIN_VALID_TS || endMs > nowMs + MAX_FUTURE_MS) return rejected('invalid');
   if (endMs - startMs > TRACK_LIMITS.maxDurationMs) return rejected('too_long');
   if (endMs <= startMs) return rejected('too_few_points');
   // NaN compares false with everything, so an unreadable row time must be refused explicitly, not slip through the check.
@@ -192,7 +204,10 @@ export function finalizeTrack(payload: TrackPayload, row: RowTimes, zones: Zone[
       : AUTO_PAUSE_CHOICES_MS.includes(payload.autoPauseMs)
         ? payload.autoPauseMs
         : DEFAULT_AUTO_PAUSE_MS;
-  const s = summarize(points, payload.pauses, autoPauseMs);
+  // Pause events from the phone are only believed inside the track: a made-up pause far outside it would inflate the time.
+  const pauses = payload.pauses.filter((e) => e.ts >= startMs && e.ts <= endMs);
+  const s = summarize(points, pauses, autoPauseMs);
+  const durationS = Math.round((endMs - startMs) / 1000);
   if (s.acceptedPoints < 2) return rejected('too_few_points');
 
   const clean = cleanRoute(points);
@@ -204,8 +219,8 @@ export function finalizeTrack(payload: TrackPayload, row: RowTimes, zones: Zone[
     kind: 'ok',
     stats: {
       distanceM: round(s.distanceM, 1),
-      movingS: Math.round(s.movingS),
-      elapsedS: Math.round(s.elapsedS),
+      movingS: Math.min(Math.round(s.movingS), durationS), // time can never exceed the track's own length
+      elapsedS: Math.min(Math.round(s.elapsedS), durationS),
       avgMovingKmh: round(s.avgMovingKmh, 2),
       avgOverallKmh: round(s.avgOverallKmh, 2),
     },

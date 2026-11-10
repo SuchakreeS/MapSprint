@@ -493,6 +493,25 @@ is 'background' (RN AppStateModule), so the "app on screen" skip did not block i
   track file is kept for rejected drives (2.6 gate: delete with the drive/account).
 - Results: typecheck clean, eslint clean, npm test 196/196.
 
+- **Opus review of 2.3/2.4 done (fresh reviewer agent, read-only, 2026-11-10):** no way found to read or write another user's data. Fixed in code:
+  (1) retry after the server decided: the runner now checks the drive row's status when the row already exists and skips the track upload
+  (Storage only accepts 'uploading' drives) and goes straight to finalize (idempotent); Storage "already exists" is also recognised by its
+  body code (`statusCode '409'` / `ResourceAlreadyExists`); (2) NEW MIGRATION `20261110130000_drives_default_private.sql`: drives default to
+  `private` (before, followers could read the untrimmed route through the API because nobody has privacy zones yet); pgTAP now 80 tests;
+  (3) finalize rejects dates before 2024 or more than 5 min in the future (`MIN_VALID_TS`, reason `invalid`); (4) pause events outside the track
+  are ignored and elapsed/moving time never exceed the track length; (5) decompressed JSON cap 8 MB, `parseTrackPayload` refuses > 2x60k points
+  before looping, Douglas-Peucker thins routes above 8000 points first; (6) the storage path uses the stored `drive.id`.
+  Accepted / later: see the PHASE 3 GATES in plan.md 2.4 (content-hash dedupe, upload caps, past-date window, re-trim on new zones); a poison
+  drive (deterministic 5xx) is retried every 10 min by the app; `alreadyDecided` returns float4 values (tiny rounding difference vs the first answer).
+- **PS must run, in this order:** `npx supabase db push --remote` (applies the private-default migration), `npx supabase test db --remote`
+  (expect 80), `npx supabase functions deploy finalize-drive --use-api`, then build the app and run testlist F16 and F17.
+- **Step 5 DONE in code (Opus, 2026-11-10, uncommitted), phone test pending (testlist F17):** `src/lib/saving.ts` (+ `tests/saving.test.mts`) decides the
+  ring %, label, the two real steps and "no signal after 10 s"; `src/app/record/saving.tsx` is design 09 (ring + 2 steps + no-signal note + "Open recap
+  when ready"; XP / badges / map cells rows are NOT shown: Phase 3); `getUploadPhase()` in the runner feeds the ring; HUD Finish goes to Saving for
+  signed-in users and straight to the local recap for guests; the recap shows the SERVER numbers once counted, a "Travelled by" Car / Motorbike /
+  Other correction (one update of mode + vehicle_id; RLS allows it only for counted drives), or a "not counted yet" note.
+- Results: typecheck clean, eslint clean, npm test 206/206.
+
 ## Next step
 **State (2026-11-09):** Phase 1 is tested on the phone except 1.9 and 1.12. 2.1 is done (cloud DB has all migrations incl. avatars,
 47/47 pgTAP on the cloud). 2.2 is coded and committed; PS added the 3 `EXPO_PUBLIC_*` vars on expo.dev and is building the preview APK

@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import {
   cleanRoute,
   finalizeTrack,
+  MIN_VALID_TS,
   parseZoneCenter,
   routeToEwkt,
   simplifyMeters,
@@ -47,6 +48,9 @@ const payloadOf = (points: GpsPoint[], over: Partial<Parameters<typeof buildTrac
       }),
     ),
   );
+
+const NOW = T0 + 24 * 3_600_000;
+const fin = (p: TrackPayload, row: { startedAtMs: number; endedAtMs: number }, zones: Zone[]) => finalizeTrack(p, row, zones, NOW);
 
 const rowOf = (points: GpsPoint[]) => ({ startedAtMs: points[0].ts, endedAtMs: points[points.length - 1].ts });
 
@@ -143,7 +147,7 @@ test('routeToEwkt writes a PostGIS line, and nothing for fewer than two points',
 // ---------------------------------------------------------------- the whole decision
 test('a normal drive is counted with plausible numbers and a simplified route', () => {
   const pts = straightDrive(600); // 10 min at 36 km/h = 6 km
-  const out = finalizeTrack(payloadOf(pts), rowOf(pts), []);
+  const out = fin(payloadOf(pts), rowOf(pts), []);
   assert.equal(out.kind, 'ok');
   if (out.kind !== 'ok') return;
   assert.ok(Math.abs(out.stats.distanceM - 6000) < 60, `distance ${out.stats.distanceM}`);
@@ -159,8 +163,8 @@ test('a normal drive is counted with plausible numbers and a simplified route', 
 
 test('stats use the WHOLE track even when the route is trimmed at home', () => {
   const pts = straightDrive(600);
-  const trimmed = finalizeTrack(payloadOf(pts), rowOf(pts), [HOME]);
-  const full = finalizeTrack(payloadOf(pts), rowOf(pts), []);
+  const trimmed = fin(payloadOf(pts), rowOf(pts), [HOME]);
+  const full = fin(payloadOf(pts), rowOf(pts), []);
   assert.equal(trimmed.kind, 'ok');
   assert.equal(full.kind, 'ok');
   if (trimmed.kind !== 'ok' || full.kind !== 'ok') return;
@@ -171,7 +175,7 @@ test('stats use the WHOLE track even when the route is trimmed at home', () => {
 
 test('a drive entirely inside a privacy zone is still counted, with no public route', () => {
   const pts = straightDrive(60, 3); // 180 m, all within 300 m of home
-  const out = finalizeTrack(payloadOf(pts), rowOf(pts), [HOME]);
+  const out = fin(payloadOf(pts), rowOf(pts), [HOME]);
   assert.equal(out.kind, 'ok');
   if (out.kind !== 'ok') return;
   assert.equal(out.routeEwkt, null);
@@ -180,25 +184,25 @@ test('a drive entirely inside a privacy zone is still counted, with no public ro
 test('start and end times that do not match the track are rejected', () => {
   const pts = straightDrive(600);
   const row = rowOf(pts);
-  assert.deepEqual(finalizeTrack(payloadOf(pts), { ...row, startedAtMs: row.startedAtMs - TIMES_TOLERANCE_MS - 1000 }, []), {
+  assert.deepEqual(fin(payloadOf(pts), { ...row, startedAtMs: row.startedAtMs - TIMES_TOLERANCE_MS - 1000 }, []), {
     kind: 'rejected',
     reason: 'times_mismatch',
   });
-  assert.deepEqual(finalizeTrack(payloadOf(pts), { ...row, endedAtMs: row.endedAtMs + TIMES_TOLERANCE_MS + 1000 }, []), {
+  assert.deepEqual(fin(payloadOf(pts), { ...row, endedAtMs: row.endedAtMs + TIMES_TOLERANCE_MS + 1000 }, []), {
     kind: 'rejected',
     reason: 'times_mismatch',
   });
   // within the tolerance is fine
-  assert.equal(finalizeTrack(payloadOf(pts), { ...row, endedAtMs: row.endedAtMs + 60_000 }, []).kind, 'ok');
+  assert.equal(fin(payloadOf(pts), { ...row, endedAtMs: row.endedAtMs + 60_000 }, []).kind, 'ok');
 });
 
 test('an unreadable row time (NaN) is a mismatch, never a free pass', () => {
   const pts = straightDrive(600);
-  assert.deepEqual(finalizeTrack(payloadOf(pts), { startedAtMs: NaN, endedAtMs: pts[600].ts }, []), {
+  assert.deepEqual(fin(payloadOf(pts), { startedAtMs: NaN, endedAtMs: pts[600].ts }, []), {
     kind: 'rejected',
     reason: 'times_mismatch',
   });
-  assert.deepEqual(finalizeTrack(payloadOf(pts), { startedAtMs: pts[0].ts, endedAtMs: Infinity }, []), {
+  assert.deepEqual(fin(payloadOf(pts), { startedAtMs: pts[0].ts, endedAtMs: Infinity }, []), {
     kind: 'rejected',
     reason: 'times_mismatch',
   });
@@ -206,33 +210,33 @@ test('an unreadable row time (NaN) is a mismatch, never a free pass', () => {
 
 test('too few good points, or poor accuracy throughout, is rejected', () => {
   const two = straightDrive(1);
-  assert.equal(finalizeTrack(payloadOf(two), rowOf(two), []).kind, 'ok'); // 2 good points are enough to count
+  assert.equal(fin(payloadOf(two), rowOf(two), []).kind, 'ok'); // 2 good points are enough to count
   const one = straightDrive(0);
-  assert.deepEqual(finalizeTrack(payloadOf(one), rowOf(one), []), { kind: 'rejected', reason: 'too_few_points' });
+  assert.deepEqual(fin(payloadOf(one), rowOf(one), []), { kind: 'rejected', reason: 'too_few_points' });
   const bad = straightDrive(100, 10, { accuracy: 90 });
-  assert.deepEqual(finalizeTrack(payloadOf(bad), rowOf(bad), []), { kind: 'rejected', reason: 'too_few_points' });
+  assert.deepEqual(fin(payloadOf(bad), rowOf(bad), []), { kind: 'rejected', reason: 'too_few_points' });
 });
 
 test('limits: more than 60 000 points or more than 12 hours is rejected as too long', () => {
   const many = straightDrive(TRACK_LIMITS.maxPoints + 5, 1);
-  assert.deepEqual(finalizeTrack(payloadOf(many), rowOf(many), []), { kind: 'rejected', reason: 'too_long' });
+  assert.deepEqual(fin(payloadOf(many), rowOf(many), []), { kind: 'rejected', reason: 'too_long' });
   const long = [straightDrive(1)[0], { ...straightDrive(1)[1], ts: T0 + TRACK_LIMITS.maxDurationMs + 1000 }];
-  assert.deepEqual(finalizeTrack(payloadOf(long), rowOf(long), []), { kind: 'rejected', reason: 'too_long' });
+  assert.deepEqual(fin(payloadOf(long), rowOf(long), []), { kind: 'rejected', reason: 'too_long' });
 });
 
 test('impossible coordinates make the track unreadable', () => {
   const pts = straightDrive(60);
   pts[3] = { ...pts[3], lat: 95 };
-  assert.deepEqual(finalizeTrack(payloadOf(pts), rowOf(pts), []), { kind: 'rejected', reason: 'unreadable' });
+  assert.deepEqual(fin(payloadOf(pts), rowOf(pts), []), { kind: 'rejected', reason: 'unreadable' });
   const pts2 = straightDrive(60);
   pts2[3] = { ...pts2[3], lng: -181 };
-  assert.deepEqual(finalizeTrack(payloadOf(pts2), rowOf(pts2), []), { kind: 'rejected', reason: 'unreadable' });
+  assert.deepEqual(fin(payloadOf(pts2), rowOf(pts2), []), { kind: 'rejected', reason: 'unreadable' });
 });
 
 test('a teleport is dropped from the stats and counted in the flags, the drive still counts', () => {
   const pts = straightDrive(600);
   pts[300] = { ...pts[300], lat: LAT0 + 0.9 }; // 100 km away for one second
-  const out = finalizeTrack(payloadOf(pts), rowOf(pts), []);
+  const out = fin(payloadOf(pts), rowOf(pts), []);
   assert.equal(out.kind, 'ok');
   if (out.kind !== 'ok') return;
   assert.ok(out.stats.distanceM < 6200, `teleport must not add distance (${out.stats.distanceM})`);
@@ -241,17 +245,45 @@ test('a teleport is dropped from the stats and counted in the flags, the drive s
 
 test('the auto-pause value from the phone is only trusted when it is one of the choices', () => {
   const pts = straightDrive(600);
-  const weird = finalizeTrack(payloadOf(pts, { autoPauseMs: 1 }), rowOf(pts), []);
-  const normal = finalizeTrack(payloadOf(pts, { autoPauseMs: 300_000 }), rowOf(pts), []);
+  const weird = fin(payloadOf(pts, { autoPauseMs: 1 }), rowOf(pts), []);
+  const normal = fin(payloadOf(pts, { autoPauseMs: 300_000 }), rowOf(pts), []);
   assert.equal(weird.kind, 'ok');
   assert.equal(normal.kind, 'ok');
   if (weird.kind !== 'ok' || normal.kind !== 'ok') return;
   assert.equal(weird.stats.movingS, normal.stats.movingS); // 1 ms would pause on every point, so it falls back to 5 min
 });
 
+test('drive dates must be real: nothing before 2024, nothing in the future (poison dates would retry forever)', () => {
+  const old = straightDrive(300).map((p) => ({ ...p, ts: p.ts - (T0 - (MIN_VALID_TS - 86_400_000)) }));
+  assert.deepEqual(fin(payloadOf(old), rowOf(old), []), { kind: 'rejected', reason: 'invalid' });
+  const future = straightDrive(300).map((p) => ({ ...p, ts: p.ts + 3 * 86_400_000 }));
+  assert.deepEqual(fin(payloadOf(future), rowOf(future), []), { kind: 'rejected', reason: 'invalid' });
+  const far = straightDrive(300).map((p) => ({ ...p, ts: p.ts + 1e13 }));
+  assert.deepEqual(fin(payloadOf(far), rowOf(far), []), { kind: 'rejected', reason: 'invalid' });
+});
+
+test('fake pause events cannot inflate the time: only pauses inside the track count, and time never exceeds the track', () => {
+  const pts = straightDrive(600);
+  const evil = payloadOf(pts, { pauses: [{ ts: 1e13, type: 'pause' }, { ts: T0 + 100_000, type: 'pause' }, { ts: T0 + 100_000, type: 'resume' }] });
+  const out = fin(evil, rowOf(pts), []);
+  assert.equal(out.kind, 'ok');
+  if (out.kind !== 'ok') return;
+  assert.ok(out.stats.elapsedS <= 600, `elapsed ${out.stats.elapsedS}`);
+  assert.ok(out.stats.movingS <= 600);
+});
+
+test('simplifyMeters does a bounded amount of work on a huge route (no quadratic blow-up)', () => {
+  const big = line(60_000, 6); // 360 km straight, 6 m apart
+  const t0 = performance.now();
+  const out = simplifyMeters(big, 5);
+  assert.ok(performance.now() - t0 < 2000, 'finished fast');
+  assert.deepEqual(out[0], big[0]);
+  assert.deepEqual(out[out.length - 1], big[big.length - 1]);
+});
+
 test('flags carry only counters and booleans (they are stored as JSON next to the drive)', () => {
   const pts = straightDrive(120);
-  const out = finalizeTrack(payloadOf(pts), rowOf(pts), []);
+  const out = fin(payloadOf(pts), rowOf(pts), []);
   assert.equal(out.kind, 'ok');
   if (out.kind !== 'ok') return;
   for (const v of Object.values(out.flags)) assert.ok(typeof v === 'number' || typeof v === 'boolean');
