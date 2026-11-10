@@ -10,6 +10,7 @@ const car = (id: string, over: Partial<Car> = {}): Car => ({
   make: null,
   model: null,
   colour: 'sport_yellow',
+  kind: 'car',
   ...over,
 });
 

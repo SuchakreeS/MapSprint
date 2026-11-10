@@ -1,16 +1,19 @@
-// Bottom sheet on the pre-drive screen: choose which car you are driving, or add one.
+// Bottom sheet on the pre-drive screen: choose which car (or motorbike) you are using, or add one.
 import { useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { CarForm } from '@/components/CarForm';
-import { carSubtitle, type Car } from '@/lib/vehicles';
+import { carSubtitle, type Car, type VehicleKind } from '@/lib/vehicles';
 import { carColours, radius, space, type CarColour } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
 interface Props {
   visible: boolean;
+  /** Which kind of vehicle this sheet is for (follows the travel mode). */
+  kind: VehicleKind;
+  /** Only the vehicles of that kind. */
   cars: Car[];
   selectedId: string | null;
   onSelect: (id: string) => void;
@@ -21,8 +24,9 @@ interface Props {
 
 export const colourOf = (key: string) => carColours[key as CarColour] ?? carColours.sport_yellow;
 
-export function CarPickerSheet({ visible, cars, selectedId, onSelect, onAdded, onClose }: Props) {
+export function CarPickerSheet({ visible, kind, cars, selectedId, onSelect, onAdded, onClose }: Props) {
   const { c, type } = useTheme();
+  const noun = kind === 'motorbike' ? 'motorbike' : 'car';
   const insets = useSafeAreaInsets();
   const [adding, setAdding] = useState(false);
 
@@ -40,13 +44,14 @@ export function CarPickerSheet({ visible, cars, selectedId, onSelect, onAdded, o
           style={[styles.sheet, { backgroundColor: c.surface, borderColor: c.line, paddingBottom: insets.bottom + space.lg }]}>
           <View style={[styles.handle, { backgroundColor: c.line }]} />
           <Text accessibilityRole="header" style={[type.sheetTitle, { color: c.text }]}>
-            {adding ? 'Add a car' : 'Choose your car'}
+            {adding ? `Add a ${noun}` : `Choose your ${noun}`}
           </Text>
 
           <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
             {adding ? (
               <CarForm
-                saveLabel="Save car"
+                kind={kind}
+                saveLabel={`Save ${noun}`}
                 skipLabel="Back"
                 onSkip={() => setAdding(false)}
                 onSaved={(car) => {
@@ -79,7 +84,7 @@ export function CarPickerSheet({ visible, cars, selectedId, onSelect, onAdded, o
                     </Pressable>
                   );
                 })}
-                <Button label="Add a car" variant="secondary" onPress={() => setAdding(true)} />
+                <Button label={`Add a ${noun}`} variant="secondary" onPress={() => setAdding(true)} />
               </>
             )}
           </ScrollView>

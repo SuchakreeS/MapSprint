@@ -6,8 +6,9 @@ import * as Location from 'expo-location';
 import { AppState, PermissionsAndroid, Platform } from 'react-native';
 
 import { APP_NAME } from '@/constants/app';
-import { getSelectedVehicleId } from '@/features/settings/prefs';
+import { getSelectedVehicleId, getTravelMode, readCachedCars } from '@/features/settings/prefs';
 import { planLaunchCleanup, planStart } from '@/lib/recording-state';
+import { kindForMode, vehicleIdForDrive } from '@/lib/travel-mode';
 
 import {
   endActiveSession,
@@ -18,6 +19,8 @@ import {
   setManualPauseSince,
   startSession,
 } from './db';
+import { runUploadQueue } from '@/features/sync/upload-runner';
+
 import { clearFinishReminder } from './finish-reminder';
 import { LOCATION_TASK } from './location-task';
 
@@ -83,9 +86,13 @@ export async function startRecording(): Promise<number> {
     await startUpdates();
     return plan.sessionId;
   }
-  // The car chosen on the pre-drive screen (per account; guests have none).
+  // The mode and vehicle chosen on the pre-drive screen (per account; guests have no vehicle). Only a vehicle that still
+  // exists in the cached garage and fits the mode is stamped: the server refuses anything else.
   const owner = getCurrentOwner();
-  const id = startSession(Date.now(), owner ? getSelectedVehicleId(owner) : null);
+  const mode = getTravelMode(owner);
+  const kind = kindForMode(mode);
+  const chosen = owner && kind ? getSelectedVehicleId(owner, kind) : null;
+  const id = startSession(Date.now(), vehicleIdForDrive(readCachedCars(owner), mode, chosen), mode);
   await startUpdates();
   return id;
 }
@@ -163,4 +170,5 @@ export async function stopRecording(): Promise<void> {
   await stopLocationService();
   endActiveSession(Date.now());
   await clearFinishReminder();
+  void runUploadQueue(); // a signed-in drive starts uploading right away (no-op for guests)
 }

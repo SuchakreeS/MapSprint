@@ -1,4 +1,5 @@
-// Add or edit one car from the Garage (form = design 05). `?id=` edits that car; no id adds a new one.
+// Add or edit one vehicle (car or motorbike) from the Garage (form = design 05). `?id=` edits it; no id adds a new one
+// (the form then asks Car or Motorbike; the kind cannot be changed afterwards).
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text } from 'react-native';
@@ -16,8 +17,9 @@ import { useTheme } from '@/theme/use-theme';
 export default function GarageCarScreen() {
   const { c, type } = useTheme();
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { cars, selected, select, refresh } = useVehicles();
+  const { cars, selectedByKind, select, refresh } = useVehicles();
   const car = id ? cars.find((v) => v.id === id) : undefined;
+  const noun = car?.kind === 'motorbike' ? 'motorbike' : 'car';
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export default function GarageCarScreen() {
     const { error: err } = await supabase.from('vehicles').delete().eq('id', car.id);
     setBusy(false);
     if (err) {
-      setError('Could not delete the car. Check your connection and try again.');
+      setError(`Could not delete the ${noun}. Check your connection and try again.`);
       return;
     }
     await done();
@@ -47,8 +49,8 @@ export default function GarageCarScreen() {
     return (
       <SafeAreaView style={[styles.fill, { backgroundColor: c.bg }]}>
         <ScrollView contentContainerStyle={styles.wrap}>
-          <Header title="Edit car" onBack={() => router.back()} />
-          <Text style={[type.body, { color: c.muted }]}>This car is not in your garage any more.</Text>
+          <Header title="Edit vehicle" onBack={() => router.back()} />
+          <Text style={[type.body, { color: c.muted }]}>This vehicle is not in your garage any more.</Text>
         </ScrollView>
       </SafeAreaView>
     );
@@ -57,23 +59,23 @@ export default function GarageCarScreen() {
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: c.bg }]}>
       <ScrollView contentContainerStyle={styles.wrap} keyboardShouldPersistTaps="handled">
-        <Header title={car ? 'Edit car' : 'Add a car'} onBack={() => router.back()} />
+        <Header title={car ? `Edit ${noun}` : 'Add a vehicle'} onBack={() => router.back()} />
 
         {/* key: re-mount the form if the car arrives after the first render (cache -> fresh list). */}
         <CarForm
           key={car?.id ?? 'new'}
           initial={car}
-          saveLabel={car ? 'Save changes' : 'Add car'}
+          saveLabel={car ? 'Save changes' : 'Add to garage'}
           skipLabel="Cancel"
           onSkip={() => router.back()}
-          onSaved={() => void done()} // a new car does not become the default here; the first car always is
+          onSaved={() => void done()} // a new vehicle does not become the default here; the first of its kind always is
         />
 
         {car ? (
           <>
-            {car.id !== selected?.id ? (
+            {car.id !== selectedByKind[car.kind]?.id ? (
               <Button
-                label="Use as default car"
+                label={`Use as default ${noun}`}
                 variant="secondary"
                 onPress={() => {
                   select(car.id);
@@ -83,7 +85,7 @@ export default function GarageCarScreen() {
               />
             ) : null}
             <Button
-              label={busy ? 'Deleting…' : 'Delete car'}
+              label={busy ? 'Deleting…' : `Delete ${noun}`}
               variant="danger"
               onPress={() => setConfirmDelete(true)}
               disabled={busy}
@@ -95,10 +97,10 @@ export default function GarageCarScreen() {
 
       <ConfirmDialog
         visible={confirmDelete}
-        tag="DELETE CAR"
-        title={`Delete ${car?.nickname ?? 'this car'}?`}
-        message="Your drives stay. They just won't show this car any more."
-        cancelLabel="Keep car"
+        tag={`DELETE ${noun.toUpperCase()}`}
+        title={`Delete ${car?.nickname ?? `this ${noun}`}?`}
+        message={`Your drives stay. They just won't show this ${noun} any more.`}
+        cancelLabel={`Keep ${noun}`}
         confirmLabel="Delete"
         onCancel={() => setConfirmDelete(false)}
         onConfirm={onDelete}

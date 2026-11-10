@@ -1,21 +1,25 @@
-// Add / edit car form (design 05). Used by onboarding step 5, the car picker sheet (pre-drive) and the Garage.
+// Add / edit vehicle form (design 05). Used by onboarding step 5, the picker sheet (pre-drive) and the Garage.
+// Cars and motorbikes share it. The kind is chosen when adding (fixed by the caller, or a toggle) and never changes after.
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { CarTopIcon } from '@/components/icons';
+import { Segmented } from '@/components/SettingsRow';
 import { TextField } from '@/components/TextField';
 import { CAR_COLUMNS } from '@/features/auth/vehicles';
 import { supabase } from '@/features/sync/supabase';
-import type { Car } from '@/lib/vehicles';
+import { normaliseKind, type Car, type VehicleKind } from '@/lib/vehicles';
 import { carColours, radius, space, type CarColour } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
 const COLOUR_KEYS = Object.keys(carColours) as CarColour[];
 
 interface Props {
-  /** Edit this car instead of adding a new one. */
+  /** Edit this vehicle instead of adding a new one. */
   initial?: Car;
+  /** Adding: fix the kind (the caller already knows it). Omitted = show a Car / Motorbike toggle. */
+  kind?: VehicleKind;
   saveLabel: string;
   skipLabel: string;
   /** Car saved to Supabase. */
@@ -24,9 +28,15 @@ interface Props {
 }
 
 const isColour = (k: string): k is CarColour => k in carColours;
+const KIND_OPTIONS = [
+  { value: 'car' as const, label: 'Car' },
+  { value: 'motorbike' as const, label: 'Motorbike' },
+];
 
-export function CarForm({ initial, saveLabel, skipLabel, onSaved, onSkip }: Props) {
+export function CarForm({ initial, kind: fixedKind, saveLabel, skipLabel, onSaved, onSkip }: Props) {
   const { c, type } = useTheme();
+  const [pickedKind, setPickedKind] = useState<VehicleKind>('car');
+  const kind: VehicleKind = initial?.kind ?? fixedKind ?? pickedKind;
   const [nickname, setNickname] = useState(initial?.nickname ?? '');
   const [make, setMake] = useState(initial?.make ?? '');
   const [model, setModel] = useState(initial?.model ?? '');
@@ -41,16 +51,16 @@ export function CarForm({ initial, saveLabel, skipLabel, onSaved, onSkip }: Prop
     setError(null);
     const fields = { nickname: nickname.trim(), make: make.trim() || null, model: model.trim() || null, colour };
     const table = supabase.from('vehicles');
-    // RLS: update only works on your own car (policy "vehicles: update own").
+    // RLS: update only works on your own vehicle (policy "vehicles: update own"). `kind` is insert-only (no update grant).
     const { data, error: err } = await (initial
       ? table.update(fields).eq('id', initial.id).select(CAR_COLUMNS).single()
-      : table.insert(fields).select(CAR_COLUMNS).single());
+      : table.insert({ ...fields, kind }).select(CAR_COLUMNS).single());
     setBusy(false);
     if (err || !data) {
       setError('Could not save your car. Check your connection and try again.');
       return;
     }
-    onSaved(data);
+    onSaved({ ...data, kind: normaliseKind(data.kind) });
   };
 
   return (
@@ -59,7 +69,17 @@ export function CarForm({ initial, saveLabel, skipLabel, onSaved, onSkip }: Prop
         <CarTopIcon body={carColours[colour].hex} outline={c.line} glass={c.bg} />
       </View>
 
-      <TextField label="Nickname" value={nickname} onChangeText={setNickname} placeholder="Daily driver" maxLength={30} />
+      {!initial && !fixedKind ? (
+        <Segmented label="Type" options={KIND_OPTIONS} value={pickedKind} onChange={setPickedKind} />
+      ) : null}
+
+      <TextField
+        label="Nickname"
+        value={nickname}
+        onChangeText={setNickname}
+        placeholder={kind === 'motorbike' ? 'Daily rider' : 'Daily driver'}
+        maxLength={30}
+      />
       <View style={styles.row}>
         <View style={styles.half}>
           <TextField label="Make" value={make} onChangeText={setMake} placeholder="e.g. your brand" maxLength={30} />

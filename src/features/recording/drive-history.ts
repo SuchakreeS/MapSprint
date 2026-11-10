@@ -7,6 +7,7 @@ import { findGaps, type GpsGap } from '@/lib/gaps';
 import { summarize, type PauseEvent } from '@/lib/live-stats';
 import { simplifyToMax } from '@/lib/route-art';
 import { appendRoutePoint, type RouteCoord } from '@/lib/route-line';
+import type { TravelMode } from '@/lib/travel-mode';
 
 import {
   getActiveSessionId,
@@ -26,6 +27,8 @@ export interface DriveItem {
   endedAt: number;
   /** Car picked on the pre-drive screen (public.vehicles id), or null. */
   vehicleId: string | null;
+  /** How the drive was travelled (picked on the pre-drive screen). */
+  mode: TravelMode;
   summary: DriveSummary;
   /** Every stretch with no GPS point for more than 3 s (manual pauses excluded). */
   gaps: GpsGap[];
@@ -52,6 +55,7 @@ export function loadDrive(id: number): DriveItem | null {
     startedAt: session.started_at,
     endedAt: session.ended_at,
     vehicleId: session.vehicle_id,
+    mode: session.mode,
     summary: summarize(points, events, getAutoPauseMs()),
     gaps: findGaps(points, events),
     route: simplifyToMax(coords, MAX_ROUTE_POINTS),

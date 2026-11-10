@@ -1,0 +1,79 @@
+// Upload queue rules (design 2026-11-10: waiting, retry, rejected, counted). Run with: npm test
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+
+import {
+  afterFailure,
+  backoffMs,
+  classifyFailure,
+  historyStatus,
+  parseFinalizeResponse,
+  pickNext,
+  rejectReasonText,
+  shouldNotifyCounted,
+  type UploadRow,
+} from '../src/lib/upload-queue.ts';
+
+const row = (sessionId: number, startedAt: number, over: Partial<UploadRow> = {}): UploadRow => ({
+  sessionId,
+  startedAt,
+  state: 'queued',
+  attempts: 0,
+  nextAttemptAt: 0,
+  ...over,
+});
+
+test('backoff grows 5 s, 15 s, 45 s, 2 min, 5 min and then stays at 10 min', () => {
+  assert.deepEqual([1, 2, 3, 4, 5, 6, 7, 50].map(backoffMs), [5000, 15000, 45000, 120000, 300000, 600000, 600000, 600000]);
+});
+
+test('pickNext: oldest drive first, only queued rows that are due', () => {
+  const rows = [row(3, 300), row(1, 100, { nextAttemptAt: 9999 }), row(2, 200), row(4, 50, { state: 'counted' })];
+  assert.equal(pickNext(rows, 1000)?.sessionId, 2); // 1 is waiting for its back-off, 4 is done
+  assert.equal(pickNext(rows, 10_000)?.sessionId, 1); // now 1 is due and oldest
+  assert.equal(pickNext([row(1, 1, { state: 'rejected' }), row(2, 2, { state: 'uploading' })], 1000), null);
+});
+
+test('classifyFailure: no network, timeouts, server and auth errors are retried; real 4xx are permanent; duplicates are fine', () => {
+  assert.equal(classifyFailure(null), 'transient'); // no network
+  for (const s of [401, 403, 404, 408, 429, 500, 502, 503, 504]) assert.equal(classifyFailure(s), 'transient', String(s));
+  assert.equal(classifyFailure(400), 'permanent');
+  assert.equal(classifyFailure(422), 'permanent');
+  assert.equal(classifyFailure(409), 'already-done');
+  assert.equal(classifyFailure(400, '23505'), 'already-done'); // Postgres unique violation = the row/file already exists
+});
+
+test('afterFailure: transient goes back to the queue with a longer wait, permanent is rejected for good', () => {
+  const r = row(1, 100, { state: 'uploading', attempts: 1 });
+  assert.deepEqual(afterFailure(r, 'transient', 1000), { state: 'queued', attempts: 2, nextAttemptAt: 1000 + 15_000 });
+  assert.deepEqual(afterFailure(r, 'permanent', 1000), { state: 'rejected', attempts: 2, nextAttemptAt: 0 });
+});
+
+test('parseFinalizeResponse reads the server answer: counted, rejected with a reason, or try again', () => {
+  const stats = { distanceM: 9120, movingS: 1759, elapsedS: 2700, avgMovingKmh: 18.7, avgOverallKmh: 12.2 };
+  assert.deepEqual(parseFinalizeResponse({ status: 'processed', stats }), { kind: 'counted', stats });
+  assert.deepEqual(parseFinalizeResponse({ status: 'rejected', reason: 'overlap' }), { kind: 'rejected', reason: 'overlap' });
+  assert.deepEqual(parseFinalizeResponse({ status: 'rejected' }), { kind: 'rejected', reason: 'invalid' });
+  assert.deepEqual(parseFinalizeResponse({ status: 'processed', stats: { distanceM: 'x' } }), { kind: 'retry' }); // unreadable
+  assert.deepEqual(parseFinalizeResponse(null), { kind: 'retry' });
+  assert.deepEqual(parseFinalizeResponse({ status: 'uploading' }), { kind: 'retry' });
+});
+
+test('shouldNotifyCounted: only when the driver was not just waiting on the Saving screen', () => {
+  assert.equal(shouldNotifyCounted(1_000_000, 1_000_000 + 30_000), false); // counted within seconds of Finish
+  assert.equal(shouldNotifyCounted(1_000_000, 1_000_000 + 10 * 60_000), true); // had to wait for signal
+});
+
+test('historyStatus: what each History row says about its upload', () => {
+  assert.equal(historyStatus(undefined)?.label, 'Waiting to upload'); // signed-in drive not queued yet
+  assert.equal(historyStatus(row(1, 1))?.label, 'Waiting to upload');
+  assert.equal(historyStatus(row(1, 1, { state: 'uploading' }))?.label, 'Uploading…');
+  assert.equal(historyStatus(row(1, 1, { state: 'counted' }))?.label, 'Counted');
+  assert.equal(historyStatus(row(1, 1, { state: 'rejected' }))?.label, "Couldn't count");
+});
+
+test('rejectReasonText turns server reasons into short sentences, unknown reasons stay vague', () => {
+  assert.match(rejectReasonText('overlap'), /overlaps another drive/i);
+  assert.match(rejectReasonText('too_long'), /too long/i);
+  assert.match(rejectReasonText('something-new'), /couldn't be checked|could not be checked/i);
+});

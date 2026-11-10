@@ -9,15 +9,27 @@ import { CarPickerSheet, colourOf } from '@/components/CarPickerSheet';
 import { CloseGlyph } from '@/components/CloseGlyph';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { PlayGlyph } from '@/components/PlayGlyph';
+import { Segmented } from '@/components/SettingsRow';
 import { Switch } from '@/components/Switch';
+import { useAuth } from '@/features/auth/auth-provider';
 import { useVehicles } from '@/features/auth/vehicles';
 import { MAP_STYLE } from '@/features/map/map-style';
 import { useGpsSignal } from '@/features/recording/use-gps-signal';
-import { getSoundOn, hideBatteryTip, isBatteryTipHidden, setSoundOn } from '@/features/settings/prefs';
-import { carSubtitle } from '@/lib/vehicles';
+import {
+  getSoundOn,
+  getTravelMode,
+  hideBatteryTip,
+  isBatteryTipHidden,
+  setSoundOn,
+  setTravelMode,
+} from '@/features/settings/prefs';
 import { needsSignalConfirm, type SignalQuality } from '@/lib/gps-signal';
+import { kindForMode, TRAVEL_MODE_LABEL, TRAVEL_MODES, type TravelMode } from '@/lib/travel-mode';
+import { carSubtitle } from '@/lib/vehicles';
 import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
+
+const MODE_OPTIONS = TRAVEL_MODES.map((m) => ({ value: m, label: TRAVEL_MODE_LABEL[m] }));
 
 // Design 07 shows "Strong"; we keep Weak and Searching so the driver knows before starting.
 const SIGNAL_LABEL: Record<SignalQuality, string> = {
@@ -35,7 +47,16 @@ export default function PreDriveScreen() {
   const [tipHidden, setTipHidden] = useState(isBatteryTipHidden);
   const [warnVisible, setWarnVisible] = useState(false);
   const [carSheet, setCarSheet] = useState(false);
-  const { signedIn, cars, selected, select, refresh } = useVehicles();
+  const { userId } = useAuth();
+  // How this drive is travelled (remembered per account). Named `travel` because `mode` above is the light/dark theme.
+  const [travel, setTravel] = useState<TravelMode>(() => getTravelMode(userId));
+  const { signedIn, modeCars, selected, select, refresh } = useVehicles(travel);
+  const vehicleKind = kindForMode(travel); // null for Other: no vehicle
+  const noun = vehicleKind === 'motorbike' ? 'motorbike' : 'car';
+  const chooseTravel = (m: TravelMode) => {
+    setTravel(m);
+    setTravelMode(userId, m);
+  };
 
   const start = () => router.replace('/record/hud');
   const onStart = () => (needsSignalConfirm(quality) ? setWarnVisible(true) : start());
@@ -87,6 +108,8 @@ export default function PreDriveScreen() {
           </Text>
         </View>
 
+        <Segmented label="Travelling by" options={MODE_OPTIONS} value={travel} onChange={chooseTravel} />
+
         <View style={[styles.list, { backgroundColor: c.surface2 }]}>
           <View style={[styles.row, { minHeight: 56, borderBottomColor: c.line }]}>
             <View style={[styles.statusRing, { borderColor: signalColor }]}>
@@ -127,33 +150,43 @@ export default function PreDriveScreen() {
             </View>
           )}
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={selected ? `Car: ${selected.nickname}. Tap to change car` : 'Add your car'}
-            disabled={!signedIn}
-            onPress={() => setCarSheet(true)}
-            style={[styles.row, styles.rowLast, { minHeight: 56 }]}>
-            <View
-              style={[
-                styles.carDot,
-                { backgroundColor: selected ? colourOf(selected.colour).hex : c.surface, borderColor: c.line },
-              ]}
-            />
-            <View style={styles.grow}>
-              <Text style={[type.rowTitle, { color: c.text }]}>
-                {selected ? selected.nickname : signedIn ? 'Add your car' : 'No car'}
-              </Text>
-              <Text style={[type.caption, { color: c.muted }]}>
-                {selected
-                  ? carSubtitle(selected, colourOf(selected.colour).label)
-                  : signedIn
-                    ? 'Optional. Tap to add one.'
-                    : 'Make an account from the Profile tab to add your car.'}
-              </Text>
+          {vehicleKind ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={selected ? `${noun}: ${selected.nickname}. Tap to change` : `Add your ${noun}`}
+              disabled={!signedIn}
+              onPress={() => setCarSheet(true)}
+              style={[styles.row, styles.rowLast, { minHeight: 56 }]}>
+              <View
+                style={[
+                  styles.carDot,
+                  { backgroundColor: selected ? colourOf(selected.colour).hex : c.surface, borderColor: c.line },
+                ]}
+              />
+              <View style={styles.grow}>
+                <Text style={[type.rowTitle, { color: c.text }]}>
+                  {selected ? selected.nickname : signedIn ? `Add your ${noun}` : `No ${noun}`}
+                </Text>
+                <Text style={[type.caption, { color: c.muted }]}>
+                  {selected
+                    ? carSubtitle(selected, colourOf(selected.colour).label)
+                    : signedIn
+                      ? 'Optional. Tap to add one.'
+                      : `Make an account from the Profile tab to add your ${noun}.`}
+                </Text>
+              </View>
+              {signedIn ? <Text style={{ color: c.muted, fontSize: 22 }}>›</Text> : null}
+            </Pressable>
+          ) : (
+            <View style={[styles.row, styles.rowLast, { minHeight: 56 }]}>
+              <View style={styles.grow}>
+                <Text style={[type.rowTitle, { color: c.text }]}>Bus, BTS, train or passenger</Text>
+                <Text style={[type.caption, { color: c.muted }]}>No vehicle needed. Your route still uncovers the map.</Text>
+              </View>
             </View>
-            {signedIn ? <Text style={{ color: c.muted, fontSize: 22 }}>›</Text> : null}
-          </Pressable>
+          )}
         </View>
+        <Text style={[type.caption, { color: c.muted }]}>Only count drives where you were the driver.</Text>
 
         <Switch
           label="Sound cues and voice"
@@ -174,8 +207,9 @@ export default function PreDriveScreen() {
       </View>
 
       <CarPickerSheet
-        visible={carSheet}
-        cars={cars}
+        visible={carSheet && vehicleKind != null}
+        kind={vehicleKind ?? 'car'}
+        cars={modeCars}
         selectedId={selected?.id ?? null}
         onSelect={select}
         onAdded={(car) => void refresh(car.id)}

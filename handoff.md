@@ -438,6 +438,37 @@ is 'background' (RN AppStateModule), so the "app on screen" skip did not block i
   (Supabase's `storage.protect_delete` trigger makes a direct DELETE on storage.objects raise 42501 instead of deleting 0 rows).
   Test 66 now expects the error (still 79 tests). Needs one more `npx supabase test db --remote` run to confirm 79/79.
 
+- **Step 1 DONE:** PS pushed the migration; pgTAP 79/79 on the cloud (`test db --remote`; test 66 fixed: direct DELETE on storage.objects raises 42501).
+- **Step 2 DONE in code (Sonnet, 2026-11-10, uncommitted), phone test pending (testlist F14):** pure rules `src/lib/travel-mode.ts`
+  (+ `Car.kind`, `normaliseKind` in `src/lib/vehicles.ts`; tests `tests/travel-mode.test.mts`, 155 total); prefs: default vehicle per kind
+  (car keeps the old key), `getTravelMode/setTravelMode` per account (guests share a slot), `readCachedCars`; `useVehicles(mode)` returns
+  `cars`, `modeCars`, `selected`, `selectedByKind`; local `sessions.mode` column (default car), `startSession(now, vehicleId, mode)`,
+  `SessionInfo.mode`, `DriveItem.mode`; recorder stamps the mode and only a vehicle that still exists in the cached garage and fits
+  the mode; Pre-drive mode picker (Segmented) + vehicle row per mode + "Other" row + driver line; `CarForm` `kind` prop / toggle (kind is
+  insert-only: no update grant); `CarPickerSheet` takes `kind`; Garage + garage-car show cars and motorbikes. `database.types.ts` was
+  edited by hand (`drives.mode`, `vehicles.kind`): regenerate it with `npx supabase gen types typescript --local` when Docker works.
+- Not built yet: mode on the recap / History (step 5), upload (step 3). Mode is stored locally only; the recap does not show it.
+- Results: typecheck clean, eslint clean, npm test 155/155. No new native module (JS only), but the phone needs a new build to get it.
+
+- **Step 3 DONE in code (Sonnet, 2026-11-10, uncommitted), phone test pending (testlist F15):** pure rules `src/lib/track-format.ts`
+  (wire format v1: columnar JSON, 6-decimal lat/lng, limits 12 h / 60k points / 5 MB; `parseTrackPayload` is what finalize-drive should
+  reuse) and `src/lib/upload-queue.ts` (states, back-off 5 s..10 min, `classifyFailure`, `parseFinalizeResponse`, History labels);
+  tests `tests/track-format.test.mts`, `tests/upload-queue.test.mts` (168 total). Local table `uploads` (db.ts). Runner
+  `src/features/sync/upload-runner.ts`: discover finished drives of the signed-in owner (junk / <2 points are marked rejected locally),
+  per drive: insert `drives` row -> upload `tracks/<uid>/<uuid>.json.gz` -> `functions.invoke('finalize-drive', { driveId })`; each step
+  idempotent; oldest first; stops on transient errors. Trigger `use-upload-trigger.ts` (root layout): on sign-in, app to front, every 30 s
+  (my call: polling instead of a network library; no extra native module). `retryUploadsNow()` on History pull-to-refresh and the queue
+  also starts right after Finish. History shows the status per row; tapping a waiting drive explains (with "View on this phone").
+  `counted-notification.ts` ("Your drive is counted" when it waited more than 2 min; tap opens the recap).
+  New packages: `expo-crypto` (native: needs the next EAS build) and `fflate` (JS gzip).
+- **Contract finalize-drive must follow (step 4):** POST `{ driveId }` with the user's JWT; answer 200 `{ status: 'processed', stats:
+  { distanceM, movingS, elapsedS, avgMovingKmh, avgOverallKmh } }` or 200 `{ status: 'rejected', reason }` with reason one of
+  `overlap | times_mismatch | unreadable | too_long | too_few_points | invalid`; transient trouble = non-2xx (5xx/timeouts are retried, 404 too
+  so the app works before the function is deployed; 400/422 are final). The drive row times are the first/last point timestamps.
+- Not built: Saving screen + recap numbers from the server (step 5), the function itself (step 4). Until step 4 is deployed every
+  signed-in drive stays "Waiting to upload" (raw tracks of PS's own drives sit in the private bucket). Do not hand this build to testers.
+- Results: typecheck clean, eslint clean, npm test 168/168.
+
 ## Next step
 **State (2026-11-09):** Phase 1 is tested on the phone except 1.9 and 1.12. 2.1 is done (cloud DB has all migrations incl. avatars,
 47/47 pgTAP on the cloud). 2.2 is coded and committed; PS added the 3 `EXPO_PUBLIC_*` vars on expo.dev and is building the preview APK

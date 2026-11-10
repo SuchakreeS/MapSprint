@@ -1,4 +1,13 @@
 // Pure rules for the car picker on the pre-drive screen.
+/** public.vehicles.kind (DB check constraint). Chosen when the vehicle is added, never changed. */
+export type VehicleKind = 'car' | 'motorbike';
+
+/** Old cached lists (before motorbikes existed) have no kind: those are cars. */
+export function normaliseKind(raw: unknown): VehicleKind {
+  return raw === 'motorbike' ? 'motorbike' : 'car';
+}
+
+/** A vehicle in the garage. Named Car from before motorbikes; `kind` says which it is. */
 export interface Car {
   id: string;
   nickname: string;
@@ -6,6 +15,7 @@ export interface Car {
   model: string | null;
   /** One of the 8 keys in theme/tokens carColours (DB check constraint). */
   colour: string;
+  kind: VehicleKind;
 }
 
 /** The saved car if it still exists, else the first one, else null. */

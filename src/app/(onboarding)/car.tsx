@@ -25,7 +25,7 @@ export default function CarScreen() {
           </Text>
         </View>
         {/* The pre-drive screen picks this car up from the saved list, so nothing else to do here. */}
-        <CarForm saveLabel="Continue" skipLabel="Skip for now" onSaved={markCarDone} onSkip={markCarDone} />
+        <CarForm kind="car" saveLabel="Continue" skipLabel="Skip for now" onSaved={markCarDone} onSkip={markCarDone} />
       </ScrollView>
     </SafeAreaView>
   );

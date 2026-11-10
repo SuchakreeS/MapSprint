@@ -9,6 +9,8 @@ import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { OnboardingGuard } from '@/features/auth/onboarding-guard';
 import { REMINDER_KIND } from '@/features/recording/finish-reminder';
 import { cleanUpRecorderOnLaunch } from '@/features/recording/recorder';
+import { COUNTED_KIND } from '@/features/sync/counted-notification';
+import { useUploadTrigger } from '@/features/sync/use-upload-trigger';
 import { applySavedTheme } from '@/features/settings/appearance';
 import { useAppFonts } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
@@ -33,6 +35,7 @@ function RootStack() {
   const { mode, c } = useTheme();
   const { ready: fontsReady } = useAppFonts();
   const { ready: authReady } = useAuth();
+  useUploadTrigger();
   // Only the FIRST load gates the UI. Later auth changes (sign-in, sign-out) must not unmount the navigator.
   const [started, setStarted] = useState(false);
   if (fontsReady && authReady && !started) setStarted(true); // latch during render (React "derived state" pattern)
@@ -44,12 +47,17 @@ function RootStack() {
     void cleanUpRecorderOnLaunch();
   }, [started]);
 
-  // Tapping the locked-phone "Finish this drive?" notification opens the HUD, which shows its own finish dialog.
+  // Tapping a notification: "Finish this drive?" opens the HUD (it shows its own finish dialog); "Your drive is counted" opens the recap.
   // Only after the navigator exists (started), so a tap that cold-starts the app is handled too.
   useEffect(() => {
     if (!started) return;
     const open = (r: Notifications.NotificationResponse | null) => {
-      if (r?.notification.request.content.data?.kind === REMINDER_KIND) router.push('/record/hud');
+      const data = r?.notification.request.content.data;
+      if (data?.kind === REMINDER_KIND) router.push('/record/hud');
+      // "Your drive is counted": open that drive's recap.
+      if (data?.kind === COUNTED_KIND && typeof data.sessionId === 'number') {
+        router.push({ pathname: '/record/recap', params: { id: String(data.sessionId) } });
+      }
     };
     open(Notifications.getLastNotificationResponse());
     Notifications.clearLastNotificationResponse();

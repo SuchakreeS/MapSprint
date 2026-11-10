@@ -13,6 +13,7 @@
     "eslint-config-expo": "~58.0.4",
     "expo": "~58.0.23",
     "expo-constants": "~58.0.14",
+    "expo-crypto": "~58.0.7",
     "expo-dev-client": "~58.0.18",
     "expo-device": "~58.0.5",
     "expo-font": "~58.0.11",
@@ -29,6 +30,7 @@
     "expo-status-bar": "~58.0.4",
     "expo-system-ui": "~58.0.7",
     "expo-task-manager": "~58.0.13",
+    "fflate": "^0.8.3",
     "h3-js": "^4.5.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -54,7 +56,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node --experimental-strip-types --no-warnings --test tests/geo.test.mts tests/format.test.mts tests/permission.test.mts tests/gps-signal.test.mts tests/live-stats.test.mts tests/hud.test.mts tests/route-line.test.mts tests/pause.test.mts tests/route-art.test.mts tests/drive-format.test.mts tests/gaps.test.mts tests/finish-prompt.test.mts tests/oem-guide.test.mts tests/auth-rules.test.mts tests/vehicles.test.mts tests/garage-profile.test.mts tests/recording-settings.test.mts tests/recording-state.test.mts",
+    "test": "node --experimental-strip-types --no-warnings --test tests/geo.test.mts tests/format.test.mts tests/permission.test.mts tests/gps-signal.test.mts tests/live-stats.test.mts tests/hud.test.mts tests/route-line.test.mts tests/pause.test.mts tests/route-art.test.mts tests/drive-format.test.mts tests/gaps.test.mts tests/finish-prompt.test.mts tests/oem-guide.test.mts tests/auth-rules.test.mts tests/vehicles.test.mts tests/garage-profile.test.mts tests/recording-settings.test.mts tests/recording-state.test.mts tests/travel-mode.test.mts tests/track-format.test.mts tests/upload-queue.test.mts",
     "typecheck": "tsc --noEmit"
   },
   "private": true

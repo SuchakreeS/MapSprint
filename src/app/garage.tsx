@@ -1,5 +1,6 @@
 // Screen 23 Garage (design/screens/*/23-garage.png, design/source/ScrGarage.dc.html).
-// "Default" = the car the pre-drive screen starts with (remembered per account on this phone).
+// Cars and motorbikes. "Default" = the vehicle the pre-drive screen starts with for that kind (one default car, one default
+// motorbike, remembered per account on this phone).
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -54,7 +55,7 @@ function CarCard({ car, isDefault, drives }: { car: Car; isDefault: boolean; dri
           </View>
           <Text style={[type.small, { color: c.muted }]}>{carSubtitle(car, col.label)}</Text>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${car.nickname}`} onPress={edit} style={styles.editBtn}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${car.nickname}, ${car.kind}`} onPress={edit} style={styles.editBtn}>
           <PencilIcon color={c.muted} />
         </Pressable>
       </View>
@@ -70,7 +71,7 @@ function CarCard({ car, isDefault, drives }: { car: Car; isDefault: boolean; dri
 
 export default function GarageScreen() {
   const { c, type, fonts } = useTheme();
-  const { cars, selected, refresh } = useVehicles();
+  const { cars, selectedByKind, refresh } = useVehicles();
   // Totals come from drives on this phone (the server has none until 2.3 upload).
   const [drives, setDrives] = useState<DriveRef[]>([]);
 
@@ -88,18 +89,18 @@ export default function GarageScreen() {
         <Header title="Garage" onBack={() => router.back()} />
         {cars.length === 0 ? (
           <Text style={[type.body, { color: c.muted }]}>
-            No cars yet. Add one: its colour becomes your car icon on the map.
+            Nothing here yet. Add your car or motorbike: its colour becomes your icon on the map.
           </Text>
         ) : null}
         {cars.map((car) => (
-          <CarCard key={car.id} car={car} isDefault={car.id === selected?.id} drives={drives} />
+          <CarCard key={car.id} car={car} isDefault={car.id === selectedByKind[car.kind]?.id} drives={drives} />
         ))}
         <Pressable
           accessibilityRole="button"
           onPress={() => router.push('/garage-car')}
           style={({ pressed }) => [styles.add, { borderColor: c.muted, opacity: pressed ? 0.7 : 1 }]}>
           <PlusIcon color={c.text} />
-          <Text style={{ color: c.text, fontFamily: fonts.bodyBold, fontSize: 16 }}>Add a car</Text>
+          <Text style={{ color: c.text, fontFamily: fonts.bodyBold, fontSize: 16 }}>Add a car or motorbike</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>

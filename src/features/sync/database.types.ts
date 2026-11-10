@@ -91,14 +91,14 @@ isOneToOne: false
                   ]
                 },"drives": {
                   Row: {
-                    "avg_moving_kmh": number | null,"avg_overall_kmh": number | null,"created_at": string,"distance_m": number | null,"elapsed_s": number | null,"ended_at": string,"id": string,"moving_s": number | null,"new_cells": number | null,"route": unknown,"smooth_score": number | null,"started_at": string,"status": string,"user_id": string,"vehicle_id": string | null,"visibility": string,"xp_earned": number | null
+                    "avg_moving_kmh": number | null,"avg_overall_kmh": number | null,"created_at": string,"distance_m": number | null,"elapsed_s": number | null,"ended_at": string,"id": string,"mode": string,"moving_s": number | null,"new_cells": number | null,"route": unknown,"smooth_score": number | null,"started_at": string,"status": string,"user_id": string,"vehicle_id": string | null,"visibility": string,"xp_earned": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "avg_moving_kmh"?: number | null,"avg_overall_kmh"?: number | null,"created_at"?: string,"distance_m"?: number | null,"elapsed_s"?: number | null,"ended_at": string,"id"?: string,"moving_s"?: number | null,"new_cells"?: number | null,"route"?: unknown,"smooth_score"?: number | null,"started_at": string,"status"?: string,"user_id"?: string,"vehicle_id"?: string | null,"visibility"?: string,"xp_earned"?: number | null
+                    "avg_moving_kmh"?: number | null,"avg_overall_kmh"?: number | null,"created_at"?: string,"distance_m"?: number | null,"elapsed_s"?: number | null,"ended_at": string,"id"?: string,"mode"?: string,"moving_s"?: number | null,"new_cells"?: number | null,"route"?: unknown,"smooth_score"?: number | null,"started_at": string,"status"?: string,"user_id"?: string,"vehicle_id"?: string | null,"visibility"?: string,"xp_earned"?: number | null
                   }
                   Update: {
-                    "avg_moving_kmh"?: number | null,"avg_overall_kmh"?: number | null,"created_at"?: string,"distance_m"?: number | null,"elapsed_s"?: number | null,"ended_at"?: string,"id"?: string,"moving_s"?: number | null,"new_cells"?: number | null,"route"?: unknown,"smooth_score"?: number | null,"started_at"?: string,"status"?: string,"user_id"?: string,"vehicle_id"?: string | null,"visibility"?: string,"xp_earned"?: number | null
+                    "avg_moving_kmh"?: number | null,"avg_overall_kmh"?: number | null,"created_at"?: string,"distance_m"?: number | null,"elapsed_s"?: number | null,"ended_at"?: string,"id"?: string,"mode"?: string,"moving_s"?: number | null,"new_cells"?: number | null,"route"?: unknown,"smooth_score"?: number | null,"started_at"?: string,"status"?: string,"user_id"?: string,"vehicle_id"?: string | null,"visibility"?: string,"xp_earned"?: number | null
                   }
                   Relationships: [
                     {
@@ -261,14 +261,14 @@ isOneToOne: false
                   ]
                 },"vehicles": {
                   Row: {
-                    "colour": string,"created_at": string,"id": string,"make": string | null,"model": string | null,"nickname": string,"user_id": string
+                    "colour": string,"created_at": string,"id": string,"kind": string,"make": string | null,"model": string | null,"nickname": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "colour"?: string,"created_at"?: string,"id"?: string,"make"?: string | null,"model"?: string | null,"nickname": string,"user_id"?: string
+                    "colour"?: string,"created_at"?: string,"id"?: string,"kind"?: string,"make"?: string | null,"model"?: string | null,"nickname": string,"user_id"?: string
                   }
                   Update: {
-                    "colour"?: string,"created_at"?: string,"id"?: string,"make"?: string | null,"model"?: string | null,"nickname"?: string,"user_id"?: string
+                    "colour"?: string,"created_at"?: string,"id"?: string,"kind"?: string,"make"?: string | null,"model"?: string | null,"nickname"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {

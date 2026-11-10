@@ -3,6 +3,8 @@
 import * as SQLite from 'expo-sqlite';
 
 import type { GpsPoint } from '@/lib/geo';
+import { parseTravelMode, type TravelMode } from '@/lib/travel-mode';
+import type { ServerStats, UploadRow, UploadState } from '@/lib/upload-queue';
 
 let db: SQLite.SQLiteDatabase | null = null;
 
@@ -35,12 +37,25 @@ export function getDb(): SQLite.SQLiteDatabase {
       type TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_pause_session ON pause_events (session_id, id);
+    -- 2.3: one row per drive that goes (or went) to the server. drive_uuid is the drives.id on the server, made once so retries are safe.
+    CREATE TABLE IF NOT EXISTS uploads (
+      session_id INTEGER PRIMARY KEY,
+      drive_uuid TEXT NOT NULL,
+      started_at INTEGER NOT NULL,
+      state TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      next_attempt_at INTEGER NOT NULL DEFAULT 0,
+      reason TEXT,
+      stats TEXT
+    );
   `);
   // 2.2: which account a drive belongs to (NULL = recorded as a guest). Added to existing installs once.
   const cols = db.getAllSync<{ name: string }>('PRAGMA table_info(sessions)');
   if (!cols.some((c) => c.name === 'owner_id')) db.execSync('ALTER TABLE sessions ADD COLUMN owner_id TEXT');
   // Car picker: which car (public.vehicles id) was driven. NULL = none chosen. Sent with the drive on upload (2.3).
   if (!cols.some((c) => c.name === 'vehicle_id')) db.execSync('ALTER TABLE sessions ADD COLUMN vehicle_id TEXT');
+  // Travel mode (car / motorbike / other). Drives recorded before modes existed are car drives. Sent with the drive on upload (2.3).
+  if (!cols.some((c) => c.name === 'mode')) db.execSync("ALTER TABLE sessions ADD COLUMN mode TEXT NOT NULL DEFAULT 'car'");
   return db;
 }
 
@@ -72,13 +87,14 @@ export function getActiveSessionId(): number | null {
   return row ? Number(row.v) : null;
 }
 
-export function startSession(now: number, vehicleId: string | null = null): number {
+export function startSession(now: number, vehicleId: string | null = null, mode: TravelMode = 'car'): number {
   const d = getDb();
   const res = d.runSync(
-    'INSERT INTO sessions (started_at, owner_id, vehicle_id) VALUES (?, ?, ?)',
+    'INSERT INTO sessions (started_at, owner_id, vehicle_id, mode) VALUES (?, ?, ?, ?)',
     now,
     getCurrentOwner(),
     vehicleId,
+    mode,
   );
   const id = Number(res.lastInsertRowId);
   d.runSync('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', ACTIVE_KEY, String(id));
@@ -182,13 +198,15 @@ export interface SessionInfo {
   ended_at: number | null;
   owner_id: string | null;
   vehicle_id: string | null;
+  mode: TravelMode;
 }
 
 export function getSession(sessionId: number): SessionInfo | null {
-  return getDb().getFirstSync<SessionInfo>(
-    'SELECT id, started_at, ended_at, owner_id, vehicle_id FROM sessions WHERE id = ?',
+  const row = getDb().getFirstSync<SessionInfo>(
+    'SELECT id, started_at, ended_at, owner_id, vehicle_id, mode FROM sessions WHERE id = ?',
     sessionId,
   );
+  return row ? { ...row, mode: parseTravelMode(row.mode) } : null;
 }
 
 export interface SessionRow {
@@ -231,4 +249,107 @@ export function getFinishNotifiedAt(): number | null {
 
 export function setFinishNotifiedAt(ts: number): void {
   getDb().runSync('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', FINISH_NOTIFIED_KEY, String(ts));
+}
+
+// ---- Upload queue (2.3). Pure rules: src/lib/upload-queue.ts. The runner: src/features/sync/upload-runner.ts. ----
+
+export interface UploadRecord extends UploadRow {
+  driveUuid: string;
+  reason: string | null;
+  stats: ServerStats | null;
+}
+
+interface UploadDbRow {
+  session_id: number;
+  drive_uuid: string;
+  started_at: number;
+  state: UploadState;
+  attempts: number;
+  next_attempt_at: number;
+  reason: string | null;
+  stats: string | null;
+}
+
+function toRecord(r: UploadDbRow): UploadRecord {
+  let stats: ServerStats | null = null;
+  try {
+    stats = r.stats ? (JSON.parse(r.stats) as ServerStats) : null;
+  } catch {
+    stats = null;
+  }
+  return {
+    sessionId: r.session_id,
+    startedAt: r.started_at,
+    state: r.state,
+    attempts: r.attempts,
+    nextAttemptAt: r.next_attempt_at,
+    driveUuid: r.drive_uuid,
+    reason: r.reason,
+    stats,
+  };
+}
+
+/** Upload rows of the drives that belong to `owner` (never another account's). */
+export function listUploads(owner: string): UploadRecord[] {
+  return getDb()
+    .getAllSync<UploadDbRow>(
+      `SELECT u.* FROM uploads u JOIN sessions s ON s.id = u.session_id WHERE s.owner_id = ? ORDER BY u.started_at`,
+      owner,
+    )
+    .map(toRecord);
+}
+
+export function getUpload(sessionId: number): UploadRecord | null {
+  const r = getDb().getFirstSync<UploadDbRow>('SELECT * FROM uploads WHERE session_id = ?', sessionId);
+  return r ? toRecord(r) : null;
+}
+
+/** Add a drive to the queue once (an existing row is left alone, so its uuid and state never change). */
+export function addUpload(sessionId: number, startedAt: number, driveUuid: string, state: UploadState = 'queued', reason: string | null = null): void {
+  getDb().runSync(
+    'INSERT OR IGNORE INTO uploads (session_id, drive_uuid, started_at, state, reason) VALUES (?, ?, ?, ?, ?)',
+    sessionId,
+    driveUuid,
+    startedAt,
+    state,
+    reason,
+  );
+}
+
+export function updateUpload(
+  sessionId: number,
+  patch: { state: UploadState; attempts?: number; nextAttemptAt?: number; reason?: string | null; stats?: ServerStats | null },
+): void {
+  const cur = getUpload(sessionId);
+  if (!cur) return;
+  getDb().runSync(
+    'UPDATE uploads SET state = ?, attempts = ?, next_attempt_at = ?, reason = ?, stats = ? WHERE session_id = ?',
+    patch.state,
+    patch.attempts ?? cur.attempts,
+    patch.nextAttemptAt ?? cur.nextAttemptAt,
+    patch.reason === undefined ? cur.reason : patch.reason,
+    patch.stats === undefined ? (cur.stats ? JSON.stringify(cur.stats) : null) : patch.stats ? JSON.stringify(patch.stats) : null,
+    sessionId,
+  );
+}
+
+/** App was closed in the middle of an upload: those drives are simply queued again (every step is safe to repeat). */
+export function requeueInterruptedUploads(): void {
+  getDb().runSync("UPDATE uploads SET state = 'queued', next_attempt_at = 0 WHERE state = 'uploading'");
+}
+
+/** Finished drives of `owner` that are not in the queue yet (new ones, and drives from before uploads existed). */
+export function listUnqueuedFinishedSessions(owner: string): { id: number; started_at: number; points: number }[] {
+  return getDb().getAllSync<{ id: number; started_at: number; points: number }>(
+    `SELECT s.id, s.started_at, COUNT(p.id) AS points
+     FROM sessions s LEFT JOIN points p ON p.session_id = s.id
+     WHERE s.owner_id = ? AND s.ended_at IS NOT NULL AND s.id NOT IN (SELECT session_id FROM uploads)
+     GROUP BY s.id ORDER BY s.started_at`,
+    owner,
+  );
+}
+
+/** Pull-to-refresh: do not wait for the back-off, try the waiting drives now. */
+export function makeQueuedUploadsDue(): void {
+  getDb().runSync("UPDATE uploads SET next_attempt_at = 0 WHERE state = 'queued'");
 }

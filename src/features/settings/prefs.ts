@@ -2,6 +2,8 @@
 import Storage from 'expo-sqlite/kv-store';
 
 import { autoPauseMsFor, parseAutoPauseMin, parseTheme, type AutoPauseMin, type ThemeChoice } from '@/lib/recording-settings';
+import { parseTravelMode, type TravelMode } from '@/lib/travel-mode';
+import { normaliseKind, type Car, type VehicleKind } from '@/lib/vehicles';
 
 const SOUND = 'pref.sound';
 const BATTERY_TIP_HIDDEN = 'pref.batteryTipHidden';
@@ -13,16 +15,37 @@ export const isBatteryTipHidden = (): boolean => Storage.getItemSync(BATTERY_TIP
 export const hideBatteryTip = () => Storage.setItemSync(BATTERY_TIP_HIDDEN, '1');
 
 // Car picker (pre-drive). Per account, so signing in as someone else never shows or stamps another person's car.
-const vehicleKey = (uid: string) => `pref.vehicle.${uid}`;
+// One default per vehicle kind (your default car and your default motorbike). The car key is the old key, so existing
+// installs keep their default car.
+const vehicleKey = (uid: string, kind: VehicleKind) => (kind === 'car' ? `pref.vehicle.${uid}` : `pref.vehicle.${kind}.${uid}`);
 const vehiclesKey = (uid: string) => `pref.vehicles.${uid}`;
+const modeKey = (uid: string | null) => `pref.mode.${uid ?? 'guest'}`;
 
-export const getSelectedVehicleId = (uid: string): string | null => Storage.getItemSync(vehicleKey(uid));
-export const setSelectedVehicleId = (uid: string, id: string | null) =>
-  id == null ? Storage.removeItemSync(vehicleKey(uid)) : Storage.setItemSync(vehicleKey(uid), id);
+export const getSelectedVehicleId = (uid: string, kind: VehicleKind): string | null =>
+  Storage.getItemSync(vehicleKey(uid, kind));
+export const setSelectedVehicleId = (uid: string, kind: VehicleKind, id: string | null) =>
+  id == null ? Storage.removeItemSync(vehicleKey(uid, kind)) : Storage.setItemSync(vehicleKey(uid, kind), id);
 
 /** Last list fetched from Supabase, so the picker works offline. JSON of Car[]. */
 export const getCachedVehicles = (uid: string): string | null => Storage.getItemSync(vehiclesKey(uid));
 export const setCachedVehicles = (uid: string, json: string) => Storage.setItemSync(vehiclesKey(uid), json);
+
+/** The cached garage, parsed. Entries from before motorbikes existed have no kind and count as cars. */
+export function readCachedCars(uid: string | null): Car[] {
+  if (!uid) return [];
+  try {
+    const raw = getCachedVehicles(uid);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+    return (parsed as Car[]).map((c) => ({ ...c, kind: normaliseKind(c.kind) }));
+  } catch {
+    return [];
+  }
+}
+
+/** How the next drive is travelled (Car / Motorbike / Other). Remembered per account; guests share one slot. */
+export const getTravelMode = (uid: string | null): TravelMode => parseTravelMode(Storage.getItemSync(modeKey(uid)));
+export const setTravelMode = (uid: string | null, mode: TravelMode) => Storage.setItemSync(modeKey(uid), mode);
 
 // ---- Settings screens (26 hub, 28 Recording) ----
 
