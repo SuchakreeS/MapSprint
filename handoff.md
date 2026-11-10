@@ -469,6 +469,30 @@ is 'background' (RN AppStateModule), so the "app on screen" skip did not block i
   signed-in drive stays "Waiting to upload" (raw tracks of PS's own drives sit in the private bucket). Do not hand this build to testers.
 - Results: typecheck clean, eslint clean, npm test 168/168.
 
+- **Step 4 DONE in code (Opus, 2026-11-10, uncommitted), NOT DEPLOYED, not run against the cloud:** `supabase/functions/finalize-drive/index.ts`
+  (Deno glue: verify the caller's JWT, load the caller's own drive, download `tracks/<uid>/<driveId>.json.gz` with the secret key, capped gunzip,
+  validate, read the caller's privacy zones (FAIL CLOSED if unreadable), `finalizeTrack`, friendly overlap check, `drive_private` upsert,
+  compare-and-set `status 'uploading' -> 'processed'` (23P01 = lost a race -> rejected 'overlap'), answers the contract above; a second call
+  returns the stored result). All decisions are in the pure `src/lib/finalize.ts` (tests `tests/finalize.test.mts`, 19): limits (12 h /
+  60k points before any work), NaN-safe times check (120 s tolerance), cleaning/stats via the same `summarize` as the phone, route =
+  accuracy <= 25 m + teleport filter + 5 m step -> leading/trailing points inside a zone dropped (stats still use the whole track) ->
+  Douglas-Peucker 5 m in metres -> EWKT (null when < 2 points left), auto-pause only from {2,5,10 min, off}, flags = counters/booleans.
+  Benchmark (Node): a 43,200-point (12 h) track decodes + finalizes in ~0.3 s; 60k points is refused as too long.
+- **Edge copy of the rules:** the function deploys from its own folder, so `supabase/functions/finalize-drive/lib/` holds IDENTICAL copies of 9
+  files from `src/lib` (list in `scripts/sync-edge-lib.mjs`). After changing any of them run `npm run sync:edge`; `tests/edge-lib-sync.test.mts`
+  fails on a stale copy. tsconfig and eslint exclude `supabase/functions` (Deno code). `supabase/config.toml`: `verify_jwt = true`.
+- **Deploy (PS):** `npx supabase functions deploy finalize-drive --use-api` (server-side bundling, no Docker). Env needed is automatic
+  (`SUPABASE_URL`, `SUPABASE_SECRET_KEYS` or legacy `SUPABASE_SERVICE_ROLE_KEY`). Never run in prod without testlist F16 afterwards.
+- **Unverified (cannot run Deno/Docker here):** that PostgREST accepts an EWKT string for `drives.route` and returns `privacy_zones.center` as
+  GeoJSON or EWKB hex (both parsed; anything else fails closed); `DecompressionStream`/`npm:@supabase/supabase-js@2` in the hosted runtime.
+  First real call tells; read the function logs (Supabase dashboard > Edge Functions > finalize-drive > Logs, tag `[finalize-drive]`).
+- **Opus review checklist (step 6):** JWT handling, every query scoped to `uid`, no path from the request, secret key never leaves the
+  function, zones fail closed, compare-and-set + exclusion constraint, caps (gunzip 24 MB, 5 MB file, 60k points, 12 h), no coordinates in
+  logs, error responses generic, 503/500 retried by the app (an unreadable zone would retry forever: acceptable, logged).
+  Known gaps: no per-user rate limit; a user can burn CPU by uploading many max-size tracks (each is idempotent per drive id); the raw
+  track file is kept for rejected drives (2.6 gate: delete with the drive/account).
+- Results: typecheck clean, eslint clean, npm test 196/196.
+
 ## Next step
 **State (2026-11-09):** Phase 1 is tested on the phone except 1.9 and 1.12. 2.1 is done (cloud DB has all migrations incl. avatars,
 47/47 pgTAP on the cloud). 2.2 is coded and committed; PS added the 3 `EXPO_PUBLIC_*` vars on expo.dev and is building the preview APK

@@ -120,6 +120,8 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
       mode uncovers cells, Other earns the same XP; not verified (like Strava), server drops only impossible data.
 - [ ] 2.4 Edge Function `finalize-drive`: clean, recompute stats, simplify route
       (Douglas–Peucker 5 m), privacy-zone trimming, anti-cheat flags (see 2.3 note + spec)
+      CODE DONE 2026-11-10 (Opus): `supabase/functions/finalize-drive/` + pure rules `src/lib/finalize.ts` (tests); NOT DEPLOYED yet:
+      `npx supabase functions deploy finalize-drive --use-api` (no Docker needed), then run testlist F16. Opus security review pending.
       2.6 GATE added: deleting a drive/account must also delete its raw track file in the `tracks` bucket.
       XP rules for 3.1 (PS 2026-11-10): same XP for every mode, daily XP cap, less XP for repeated roads.
 - [ ] 2.5 Weekly DB backup GitHub Action
