@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { OnboardingGuard } from '@/features/auth/onboarding-guard';
 import { REMINDER_KIND } from '@/features/recording/finish-reminder';
+import { cleanUpRecorderOnLaunch } from '@/features/recording/recorder';
 import { applySavedTheme } from '@/features/settings/appearance';
 import { useAppFonts } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
@@ -37,7 +38,10 @@ function RootStack() {
   if (fontsReady && authReady && !started) setStarted(true); // latch during render (React "derived state" pattern)
 
   useEffect(() => {
-    if (started) SplashScreen.hideAsync();
+    if (!started) return;
+    SplashScreen.hideAsync();
+    // GPS left running with no open drive (earlier stop failed): switch it off. Once the UI is up, so the app is in front.
+    void cleanUpRecorderOnLaunch();
   }, [started]);
 
   // Tapping the locked-phone "Finish this drive?" notification opens the HUD, which shows its own finish dialog.

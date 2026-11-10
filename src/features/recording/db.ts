@@ -208,12 +208,17 @@ export function listSessions(limit = 20): SessionRow[] {
   );
 }
 
-/** Timestamp (ms) of the last point that was moving (speed at or above the stopped limit), or null if none yet. */
-export function getLastMovingTs(sessionId: number, minSpeedMs: number): number | null {
+/**
+ * Timestamp (ms) of the last point that was moving, or null if none yet. Same rule as the live stats engine
+ * (src/lib/live-stats.ts): points with accuracy worse than `maxAccuracyM` are ignored, otherwise speed >= the stopped limit.
+ * Without the accuracy filter, poor indoor fixes with jittery speed (phone parked at home) kept "moving" fresh forever.
+ */
+export function getLastMovingTs(sessionId: number, minSpeedMs: number, maxAccuracyM: number): number | null {
   const row = getDb().getFirstSync<{ t: number | null }>(
-    'SELECT MAX(ts) AS t FROM points WHERE session_id = ? AND speed >= ?',
+    'SELECT MAX(ts) AS t FROM points WHERE session_id = ? AND speed >= ? AND accuracy IS NOT NULL AND accuracy <= ?',
     sessionId,
     minSpeedMs,
+    maxAccuracyM,
   );
   return row?.t ?? null;
 }

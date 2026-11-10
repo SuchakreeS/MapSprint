@@ -85,6 +85,7 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
 - [x] 1.7 Local drive history list + local recap stats (no server yet) (code done 2026-11-05; on-phone test pending; XP/level/cells/smooth/badges left for Phase 3)
 - [x] 1.8 Samsung/OEM battery-optimisation guide screen (code done 2026-11-05; on-phone test pending, steps based on dontkillmyapp.com)
 - [ ] 1.9 Field test 10 drives, compare with trip meter; tune CLEANING constants
+      (progress 2026-11-10: 2 of 10 drives with a trip-meter reference, +0.2% and +0.3%; details in handoff.md)
       (first data point 2026-11-05: 7.86 km vs 7.91 km on the same route 2 days earlier; 42 min drive, longest gap 2 s; still needs trip-meter comparisons)
 - [x] 1.10 Gap log: store every gap > 3 s (time + position) per drive; show max gap in debug stats
       (code done 2026-11-05; derived from stored points, shown in the recap "GPS check" card; on-phone test pending)

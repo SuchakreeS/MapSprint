@@ -12,6 +12,7 @@ import { CLEANING } from '@/lib/geo';
 
 import { getFinishNotifiedAt, getLastMovingTs, getManualPauseSince, getSessionStartedAt, setFinishNotifiedAt } from './db';
 
+const TAG = '[finish-reminder]';
 const CHANNEL_ID = 'drive-reminders';
 export const REMINDER_ID = 'finish-reminder';
 /** Tapping the notification opens the HUD (root layout reads this). */
@@ -32,7 +33,7 @@ export async function maybeNotifyStillRecording(sessionId: number, nowMs: number
   if (startedAt == null) return;
   const pause = reminderPauseState({
     manualSince: getManualPauseSince(),
-    lastMovingTs: getLastMovingTs(sessionId, CLEANING.stoppedBelowKmh / 3.6),
+    lastMovingTs: getLastMovingTs(sessionId, CLEANING.stoppedBelowKmh / 3.6, CLEANING.maxAccuracyM),
     sessionStartMs: startedAt,
   });
   if (!shouldPromptFinish(pause, nowMs, getFinishNotifiedAt())) return;
@@ -53,8 +54,10 @@ export async function maybeNotifyStillRecording(sessionId: number, nowMs: number
       },
       trigger: { channelId: CHANNEL_ID }, // channel-only trigger = deliver now
     });
+    console.log(TAG, `posted for drive ${sessionId} (stopped ${Math.round(stoppedForMs(pause, nowMs) / 60_000)} min)`);
   } catch (e) {
-    console.warn('[finish-reminder]', e instanceof Error ? e.message : e);
+    // Visible in `adb logcat` (ReactNativeJS). The task itself keeps recording.
+    console.error(TAG, 'posting failed:', e instanceof Error ? e.message : e);
   }
 }
 
@@ -62,7 +65,7 @@ export async function maybeNotifyStillRecording(sessionId: number, nowMs: number
 export async function clearFinishReminder(): Promise<void> {
   try {
     await dismissNotificationAsync(REMINDER_ID);
-  } catch {
-    // nothing to dismiss
+  } catch (e) {
+    console.warn(TAG, 'dismiss failed:', e instanceof Error ? e.message : e);
   }
 }

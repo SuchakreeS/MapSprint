@@ -365,6 +365,54 @@ Recap screenshots from PS (standalone APK, screen locked, foreground service). N
 - Logo: JPG copy saved as `design/logo/icon.jpg` (full icon on #0A0A0A, 1024x1024). Not for the Android adaptive icon (needs the transparent PNGs).
 - Planning talk (no code): 3D replay free / live 3D + 3D car premium (see "3D map decision" above), caravan, turn-by-turn navigation (out), Android Auto (not possible), music controls (skip), Mapbox free tiers. All parked in plan.md under "Later ideas" and "Mapbox free tiers".
 
+## Task 1.9 field test: drives WITH a car trip meter reference (PS, 2026-11-10)
+PS photographed the car's Trip A at the start and end of each drive (Trip A never reset between them; assumed photo order: 113.6 start Mon, 122.7 end Mon at home, 132.8 end Tue). The meter shows 0.1 km steps, so each reference is only good to about +-1% on a 9-10 km drive.
+| # | Drive | Trip meter | App GPS | Diff | Points used | Longest gap | Gaps > 3 s |
+|---|---|---|---|---|---|---|---|
+| 1 | Mon 9 Nov 17:47 -> 19:13 (85 min, 46:19 active, 29:19 moving) | 9.1 km | 9.12 km | +0.2% | 3669 of 5089 | 7 s | 3 |
+| 2 | Tue 10 Nov 05:34 -> 05:54 (20 min, 14:57 moving) | 10.1 km | 10.13 km | +0.3% | 1199 of 1199 | 2 s | 0 |
+- Both far inside the 2% gate. This car's trip meter looks accurate (no obvious over-read). That is 2 of the 10 reference drives. The 5 Nov first data point (7.86 km vs 7.91 km) may count as a third if the 7.91 was a trip meter (PS to confirm what it came from). The 4 earlier GPS-only drives (table above) do not count.
+- Drive 1 dropped 28% of points (1420 of 5089, others < 2%). Suspect: parking garage at the start (photo 1 is in a garage; GPS accuracy worse than 25 m is dropped). Distance still matched the meter, so it did no harm. Worth a look when tuning `CLEANING`.
+- Correction (2026-11-10): on drive 1 PS forgot to press Finish after arriving home. The numbers say he was parked about 40 min, not the 10 min he first guessed (PS agrees): active 46:19 from 17:47 ends ~18:33 = 5 min after stopping (auto-pause), the 18:28 and 19:11 gaps are at the same spot (~15 m apart), and the reminder only fires after 30 min when auto-paused. So he arrived ~18:28 and the real drive was ~41 min wall; the 85 min wall time and 46:19 active include ~5 min stopped before auto-pause and ~40 min paused. Distance and moving time are unaffected. Both gaps are from the parked period (phone at home), not driving problems.
+- BUG (PS, 2026-11-10, HIGH priority, battery): the ongoing foreground-service notification "Recording your drive" does NOT disappear after pressing Finish in the app. Suspect: `stopRecording()` only calls `Location.stopLocationUpdatesAsync` when `isRecording()` (= `hasStartedLocationUpdatesAsync`) is true; if that returns false (e.g. after the app process was recreated while the service kept running, `killServiceOnDestroy: false`), the stop is skipped and GPS + service keep running with no active session (the task stores nothing, but the battery drains). Also no orphan cleanup on app start. Agent prompt given.
+- The 'Finish this drive?' reminder did NOT appear (PS only saw the recording notification), although he was parked ~40 min (rule: 15 min stopped, 30 min if manually paused). Check first whether the installed APK includes commit 8709b5c (expo-notifications needs a new EAS build); if it does, posting from the background task may be failing silently (see Session 12 UNVERIFIED note).
+- Drive 1 gaps: 19:11:35 (7 s) at 13.9673, 100.6817 and 18:28:42 (5 s) at 13.9674, 100.6816 (same spot, 43 min apart); the third gap was cut off in the screenshot. PS to say what happened at 18:28 (about 40 min stopped there?) and optionally send the full GPS check.
+- Next for 1.9: 8 more drives with the meter reset at Start (prefer >= 10 km). Then tune `CLEANING` if needed and decide the gate.
+
+## Session 13 (2026-11-10, Opus): BUG "Recording your drive" stays after Finish + reminder did not fire (code done, uncommitted)
+**Root cause, read from node_modules source (expo-location SDK 58 classic module, expo-task-manager, expo-modules-core):**
+- `hasStartedLocationUpdatesAsync` = `TaskService.taskHasConsumerOfClass`, which reads expo-task-manager's task registry: static maps,
+  persisted to SharedPreferences "TaskManagerModule" and restored in each new process (`restoreTasks`). So after an app restart it still
+  returns true; the guess "isRecording() returns false so stop is skipped" is unlikely.
+- `stopLocationUpdatesAsync` -> `unregisterTask` -> `LocationTaskConsumer.didUnregister()` -> removes the GPS PendingIntent (GPS off) and
+  `stopForegroundService()` = `mService?.stop()` only. `mService` is set only when the consumer's `bindService` connects, made in
+  `maybeStartForegroundService()`, which returns early if `AppForegroundedSingleton.isForegrounded` is false.
+- Chain on PS's drive 1: phone parked, Samsung kills the process -> `LocationTaskService` returns `START_REDELIVER_INTENT` so Android
+  restarts it (notification back) -> the next GPS broadcast restores the task in the background -> consumer never binds -> the headless JS
+  instance (`RNHeadlessAppLoader.appRecords`) stays alive because a location event arrives every second (it is only dropped after 2 s
+  idle) -> when PS opens the app, `TaskManagerInternalModule.onHostResume` sees "headless" and does NOT forward onHostResume to the
+  consumer, so it still never binds -> Finish: GPS updates removed, service + notification left behind (idle service, small drain; the
+  notification lies). The 5-7 s gaps at 18:28 and 19:11 at the same parked spot fit two process restarts.
+- Fix (`src/features/recording/recorder.ts`): `stopLocationService()` re-registers the task with the same options while the app is in
+  front (forces `startForegroundService` + bind on the running service), then unregisters; expo's `onServiceConnected` stops the service if
+  the task was unregistered while the bind was pending. Falls back to a plain stop if re-attach fails (permission revoked). Errors logged
+  `[recorder]` and rethrown; `stopRecording()` ends the drive only after GPS is off (HUD shows the error, Finish can be retried), and
+  awaits `clearFinishReminder()`. Alternative (not done): patch-package expo-location so `stopForegroundService()` also calls
+  `context.stopService(...)` when `mService` is null (native rebuild, cleaner; worth an upstream issue).
+- Launch cleanup (`cleanUpRecorderOnLaunch()`, root layout once started): task registered + no open drive -> stop it. Open drive + task
+  not registered: nothing at launch (no surprise GPS); opening the HUD (pill) now RESUMES GPS on the same drive. Before, `startRecording()`
+  opened a second drive and left the first one open forever. Pure rules `planStart` / `planLaunchCleanup` in `src/lib/recording-state.ts`
+  (tests `tests/recording-state.test.mts`).
+- A zombie service from the OLD build cannot be detected from JS (the task is already unregistered): PS force-stops the app once.
+**Reminder did not fire:** a real logic bug, whatever the APK: `getLastMovingTs` counted ANY point with speed >= 3 km/h, while the live
+engine ignores points with accuracy > 25 m. Parked indoors, poor fixes with jittery speed kept "last moving" fresh, so 15 min stopped
+never arrived (drive 1 dropped 1420 points for accuracy, likely the parked hour). Now the SQL also requires `accuracy <= 25`. Posting
+errors are logged with `console.error('[finish-reminder] ...')`, a successful post with `console.log`. `AppState` in a headless JS context
+is 'background' (RN AppStateModule), so the "app on screen" skip did not block it. Whether the APK had 8709b5c: if Profile has a
+"Settings" button, it did (same commit); `npx eas-cli@latest build:list -p android --limit 5` shows each build's commit.
+- Results: typecheck clean, eslint clean, npm test 148/148 (5 new). Not checked on the phone: testlist F13.
+- **Needs a new EAS preview build** (JS change; no new native code). No OTA updates in this project.
+
 ## Next step
 **State (2026-11-09):** Phase 1 is tested on the phone except 1.9 and 1.12. 2.1 is done (cloud DB has all migrations incl. avatars,
 47/47 pgTAP on the cloud). 2.2 is coded and committed; PS added the 3 `EXPO_PUBLIC_*` vars on expo.dev and is building the preview APK
