@@ -1,4 +1,5 @@
 import { Camera, LineLayer, LocationPuck, MapView, ShapeSource } from '@rnmapbox/maps';
+import { latLngToCell } from 'h3-js';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -19,7 +20,8 @@ import { getActiveSessionId, getCurrentOwner } from '@/features/recording/db';
 import { stopRecording } from '@/features/recording/recorder';
 import { useLiveDrive } from '@/features/recording/use-live-drive';
 import { getAutoPauseMs, getKeepAwakeOn } from '@/features/settings/prefs';
-import { boxAround, FOG, needsRecentre, type Box } from '@/lib/fog';
+import { CELL_RES } from '@/lib/cells';
+import { boxAround, cellsNearBox, FOG, needsRecentre, type Box } from '@/lib/fog';
 import { formatDistanceKm, formatDuration, formatKmh1 } from '@/lib/format';
 import { shouldPromptFinish, stoppedForMs } from '@/lib/finish-prompt';
 import { controlsLocked } from '@/lib/hud';
@@ -33,12 +35,6 @@ export default function HudScreen() {
   const { ready, error, elapsedS, snapshot, speedKmh, paused, nowMs, route, liveCells, lastPos, pause, resume } = useLiveDrive();
   const styleJSON = useMemo(() => standardStyleJSON(mode, c), [mode, c]);
   const { cells: explored } = useExploredCells();
-  // Explored before this drive + what this drive opened so far (live, same rule as the server).
-  const shownCells = useMemo(() => {
-    const s = new Set(explored);
-    for (const cell of liveCells) s.add(cell);
-    return s;
-  }, [explored, liveCells]);
   // Live estimate for the pill; the recap's "New cells" is the server's number.
   const newCells = useMemo(() => liveCells.filter((cell) => !explored.has(cell)).length, [explored, liveCells]);
   // Fog box around the car, re-centred when it leaves the inner half (keeps the fog polygon small while driving).
@@ -46,6 +42,11 @@ export default function HudScreen() {
   if (lastPos && (!fogBox || needsRecentre(fogBox, lastPos.lat, lastPos.lng))) {
     setFogBox(boxAround(lastPos.lat, lastPos.lng, FOG.hudBoxHalfDeg));
   }
+  // Only the explored cells near the box (the account's whole history is not re-walked on every new cell)...
+  const nearby = useMemo(() => (fogBox ? cellsNearBox(explored, fogBox) : []), [explored, fogBox]);
+  // ...plus what this drive opened so far (live, same rule as the server).
+  const shownCells = useMemo(() => new Set([...nearby, ...liveCells]), [nearby, liveCells]);
+  const gridCell = lastPos ? latLngToCell(lastPos.lat, lastPos.lng, CELL_RES) : null;
   const [following, setFollowing] = useState(true);
   const [sheetHeight, setSheetHeight] = useState(0);
   const [finishError, setFinishError] = useState<string | null>(null);
@@ -102,7 +103,7 @@ export default function HudScreen() {
             if (!e.nativeEvent.payload.followUserLocation) setFollowing(false);
           }}
         />
-        {fogBox && <FogLayers cells={shownCells} box={fogBox} gridCenter={lastPos} />}
+        {fogBox && <FogLayers cells={shownCells} box={fogBox} gridCell={gridCell} />}
         {route.length >= 2 && (
           <ShapeSource
             id="drive-route"

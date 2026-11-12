@@ -3,6 +3,7 @@
 // Not here yet: the All time / This week switch and the Districts sheet (plan 3.8).
 import { Camera, LocationPuck, MapView } from '@rnmapbox/maps';
 import { useFocusEffect } from 'expo-router';
+import { latLngToCell } from 'h3-js';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RecenterGlyph } from '@/components/RecenterGlyph';
 import { useExploredCells } from '@/features/map/explored';
 import { FogLayers } from '@/features/map/FogLayers';
+import { CELL_RES } from '@/lib/cells';
 import { exploredAreaKm2, fogFeature, WORLD_BOX } from '@/lib/fog';
 import { formatCount } from '@/lib/format';
 import { standardStyleJSON } from '@/lib/map-style';
@@ -25,7 +27,13 @@ export default function MapTab() {
   const { cells, refresh } = useExploredCells();
   const [following, setFollowing] = useState(true);
   const [threeD, setThreeD] = useState(false);
-  const [gridCenter, setGridCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [gridCell, setGridCell] = useState<string | null>(null);
+  // Where the camera last rested: a remount (3D toggle, cells changed in 3D) starts there instead of jumping to Bangkok.
+  // (State, not a ref: it is read while rendering. Map idle events are rare, so the extra render is cheap.)
+  const [restCamera, setRestCamera] = useState<{ centerCoordinate: [number, number]; zoomLevel: number }>({
+    centerCoordinate: DEFAULT_CENTER,
+    zoomLevel: 11,
+  });
 
   // Coming back from a recap: read the cells again (the drive may have just been counted).
   useFocusEffect(refresh);
@@ -50,19 +58,20 @@ export default function MapTab() {
         attributionEnabled={false}
         onMapIdle={(state) => {
           const [lng, lat] = state.properties.center;
-          setGridCenter({ lat, lng });
+          setRestCamera({ centerCoordinate: [lng, lat], zoomLevel: state.properties.zoom });
+          setGridCell(latLngToCell(lat, lng, CELL_RES));
         }}>
         <Camera
           followUserLocation={following}
           followZoomLevel={14}
           followPitch={threeD ? 60 : 0}
           pitch={threeD ? 60 : 0}
-          defaultSettings={{ centerCoordinate: DEFAULT_CENTER, zoomLevel: 11 }}
+          defaultSettings={restCamera}
           onUserTrackingModeChange={(e) => {
             if (!e.nativeEvent.payload.followUserLocation) setFollowing(false);
           }}
         />
-        <FogLayers cells={cells} box={WORLD_BOX} gridCenter={gridCenter} />
+        <FogLayers cells={cells} box={WORLD_BOX} gridCell={gridCell} />
         <LocationPuck pulsing={{ isEnabled: true }} />
       </MapView>
 

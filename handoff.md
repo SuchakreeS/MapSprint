@@ -589,7 +589,15 @@ is 'background' (RN AppStateModule), so the "app on screen" skip did not block i
 - Screens: HUD (Standard, fog box around the car, live holes from `useLiveDrive().liveCells`, "+N new cells" estimate pill), Pre-drive (fog),
   Map tab `(tabs)/world.tsx` (card, recenter, 3D toggle with clip). `RecenterGlyph` moved to `src/components/`.
 - Deleted: spike `src/app/dev/`, `src/features/dev/`, `src/features/map/map-style.ts` (`MAP_STYLE`).
-- Results: typecheck clean, eslint clean, npm test 252/252.
+- Results: typecheck clean, eslint clean, npm test 254/254 (after the review fixes).
+- Opus review fixes: (C1) an explored area inside an unexplored island is now a hole of that island (was an invalid nested hole); one shared
+  `fogShapes` pass; (I1) HUD only re-walks explored cells near the box (`cellsNearBox`), `FogLayers` is `memo` and takes a grid CELL, so the fog
+  JSON is not re-sent every second; (I2) Map tab remembers the camera (`restCamera` from `onMapIdle`) so the 3D toggle no longer jumps to Bangkok;
+  (I3) counted drives WITH server cells (`stats.newCells` set) keep their local cells, so new holes show at once and offline.
+- Deferred minors (review): paging during an account switch can damage the old owner's cache until the next refresh (no leak); `fetchAllPages`
+  assumes server max-rows >= 1000; first open computes old local drives' cells on the JS thread (one-time freeze for big guest histories);
+  double load on Map tab mount (focus + mount); `+40` magic offset for the pill; pill briefly over-counts before cells load; no HUD fog before the
+  first GPS point; **Opus/PDPA question:** `explored_cache` / `session_cells` stay on the phone after sign-out (never shown to another account).
 - **PS run order:** (1) commit 3.4, (2) `npx supabase db push --remote`, (3) `npx supabase test db --remote` (expect 95),
   (4) `npx supabase functions deploy finalize-drive --use-api`, (5) EAS preview build, (6) drive: F18, F19, F20.
 - Untested on a device: LocationPuck and no-slot route layer on top of a Standard `styleJSON` map; the clip polygon as a world box with many holes;

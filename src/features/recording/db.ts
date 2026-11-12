@@ -389,7 +389,10 @@ export function getExploredCache(owner: string): string[] {
 
 /**
  * Finished local drives whose cells the phone shows itself. Guest (owner null): all finished guest drives.
- * Account: its finished drives that are not counted (the server has those cells) and not rejected (they explore nothing).
+ * Account: its finished drives that are not rejected (they explore nothing) and either not counted yet, or counted WITH
+ * server cells (the server answered `newCells`, i.e. counted after the 3.3 deploy: same cells as the server, and the new
+ * holes show at once, even before the explored_cells refresh lands or when it fails offline). Drives counted before 3.3
+ * (no `newCells`) are left out on purpose: the server has no cells for them, the map must not claim them.
  */
 export function listLocalExploreSessions(owner: string | null): number[] {
   const rows =
@@ -397,7 +400,8 @@ export function listLocalExploreSessions(owner: string | null): number[] {
       ? getDb().getAllSync<{ id: number }>('SELECT id FROM sessions WHERE owner_id IS NULL AND ended_at IS NOT NULL')
       : getDb().getAllSync<{ id: number }>(
           `SELECT s.id FROM sessions s LEFT JOIN uploads u ON u.session_id = s.id
-           WHERE s.owner_id = ? AND s.ended_at IS NOT NULL AND (u.state IS NULL OR u.state NOT IN ('counted', 'rejected'))`,
+           WHERE s.owner_id = ? AND s.ended_at IS NOT NULL AND (u.state IS NULL OR u.state IN ('queued', 'uploading')
+                OR (u.state = 'counted' AND json_extract(u.stats, '$.newCells') IS NOT NULL))`,
           owner,
         );
   return rows.map((r) => r.id);

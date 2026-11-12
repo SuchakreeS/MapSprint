@@ -1,6 +1,7 @@
 // Explored H3 cells as the phone knows them (plan 3.4, decision 3):
 //  - signed in: the server's explored_cells (cached per account in SQLite, so the map works offline)
-//    + the cells of this account's finished local drives that are not counted or rejected yet (waiting to upload);
+//    + the cells of this account's finished local drives that are waiting to upload, or counted with server cells
+//      (so a just-counted drive's holes show at once, also offline; see listLocalExploreSessions);
 //  - guest: the cells of all finished guest drives.
 // Counted drives from before the 3.3 deploy have no server cells and are NOT filled in from local points:
 // the map would then disagree with the server's "new cells". A server back-fill is a later task.

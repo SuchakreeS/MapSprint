@@ -9,6 +9,7 @@ import {
   exploredAreaKm2,
   exploredEdges,
   fogFeature,
+  fogShapes,
   needsRecentre,
   unexploredGrid,
   type Box,
@@ -122,4 +123,22 @@ test('hole vertices match the cell boundaries (lng, lat order)', () => {
   const hole = (f.geometry.coordinates[0] as LngLat[][])[1];
   const b = cellToBoundary(C0, true);
   for (const v of b) assert.ok(hole.some((h) => Math.abs(h[0] - v[0]) < 1e-9 && Math.abs(h[1] - v[1]) < 1e-9));
+});
+
+test('explored centre inside an unexplored island: the centre is a hole of the island, not of the box', () => {
+  const cells = [...gridRingUnsafe(C0, 2), C0];
+  const f = fogFeature(cells, box);
+  const polys = f.geometry.coordinates as LngLat[][][];
+  assert.equal(polys.length, 2, 'box + island');
+  assert.equal(polys[0].length, 2, 'box with only the outer ring hole');
+  assert.equal(polys[1].length, 2, 'island with the explored centre as its hole');
+  assert.ok(signedArea(polys[1][1]) < 0);
+  assert.ok(inRing(centre(C0), polys[1][1]));
+});
+
+test('fogShapes gives the same fog and edges as the single functions', () => {
+  const cells = [...gridRingUnsafe(C0, 2), C0, latLngToCell(LAT + 1, LNG, 9)];
+  const s = fogShapes(cells, box);
+  assert.deepEqual(s.fog, fogFeature(cells, box));
+  assert.deepEqual(s.edges, exploredEdges(cells, box));
 });

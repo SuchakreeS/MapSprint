@@ -1,6 +1,7 @@
 import { Camera, LocationPuck, MapView } from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
+import { latLngToCell } from 'h3-js';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,6 +26,7 @@ import {
   setSoundOn,
   setTravelMode,
 } from '@/features/settings/prefs';
+import { CELL_RES } from '@/lib/cells';
 import { boxAround, FOG } from '@/lib/fog';
 import { needsSignalConfirm, type SignalQuality } from '@/lib/gps-signal';
 import { standardStyleJSON } from '@/lib/map-style';
@@ -101,7 +103,7 @@ export default function PreDriveScreen() {
         rotateEnabled={false}
         pitchEnabled={false}>
         <Camera followUserLocation followZoomLevel={15.5} />
-        {fogBox && <FogLayers cells={explored} box={fogBox} gridCenter={here} />}
+        {fogBox && <FogLayers cells={explored} box={fogBox} gridCell={here ? latLngToCell(here.lat, here.lng, CELL_RES) : null} />}
         <LocationPuck pulsing={{ isEnabled: true }} />
       </MapView>
 
