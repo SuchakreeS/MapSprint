@@ -159,6 +159,7 @@ test('a normal drive is counted with plausible numbers and a simplified route', 
   assert.equal(out.endMs, T0 + 600_000);
   assert.ok(out.routeEwkt?.startsWith('SRID=4326;LINESTRING('));
   assert.equal(out.flags.routePoints, 2); // a straight line simplifies to its two ends
+  assert.ok(out.topKmh != null && Math.abs(out.topKmh - 36) < 1, `top speed ${out.topKmh}`); // plan 3.10, held for >= 3 s
 });
 
 test('stats use the WHOLE track even when the route is trimmed at home', () => {

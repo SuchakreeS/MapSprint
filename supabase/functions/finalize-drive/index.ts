@@ -3,7 +3,8 @@
 // Node); this file only talks to Supabase. NEVER trust the phone: every number that counts is recomputed here from the raw points.
 //
 // Contract with the app (parseFinalizeResponse in src/lib/upload-queue.ts):
-//   200 { status: 'processed', stats }      counted (also when asked again: idempotent)
+//   200 { status: 'processed', stats }      counted (also when asked again: idempotent). stats.topKmh (number | null, plan 3.10)
+//                                            is the PRIVATE top speed: this answer only ever goes to the drive's owner (JWT-scoped).
 //   200 { status: 'rejected', reason }      final, the drive will never count
 //   non-2xx                                  transient (the app retries with back-off): 401 auth, 404 drive row missing,
 //                                            500/503 anything that may work later. 400 = malformed request (final).
@@ -68,9 +69,13 @@ async function alreadyDecided(drive: DriveRow): Promise<Response | null> {
       console.error(TAG, 'processed drive without stats', drive.id);
       return json(500, { error: 'incomplete' });
     }
+    // The private top speed lives in drive_private (owner-only), never on drives. drive.id is the caller's own (checked by the caller).
+    const { data: priv, error: privError } = await admin.from('drive_private').select('top_kmh').eq('drive_id', drive.id).maybeSingle();
+    if (privError) return json(503, { error: 'try_again' });
+    const topKmh = typeof priv?.top_kmh === 'number' ? priv.top_kmh : null;
     return json(200, {
       status: 'processed',
-      stats: { distanceM: distance_m, movingS: moving_s, elapsedS: elapsed_s, avgMovingKmh: avg_moving_kmh, avgOverallKmh: avg_overall_kmh },
+      stats: { distanceM: distance_m, movingS: moving_s, elapsedS: elapsed_s, avgMovingKmh: avg_moving_kmh, avgOverallKmh: avg_overall_kmh, topKmh },
     });
   }
   if (drive.status === 'rejected') {
@@ -206,7 +211,7 @@ async function handle(req: Request): Promise<Response> {
 
   // Owner-only details first (idempotent), then the public card with a compare-and-set: only one caller can win.
   const priv = await admin.from('drive_private').upsert(
-    { drive_id: driveId, user_id: uid, track_path: path, max_kmh: outcome.maxKmh, raw_points: outcome.rawPoints, flags: outcome.flags },
+    { drive_id: driveId, user_id: uid, track_path: path, top_kmh: outcome.topKmh, raw_points: outcome.rawPoints, flags: outcome.flags },
     { onConflict: 'drive_id' },
   );
   if (priv.error) {
@@ -241,7 +246,7 @@ async function handle(req: Request): Promise<Response> {
     const stored = again ? await alreadyDecided(again) : null;
     return stored ?? json(503, { error: 'try_again' });
   }
-  return json(200, { status: 'processed', stats: outcome.stats });
+  return json(200, { status: 'processed', stats: { ...outcome.stats, topKmh: outcome.topKmh } });
 }
 
 Deno.serve(async (req: Request) => {

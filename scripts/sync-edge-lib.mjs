@@ -11,6 +11,7 @@ export const SHARED_FILES = [
   'live-stats.ts',
   'route-art.ts',
   'route-line.ts',
+  'top-speed.ts',
   'track-format.ts',
   'travel-mode.ts',
   'upload-queue.ts',

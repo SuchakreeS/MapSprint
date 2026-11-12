@@ -64,6 +64,8 @@ export interface ServerStats {
   elapsedS: number;
   avgMovingKmh: number;
   avgOverallKmh: number;
+  /** Private top speed (plan 3.10). Only for the owner's recap and History; absent from older servers / old drives. */
+  topKmh?: number | null;
 }
 
 export type FinalizeResult =
@@ -91,6 +93,8 @@ export function parseFinalizeResponse(body: unknown): FinalizeResult {
       elapsedS: s.elapsedS,
       avgMovingKmh: s.avgMovingKmh,
       avgOverallKmh: s.avgOverallKmh,
+      // Optional extra field: never a reason to refuse an answer (older servers do not send it).
+      ...(isNum(s.topKmh) ? { topKmh: s.topKmh } : {}),
     },
   };
 }

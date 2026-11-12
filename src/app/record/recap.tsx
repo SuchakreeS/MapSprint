@@ -12,7 +12,8 @@ import { loadDrive } from '@/features/recording/drive-history';
 import { getSelectedVehicleId, readCachedCars } from '@/features/settings/prefs';
 import { supabase } from '@/features/sync/supabase';
 import { formatDateTimeRange } from '@/lib/drive-format';
-import { formatDistanceKm, formatDuration, formatKmh1 } from '@/lib/format';
+import { formatDistanceKm, formatDuration, formatKmh1, formatSpeedKmh } from '@/lib/format';
+import { shownTopKmh } from '@/lib/top-speed';
 import { kindForMode, TRAVEL_MODE_LABEL, TRAVEL_MODES, vehicleForMode, type TravelMode } from '@/lib/travel-mode';
 import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
@@ -84,6 +85,8 @@ export default function RecapScreen() {
   }
 
   const s = drive.summary;
+  // Private top speed (3.10): this screen is owner-only. Counted drives show the server's value, others the phone's.
+  const topKmh = shownTopKmh({ counted: server != null, serverTopKmh: server?.topKmh, localTopKmh: drive.topKmh });
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: c.bg }]}>
       <ScrollView contentContainerStyle={styles.wrap}>
@@ -118,6 +121,12 @@ export default function RecapScreen() {
           <Tile label="Moving avg" value={formatKmh1(server?.avgMovingKmh ?? s.avgMovingKmh)} unit="km/h" />
           <Tile label="Overall avg" value={formatKmh1(server?.avgOverallKmh ?? s.avgOverallKmh)} unit="km/h" />
         </View>
+        {topKmh != null ? (
+          <View style={styles.row}>
+            <Tile label="Top speed" value={formatSpeedKmh(topKmh)} unit="km/h" />
+            <View style={styles.spacer} />
+          </View>
+        ) : null}
 
         {server ? (
           <View style={[styles.modeCard, { backgroundColor: c.surface, borderColor: c.line }]}>
@@ -156,4 +165,5 @@ const styles = StyleSheet.create({
   modeCard: { borderRadius: radius.md, borderWidth: 1, overflow: 'hidden' },
   modeError: { paddingHorizontal: space.lg, paddingBottom: space.md },
   tile: { flex: 1, padding: 14, borderRadius: radius.md, borderWidth: 1, gap: 6 },
+  spacer: { flex: 1 },
 });

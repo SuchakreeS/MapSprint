@@ -1,7 +1,8 @@
 // Screen 27 Privacy (design/screens/*/27-privacy-settings.png).
-// Real now: Private account (profiles.is_private) and Share max speed (profiles.share_max_speed): both columns have
-// update grants and RLS tests. Not built yet, shown as "Coming soon": Default drive visibility (needs a new column),
-// Privacy zones (Phase 4, before the Feed), Blocked people (no table yet).
+// Real now: Private account (profiles.is_private), update grant + RLS tests. No "Share max speed" row: top speed is private
+// to the owner and can not be shared at all (PS 2026-11-12, plan 3.10; the column was dropped).
+// Not built yet, shown as "Coming soon": Default drive visibility (needs a new column), Privacy zones (Phase 4, before the
+// Feed), Blocked people (no table yet).
 import { useEffect, useState } from 'react';
 import { Text } from 'react-native';
 
@@ -13,7 +14,6 @@ import { useTheme } from '@/theme/use-theme';
 
 interface Flags {
   is_private: boolean;
-  share_max_speed: boolean;
 }
 
 export default function PrivacySettingsScreen() {
@@ -29,7 +29,7 @@ export default function PrivacySettingsScreen() {
     let alive = true;
     supabase
       .from('profiles')
-      .select('is_private, share_max_speed')
+      .select('is_private')
       .eq('id', userId)
       .single()
       .then(({ data, error: err }) => {
@@ -66,16 +66,6 @@ export default function PrivacySettingsScreen() {
             value={flags?.is_private ?? false}
             disabled={disabled}
             onValueChange={(v) => change({ is_private: v })}
-          />
-        </SwitchRow>
-        <Divider />
-        <SwitchRow>
-          <Switch
-            label="Share max speed"
-            caption="Off by default. Max speed is never ranked or scored."
-            value={flags?.share_max_speed ?? false}
-            disabled={disabled}
-            onValueChange={(v) => change({ share_max_speed: v })}
           />
         </SwitchRow>
       </SettingsGroup>

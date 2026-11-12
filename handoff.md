@@ -512,7 +512,46 @@ is 'background' (RN AppStateModule), so the "app on screen" skip did not block i
   Other correction (one update of mode + vehicle_id; RLS allows it only for counted drives), or a "not counted yet" note.
 - Results: typecheck clean, eslint clean, npm test 206/206.
 
-## Spike 3.0 (map style), IN PROGRESS (2026-11-12), uncommitted
+## Session 15 (2026-11-12, Opus): 3.10 private top speed, CODE DONE, uncommitted, phone test F18 pending
+- Rule (`src/lib/top-speed.ts`, shared with finalize-drive via `npm run sync:edge`):
+  - Same cleaning as the drive stats: accuracy <= 25 m and the teleport filter.
+  - It uses the RAW chip (Doppler) speed, not the EMA. The EMA lags a real peak and smears one glitch over several points;
+    the window is the spike filter.
+  - Top speed = max over every >= 3 s stretch of that stretch's SLOWEST point (sliding-window minimum, O(n)).
+  - A stretch can't cross a GPS gap > 5 s, a point with no speed, or a speed > 250 km/h.
+  - Result in km/h, 0.1 rounding, null when there is no 3 s stretch. Tests: `tests/top-speed.test.mts` (a 180 glitch in a
+    90 drive gives 90, a 2 s burst doesn't count, 4 s held does, poor accuracy, teleport, gap, null speed, unsorted).
+  - `shownTopKmh`: counted drives show the server value only, local or guest drives the phone value.
+- DB: new migration `20261112120000_private_top_speed.sql`:
+  - adds `drive_private.top_kmh` (0..250 check)
+  - drops `drive_private.max_kmh` (old EMA max, never read, so old drives get none)
+  - drops `profiles.share_max_speed`
+  - Never on `drives`.
+  - pgTAP `plan(86)`, 6 new tests: owner reads own top speed, owner can't update or insert it, `drives` has no top_kmh, both
+    old columns are gone. Stranger and follower reading nothing from `drive_private` was already tested.
+  - `database.types.ts` edited by hand.
+- finalize-drive:
+  - writes `top_kmh`
+  - 200 response `stats.topKmh` (extra optional field, old apps unaffected), also on idempotent retries (read from `drive_private`)
+  - `parseFinalizeResponse` keeps it only when it is a number
+- Phone:
+  - SQLite `sessions.has_top_speed` (0 for old rows, 1 from `startSession`), so new drives only.
+  - `DriveItem.topKmh` computed on read and never uploaded.
+  - The recap gets a third tile row "Top speed" (half width, same Tile style), and History's grey line gets "· top 92 km/h".
+  - No HUD, Saving screen, feed or share use.
+  - Privacy settings: the "Share max speed" row is removed.
+- Results: typecheck clean, eslint clean, npm test 220/220.
+- **PS must run, in this order:**
+  1. `npx supabase db push --remote`
+  2. `npx supabase test db --remote` (expect 86)
+  3. `npx supabase functions deploy finalize-drive --use-api` RIGHT AFTER step 1. Between 1 and 3 the old function still writes
+     `max_kmh` and gets 503; the app retries, so nothing is lost.
+  4. New EAS preview build (JS only; it also carries the 3.0 spike screen)
+  5. testlist F18
+
+  Until the new APK is installed, the OLD app's Privacy screen can't load (it still asks for `share_max_speed`).
+
+## Spike 3.0 (map style), IN PROGRESS (2026-11-12), screen committed in 5b636df
 - Built (Sonnet): throwaway `src/app/dev/map-style.tsx` (route `mapsprint://dev/map-style`, not linked from the UI) + `src/features/dev/map-style-spike.ts` (fake fog, grids, JS building pick, height stats). Delete both after the decision. typecheck/eslint clean, npm test 206/206. Needs a new preview APK to run.
 - Answered from code and docs: `@rnmapbox/maps` 10.3.16 already pins Maps SDK 11.33 and supports Standard (`StyleImport`, `slot`), so NO upgrade and NO native change. Slots: bottom = above land/water, middle = above roads and behind 3D buildings, top = above POI labels, behind place labels. `show3dBuildings` is global on/off only; `within` cannot filter polygon buildings. A `clip` layer (SDK 11.6+, experimental) can remove 3D buildings inside a polygon, but rnmapbox has no component for it, so the spike uses a hand-written `styleJSON` that imports Standard. Mobile billing is per MAU (25,000 free); no separate Standard/3D charge on the pricing pages.
 - Finding: the rnmapbox `FillExtrusionLayer` component has NO `slot` prop in 10.3.16 (other layers do), so an own 3D layer on Standard must be declared inside the style JSON to sit under the clip layer.
@@ -522,7 +561,8 @@ is 'background' (RN AppStateModule), so the "app on screen" skip did not block i
 ## Next step
 **Decision (PS, 2026-11-12):** do NOT start the closed test yet. Build the Phase 3 core loop first (order in plan.md Phase 3:
 3.0 -> 3.3 -> 3.4 -> 3.1/3.2 -> 3.6), then account deletion + privacy policy, then 2.6. PS meanwhile starts the Play developer
-account verification and collects tester Gmails. 1.9 (trip-meter drives) continues on every drive. **Next task: 3.0 map style spike.**
+account verification and collects tester Gmails. 1.9 (trip-meter drives) continues on every drive. **3.10 is coded (Session 15 above):
+PS runs its steps + F18. Next: 3.0 map style spike on the phone (screen already built and committed, 5b636df), then 3.3.**
 
 **State (2026-11-12, PS report via Claude chat):** PS ran `npx supabase db push --remote` (private-by-default migration),
 `npx supabase test db --remote`, `npx supabase functions deploy finalize-drive --use-api`, built and installed the new preview APK, and ran

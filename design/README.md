@@ -75,7 +75,7 @@ Tab bar (all tab screens): Feed, Map, **Record** (big yellow centre button), Ran
 2. **App name.** Images and source still say "Cartrava" (screens 01, 02, 03, 28, tab titles).
    The working name is **Mapsprint** and is not final. Put the name in one constant, never inline.
 3. **Sample data is fake** (users Mint, Beam, Fah..., drives, XP). Never ship it.
-4. **Safety:** speed is never ranked or rewarded (max speed is off by default, screen 27).
+4. **Safety:** speed is never ranked or rewarded. Top speed is private to the owner and can NOT be shared (PS 2026-11-12: the "Share max speed" row on screen 27 is dropped; plan 3.10).
    HUD controls lock above 10 km/h and "Hold to finish" needs an 800 ms press (screen 08).
 5. **Not designed yet:** empty states, error states, loading skeletons, tablet layouts, and the
    Update 1 premium screens (cosmetics, deeper stats, paywall).

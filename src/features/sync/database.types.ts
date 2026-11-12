@@ -65,14 +65,14 @@ isOneToOne: false
                   ]
                 },"drive_private": {
                   Row: {
-                    "drive_id": string,"flags": NonNullable<Json>,"max_kmh": number | null,"raw_points": number | null,"track_path": string | null,"user_id": string
+                    "drive_id": string,"flags": NonNullable<Json>,"top_kmh": number | null,"raw_points": number | null,"track_path": string | null,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "drive_id": string,"flags"?: NonNullable<Json>,"max_kmh"?: number | null,"raw_points"?: number | null,"track_path"?: string | null,"user_id": string
+                    "drive_id": string,"flags"?: NonNullable<Json>,"top_kmh"?: number | null,"raw_points"?: number | null,"track_path"?: string | null,"user_id": string
                   }
                   Update: {
-                    "drive_id"?: string,"flags"?: NonNullable<Json>,"max_kmh"?: number | null,"raw_points"?: number | null,"track_path"?: string | null,"user_id"?: string
+                    "drive_id"?: string,"flags"?: NonNullable<Json>,"top_kmh"?: number | null,"raw_points"?: number | null,"track_path"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -215,14 +215,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "avatar_url": string | null,"created_at": string,"display_name": string | null,"id": string,"is_private": boolean,"level": number,"plan": string,"province": string | null,"share_max_speed": boolean,"total_xp": number,"username": string | null
+                    "avatar_url": string | null,"created_at": string,"display_name": string | null,"id": string,"is_private": boolean,"level": number,"plan": string,"province": string | null,"total_xp": number,"username": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "avatar_url"?: string | null,"created_at"?: string,"display_name"?: string | null,"id": string,"is_private"?: boolean,"level"?: number,"plan"?: string,"province"?: string | null,"share_max_speed"?: boolean,"total_xp"?: number,"username"?: string | null
+                    "avatar_url"?: string | null,"created_at"?: string,"display_name"?: string | null,"id": string,"is_private"?: boolean,"level"?: number,"plan"?: string,"province"?: string | null,"total_xp"?: number,"username"?: string | null
                   }
                   Update: {
-                    "avatar_url"?: string | null,"created_at"?: string,"display_name"?: string | null,"id"?: string,"is_private"?: boolean,"level"?: number,"plan"?: string,"province"?: string | null,"share_max_speed"?: boolean,"total_xp"?: number,"username"?: string | null
+                    "avatar_url"?: string | null,"created_at"?: string,"display_name"?: string | null,"id"?: string,"is_private"?: boolean,"level"?: number,"plan"?: string,"province"?: string | null,"total_xp"?: number,"username"?: string | null
                   }
                   Relationships: [
                     

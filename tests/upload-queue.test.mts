@@ -59,6 +59,13 @@ test('parseFinalizeResponse reads the server answer: counted, rejected with a re
   assert.deepEqual(parseFinalizeResponse({ status: 'uploading' }), { kind: 'retry' });
 });
 
+test('parseFinalizeResponse keeps the private top speed when the server sends one, and never refuses an answer over it', () => {
+  const stats = { distanceM: 9120, movingS: 1759, elapsedS: 2700, avgMovingKmh: 18.7, avgOverallKmh: 12.2 };
+  assert.deepEqual(parseFinalizeResponse({ status: 'processed', stats: { ...stats, topKmh: 97.4 } }), { kind: 'counted', stats: { ...stats, topKmh: 97.4 } });
+  assert.deepEqual(parseFinalizeResponse({ status: 'processed', stats: { ...stats, topKmh: null } }), { kind: 'counted', stats });
+  assert.deepEqual(parseFinalizeResponse({ status: 'processed', stats: { ...stats, topKmh: 'fast' } }), { kind: 'counted', stats });
+});
+
 test('shouldNotifyCounted: only when the driver was not just waiting on the Saving screen', () => {
   assert.equal(shouldNotifyCounted(1_000_000, 1_000_000 + 30_000), false); // counted within seconds of Finish
   assert.equal(shouldNotifyCounted(1_000_000, 1_000_000 + 10 * 60_000), true); // had to wait for signal

@@ -56,6 +56,10 @@ export function getDb(): SQLite.SQLiteDatabase {
   if (!cols.some((c) => c.name === 'vehicle_id')) db.execSync('ALTER TABLE sessions ADD COLUMN vehicle_id TEXT');
   // Travel mode (car / motorbike / other). Drives recorded before modes existed are car drives. Sent with the drive on upload (2.3).
   if (!cols.some((c) => c.name === 'mode')) db.execSync("ALTER TABLE sessions ADD COLUMN mode TEXT NOT NULL DEFAULT 'car'");
+  // 3.10 private top speed: only drives recorded from this version on get one (no back-fill). Old rows get 0, new ones 1.
+  if (!cols.some((c) => c.name === 'has_top_speed')) {
+    db.execSync('ALTER TABLE sessions ADD COLUMN has_top_speed INTEGER NOT NULL DEFAULT 0');
+  }
   return db;
 }
 
@@ -90,7 +94,7 @@ export function getActiveSessionId(): number | null {
 export function startSession(now: number, vehicleId: string | null = null, mode: TravelMode = 'car'): number {
   const d = getDb();
   const res = d.runSync(
-    'INSERT INTO sessions (started_at, owner_id, vehicle_id, mode) VALUES (?, ?, ?, ?)',
+    'INSERT INTO sessions (started_at, owner_id, vehicle_id, mode, has_top_speed) VALUES (?, ?, ?, ?, 1)',
     now,
     getCurrentOwner(),
     vehicleId,
@@ -199,14 +203,16 @@ export interface SessionInfo {
   owner_id: string | null;
   vehicle_id: string | null;
   mode: TravelMode;
+  /** Recorded with private top speed (3.10). False for older drives: they show no top speed (no back-fill). */
+  has_top_speed: boolean;
 }
 
 export function getSession(sessionId: number): SessionInfo | null {
-  const row = getDb().getFirstSync<SessionInfo>(
-    'SELECT id, started_at, ended_at, owner_id, vehicle_id, mode FROM sessions WHERE id = ?',
+  const row = getDb().getFirstSync<Omit<SessionInfo, 'has_top_speed'> & { has_top_speed: number }>(
+    'SELECT id, started_at, ended_at, owner_id, vehicle_id, mode, has_top_speed FROM sessions WHERE id = ?',
     sessionId,
   );
-  return row ? { ...row, mode: parseTravelMode(row.mode) } : null;
+  return row ? { ...row, mode: parseTravelMode(row.mode), has_top_speed: row.has_top_speed === 1 } : null;
 }
 
 export interface SessionRow {

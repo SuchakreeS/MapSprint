@@ -9,7 +9,8 @@ import { getCurrentOwner, listUploads, type UploadRecord } from '@/features/reco
 import { loadDrives, type DriveItem } from '@/features/recording/drive-history';
 import { retryUploadsNow } from '@/features/sync/upload-runner';
 import { driveTitle, formatDriveCount, formatDriveDay, groupByMonth } from '@/lib/drive-format';
-import { formatDistanceKm, formatDuration } from '@/lib/format';
+import { formatDistanceKm, formatDuration, formatSpeedKmh } from '@/lib/format';
+import { shownTopKmh } from '@/lib/top-speed';
 import { historyStatus, rejectReasonText } from '@/lib/upload-queue';
 import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
@@ -19,6 +20,8 @@ function DriveRow({ drive, upload, signedIn }: { drive: DriveItem; upload: Uploa
   const s = drive.summary;
   // Guests have no upload status: their drives only live on this phone until they make an account.
   const status = signedIn ? historyStatus(upload) : null;
+  // Private top speed (3.10): only the owner ever sees this list. Quiet text, same style as the rest of the line.
+  const topKmh = shownTopKmh({ counted: upload?.state === 'counted', serverTopKmh: upload?.stats?.topKmh, localTopKmh: drive.topKmh });
   const open = () => router.push({ pathname: '/record/recap', params: { id: String(drive.id), from: 'history' } });
   const onPress = () => {
     if (!status || status.tone === 'good') return open();
@@ -50,6 +53,7 @@ function DriveRow({ drive, upload, signedIn }: { drive: DriveItem; upload: Uploa
         </Text>
         <Text style={[type.caption, { color: c.muted }]}>
           {formatDriveDay(drive.startedAt)} · {formatDistanceKm(s.distanceM, 1)} km
+          {topKmh != null ? ` · top ${formatSpeedKmh(topKmh)} km/h` : ''}
         </Text>
         {status ? (
           <Text style={[type.caption, { color: status.tone === 'good' ? c.success : status.tone === 'bad' ? c.danger : c.muted }]}>

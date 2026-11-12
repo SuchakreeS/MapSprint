@@ -7,6 +7,7 @@ import { findGaps, type GpsGap } from '@/lib/gaps';
 import { summarize, type PauseEvent } from '@/lib/live-stats';
 import { simplifyToMax } from '@/lib/route-art';
 import { appendRoutePoint, type RouteCoord } from '@/lib/route-line';
+import { topSpeedKmh } from '@/lib/top-speed';
 import type { TravelMode } from '@/lib/travel-mode';
 
 import {
@@ -34,6 +35,11 @@ export interface DriveItem {
   gaps: GpsGap[];
   /** Thinned and simplified `[lng, lat]` route for drawing. */
   route: RouteCoord[];
+  /**
+   * Private top speed worked out on this phone (3.10), or null (drive recorded before 3.10, or no 3 s stretch). Owner-only:
+   * never uploaded (the server recomputes it from the raw track). Show it through `shownTopKmh`.
+   */
+  topKmh: number | null;
 }
 
 /** A finished drive, or null if it does not exist, has not ended yet, or belongs to another account. */
@@ -59,6 +65,7 @@ export function loadDrive(id: number): DriveItem | null {
     summary: summarize(points, events, getAutoPauseMs()),
     gaps: findGaps(points, events),
     route: simplifyToMax(coords, MAX_ROUTE_POINTS),
+    topKmh: session.has_top_speed ? topSpeedKmh(points) : null,
   };
 }
 

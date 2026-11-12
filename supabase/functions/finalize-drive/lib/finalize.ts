@@ -7,6 +7,7 @@ import { CLEANING, haversineMeters, msToKmh, type GpsPoint } from './geo.ts';
 import { summarize } from './live-stats.ts';
 import { simplifyRoute } from './route-art.ts';
 import type { RouteCoord } from './route-line.ts';
+import { topSpeedKmh } from './top-speed.ts';
 import { payloadToPoints, TRACK_LIMITS, type TrackPayload } from './track-format.ts';
 import type { ServerStats } from './upload-queue.ts';
 
@@ -44,8 +45,8 @@ export type FinalizeOutcome =
       kind: 'ok';
       /** Rounded exactly as stored in `drives` and as returned to the app. */
       stats: ServerStats;
-      /** Private (drive_private), never ranked. */
-      maxKmh: number;
+      /** Top speed held for >= 3 s (plan 3.10), or null. Owner-only (drive_private.top_kmh): never ranked, rewarded or shared. */
+      topKmh: number | null;
       rawPoints: number;
       /** First / last point time: written to drives.started_at / ended_at. */
       startMs: number;
@@ -224,7 +225,7 @@ export function finalizeTrack(payload: TrackPayload, row: RowTimes, zones: Zone[
       avgMovingKmh: round(s.avgMovingKmh, 2),
       avgOverallKmh: round(s.avgOverallKmh, 2),
     },
-    maxKmh: round(s.maxKmh, 1),
+    topKmh: topSpeedKmh(points),
     rawPoints: s.rawPoints,
     startMs,
     endMs,

@@ -5,7 +5,7 @@ set local role postgres;
 create extension if not exists pgtap with schema extensions;
 set local search_path to extensions, public;
 
-select plan(80);
+select plan(86);
 
 
 -- =====================================================================
@@ -37,7 +37,7 @@ insert into public.drives (id, user_id, started_at, ended_at, visibility, status
   ('d1000000-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111', now() - interval '2 hours', now() - interval '1 hour', 'public',    'processed'),
   ('d1000000-0000-0000-0000-000000000005', '44444444-4444-4444-4444-444444444444', now() - interval '1 hour', now(), 'public',    'processed');
 
-insert into public.drive_private (drive_id, user_id, max_kmh)
+insert into public.drive_private (drive_id, user_id, top_kmh)
   values ('d1000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 88);
 insert into public.xp_events (user_id, drive_id, source, amount)
   values ('11111111-1111-1111-1111-111111111111', 'd1000000-0000-0000-0000-000000000001', 'distance', 100);
@@ -102,7 +102,7 @@ select results_eq('select id from public.drives order by id',
   'follower sees processed followers/public drives (also of a private account), never private or uploading ones');
 select lives_ok($$insert into public.kudos (drive_id) values ('d1000000-0000-0000-0000-000000000001')$$,
   'follower can give kudos');
-select is_empty('select * from public.drive_private', 'follower cannot read drive_private (max speed)');
+select is_empty('select * from public.drive_private', 'follower cannot read drive_private (private top speed)');
 select is((select count(*)::int from public.comments), 1, 'follower can read comments on the drive');
 
 -- =====================================================================
@@ -139,6 +139,21 @@ select lives_ok($$update public.drives set visibility = 'private' where id = 'd1
 select lives_ok($$delete from public.comments where id = 'c1000000-0000-0000-0000-000000000001'$$,
   'drive owner can delete a comment on their drive');
 select is_empty('select * from public.comments', 'the comment is gone');
+
+-- =====================================================================
+-- 3.10: private top speed  [6]  (still signed in as A)
+-- Stranger B and follower C reading nothing from drive_private is tested above.
+-- =====================================================================
+select is((select top_kmh from public.drive_private where drive_id = 'd1000000-0000-0000-0000-000000000001'),
+  88::real, 'owner reads the private top speed of their own drive');
+select throws_ok($$update public.drive_private set top_kmh = 240 where drive_id = 'd1000000-0000-0000-0000-000000000001'$$,
+  '42501', null, 'owner cannot change their own top speed (only the server writes it)');
+select throws_ok($$insert into public.drive_private (drive_id, user_id, top_kmh)
+                   values ('d1000000-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 50)$$,
+  '42501', null, 'owner cannot insert a top speed');
+select hasnt_column('public', 'drives', 'top_kmh', 'top speed is never a column on drives (followers can read drive rows)');
+select hasnt_column('public', 'drive_private', 'max_kmh', 'the old spike-prone max_kmh is gone');
+select hasnt_column('public', 'profiles', 'share_max_speed', 'top speed can not be shared: the setting is gone');
 
 -- =====================================================================
 -- 2.2: car colour + avatar photos  [10]  (still signed in as A)

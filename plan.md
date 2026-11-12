@@ -143,7 +143,7 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
       OAuth client and append its ID to Supabase's Google Client IDs
 
 ## Phase 3 — Game (≈65 h; was 50, +4 for spike 3.0, +10 for replay 3.9, my estimates)
-**Build order (PS decision 2026-11-12), the core loop before the closed test:** 3.0 map style spike -> 3.3 hex cells
+**Build order (PS decision 2026-11-12), the core loop before the closed test:** 3.10 private top speed (small, first) -> 3.0 map style spike -> 3.3 hex cells
 (server, in finalize-drive) -> 3.4 blueprint fog -> 3.1 XP + 3.2 levels -> 3.6 full recap + a first set of badges.
 Then account deletion + privacy policy, then 2.6 closed test. 3.5, 3.7, 3.8, 3.9 and Phase 4 come during or after the test.
 - [ ] 3.0 Map style spike (do BEFORE 3.4; decision PS 2026-11-06): try Mapbox **Standard** style (built-in 3D buildings,
@@ -164,6 +164,19 @@ Then account deletion + privacy policy, then 2.6 closed test. 3.5, 3.7, 3.8, 3.9
       ("reveal the city"). The car is a **dot** (route line drawing itself + glowing dot at its tip), NOT a 3D car.
       Replay only, never during a live drive. Needs 3.0 and 3.4. Design for this screen not made yet.
 
+- [ ] 3.10 Private top speed (PS decision 2026-11-12): record the drive's top speed, visible ONLY to the owner (recap + History).
+      Never in feed, leaderboards, XP, badges or any public view; not live on the HUD (no "max" counter while driving).
+      Robust value: only points with accuracy <= 25 m that pass the teleport filter, and the highest speed HELD for >= 3 s
+      (one GPS spike can't count). Same shared rule in src/lib for the phone and finalize-drive (sync:edge copy).
+      Stored in `drive_private` (owner-only), NEVER on `drives` (followers can read public drive rows through the API).
+      New drives only, no back-fill. REMOVE the "Share max speed" toggle (Privacy settings) and drop/stop using
+      `profiles.share_max_speed`: PS does not want top speed shareable at all (bad influence on others). Privacy policy must
+      mention that speed is recorded and kept private.
+      [code done 2026-11-12 (Opus, uncommitted): `src/lib/top-speed.ts` (raw chip speed, max over >= 3 s windows of the window
+      minimum, 5 s gap / unknown speed breaks a window), migration `20261112120000_private_top_speed.sql` (drive_private.top_kmh,
+      drops drive_private.max_kmh and profiles.share_max_speed), pgTAP 86, finalize-drive returns stats.topKmh; phone shows it on
+      the recap + History only for drives recorded from this build (sessions.has_top_speed). Tick after testlist F18.]
+
 ## Phase 4 — Social (≈45 h)
 - [ ] 4.1 Follows (private accounts, requests) + Followers screen (25)
 - [ ] 4.2 Feed (12), Drive detail (13), Comments (14), kudos
@@ -181,6 +194,7 @@ Then account deletion + privacy policy, then 2.6 closed test. 3.5, 3.7, 3.8, 3.9
 ## Phase 5 — Launch (≈20 h)
 - [ ] 5.1 Final name + trademark + domain; app icon (icon artwork wired in 2026-11-06, needs a native build to see; name/trademark/domain still open)
 - [ ] 5.2 Privacy policy (PDPA), terms (traffic-law disclaimer), delete/export data
+      + policy must say: each drive's speed is recorded, its top speed is kept private to the owner and never shared (3.10)
       + email sign-up (from 2.2): email service + domain, 6-digit confirmation code, password reset; then turn on
       `EMAIL_AUTH_ENABLED` AND re-enable the Email provider + "Confirm email" in Supabase together
 - [ ] 5.3 Store listing (English), screenshots, production release
