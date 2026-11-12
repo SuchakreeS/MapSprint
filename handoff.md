@@ -512,7 +512,25 @@ is 'background' (RN AppStateModule), so the "app on screen" skip did not block i
   Other correction (one update of mode + vehicle_id; RLS allows it only for counted drives), or a "not counted yet" note.
 - Results: typecheck clean, eslint clean, npm test 206/206.
 
+## Spike 3.0 (map style), IN PROGRESS (2026-11-12), uncommitted
+- Built (Sonnet): throwaway `src/app/dev/map-style.tsx` (route `mapsprint://dev/map-style`, not linked from the UI) + `src/features/dev/map-style-spike.ts` (fake fog, grids, JS building pick, height stats). Delete both after the decision. typecheck/eslint clean, npm test 206/206. Needs a new preview APK to run.
+- Answered from code and docs: `@rnmapbox/maps` 10.3.16 already pins Maps SDK 11.33 and supports Standard (`StyleImport`, `slot`), so NO upgrade and NO native change. Slots: bottom = above land/water, middle = above roads and behind 3D buildings, top = above POI labels, behind place labels. `show3dBuildings` is global on/off only; `within` cannot filter polygon buildings. A `clip` layer (SDK 11.6+, experimental) can remove 3D buildings inside a polygon, but rnmapbox has no component for it, so the spike uses a hand-written `styleJSON` that imports Standard. Mobile billing is per MAU (25,000 free); no separate Standard/3D charge on the pricing pages.
+- Finding: the rnmapbox `FillExtrusionLayer` component has NO `slot` prop in 10.3.16 (other layers do), so an own 3D layer on Standard must be declared inside the style JSON to sit under the clip layer.
+- PS on the phone (adb deep link, see plan file): fog look (Q2), 3D only in explored cells per mode (Q3), Count buildings in Bangkok vs Pathum Thani (Q4), Orbit FPS + heat 10 min (Q5), light presets on Onyx/Pearl (Q6). Then an Opus session writes the comparison table + recommendation here and ticks plan.md 3.0.
+- Untested on a device: whether Standard imports inside `styleJSON`, whether the clip layer removes the buildings, whether `belowLayerID: 'road-label'` works on Classic.
+
 ## Next step
+**Decision (PS, 2026-11-12):** do NOT start the closed test yet. Build the Phase 3 core loop first (order in plan.md Phase 3:
+3.0 -> 3.3 -> 3.4 -> 3.1/3.2 -> 3.6), then account deletion + privacy policy, then 2.6. PS meanwhile starts the Play developer
+account verification and collects tester Gmails. 1.9 (trip-meter drives) continues on every drive. **Next task: 3.0 map style spike.**
+
+**State (2026-11-12, PS report via Claude chat):** PS ran `npx supabase db push --remote` (private-by-default migration),
+`npx supabase test db --remote`, `npx supabase functions deploy finalize-drive --use-api`, built and installed the new preview APK, and ran
+testlist F13-F17: "everything seems in order" (no failures reported; exact pgTAP count and per-test details not reported). So: the Finish /
+foreground-service fix (Session 13) works on the phone, travel modes, upload queue, finalize-drive, Saving screen and server-number recap all
+work. 2.3 and 2.4 ticked in plan.md. Still open: 1.9 (2 of 10 trip-meter drives done), 2.5 backup, 2.6 Play Console + closed test, the Phase 3
+gates listed in plan.md 2.4. The older "State (2026-11-09)" text below is history.
+
 **State (2026-11-09):** Phase 1 is tested on the phone except 1.9 and 1.12. 2.1 is done (cloud DB has all migrations incl. avatars,
 47/47 pgTAP on the cloud). 2.2 is coded and committed; PS added the 3 `EXPO_PUBLIC_*` vars on expo.dev and is building the preview APK
 (Google sign-in, image picker, svg: native rebuild). PS will come back with the results of `testlist.md` section F.

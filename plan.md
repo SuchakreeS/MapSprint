@@ -112,13 +112,13 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
       Spec `docs/superpowers/specs/2026-11-09-auth-onboarding-design.md`. GOOGLE-ONLY for now (email screens built but
       off: `EMAIL_AUTH_ENABLED`), guest mode, onboarding 01 → 03 → 04 → 05 (06 privacy zones moved to Phase 4),
       guest drives move to the next account, tab-bar icons (react-native-svg)
-- [ ] 2.3 Upload: gzipped raw track to Storage, drive row; offline queue + retry (Saving screen 09)
+- [x] 2.3 (done + phone-tested 2026-11-12, PS) Upload: gzipped raw track to Storage, drive row; offline queue + retry (Saving screen 09)
       DESIGNED 2026-11-10 (Opus, with PS): spec `docs/superpowers/specs/2026-11-10-drive-upload-finalize-design.md`,
       task list `docs/superpowers/plans/2026-11-10-drive-upload-finalize.md` (6 steps; Sonnet codes, Opus reviews steps 1 + 4).
       Decided: recap waits for the server and shows final numbers only; no signal = "Waiting to upload" in History;
       travel MODES Car / Motorbike / Other picked on Pre-drive (Garage holds cars + motorbikes); one shared map, every
       mode uncovers cells, Other earns the same XP; not verified (like Strava), server drops only impossible data.
-- [ ] 2.4 Edge Function `finalize-drive`: clean, recompute stats, simplify route
+- [x] 2.4 (deployed + phone-tested 2026-11-12, PS) Edge Function `finalize-drive`: clean, recompute stats, simplify route
       (Douglas–Peucker 5 m), privacy-zone trimming, anti-cheat flags (see 2.3 note + spec)
       CODE DONE 2026-11-10 (Opus): `supabase/functions/finalize-drive/` + pure rules `src/lib/finalize.ts` (tests); NOT DEPLOYED yet:
       `npx supabase functions deploy finalize-drive --use-api` (no Docker needed), then run testlist F16. Opus security review pending.
@@ -133,12 +133,19 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
       XP rules for 3.1 (PS 2026-11-10): same XP for every mode, daily XP cap, less XP for repeated roads.
 - [ ] 2.5 Weekly DB backup GitHub Action
 - [ ] 2.6 Play Console: app, foreground-service declaration, internal → closed test
+      **MOVED (PS decision 2026-11-12):** the closed test starts AFTER the Phase 3 core loop (3.0, 3.3, 3.4, 3.1, 3.2, 3.6 below),
+      so testers have a reason to drive. Before inviting testers also: account deletion in-app + web link (Play requirement,
+      moved up from 5.2), privacy policy + terms (5.2), Play App Signing SHA-1 added to the Google OAuth client, production .aab.
+      In parallel NOW (PS): Play developer account + identity verification; collect 15-20 tester Gmails (do not invite yet).
       GATES before the closed test (from 2.2): in-app account deletion (Play policy; also delete the user's
       `avatars/<uid>/` files, which do not cascade) + a privacy policy URL; Google Auth Platform: add the testers as
       test users or publish the app (basic scopes, no review); add the Play App Signing SHA-1 as another Android
       OAuth client and append its ID to Supabase's Google Client IDs
 
 ## Phase 3 — Game (≈65 h; was 50, +4 for spike 3.0, +10 for replay 3.9, my estimates)
+**Build order (PS decision 2026-11-12), the core loop before the closed test:** 3.0 map style spike -> 3.3 hex cells
+(server, in finalize-drive) -> 3.4 blueprint fog -> 3.1 XP + 3.2 levels -> 3.6 full recap + a first set of badges.
+Then account deletion + privacy policy, then 2.6 closed test. 3.5, 3.7, 3.8, 3.9 and Phase 4 come during or after the test.
 - [ ] 3.0 Map style spike (do BEFORE 3.4; decision PS 2026-11-06): try Mapbox **Standard** style (built-in 3D buildings,
       day/dusk/night light presets) vs our current style. Check on the Samsung: can the blueprint fog (3.4) be layered
       on Standard (slots / custom layers), can 3D buildings be shown only inside explored cells (unexplored = flat
