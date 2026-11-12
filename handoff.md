@@ -551,18 +551,99 @@ is 'background' (RN AppStateModule), so the "app on screen" skip did not block i
 
   Until the new APK is installed, the OLD app's Privacy screen can't load (it still asks for `share_max_speed`).
 
+## Session 16 (2026-11-12, Sonnet executing the Opus plan `docs/superpowers/plans/2026-11-12-hex-cells.md`): 3.3 hex cells, CODE DONE, uncommitted, phone test F19 pending
+- `src/lib/cells.ts` (`driveCells`, `CELL_RES` 9, `CELLS`): cleaned MOVING points only (accuracy <= 25 m, no teleports, speed >= 3 km/h, so parked
+  drift explores nothing); gaps <= 2 km get `gridPathCells`, longer ones only the two own cells; sorted and unique. Shared with the Edge Function
+  (`SHARED_FILES` has 11 files now) and `supabase/functions/finalize-drive/deno.json` maps `h3-js` to `npm:h3-js@4.5.0`.
+- `finalizeTrack` returns `cells` (NOT trimmed by privacy zones: owner-only); more than 20,000 cells = `too_long`.
+- Migration `20261112130000_finalize_counted_drive.sql`: `public.finalize_counted_drive(...)` does compare-and-set 'processed' + drive_private +
+  explored_cells (`on conflict do nothing`, first drive keeps a cell) + `drives.new_cells` in ONE transaction; returns new-cell count, NULL when the
+  drive was no longer 'uploading'. EXECUTE only for service_role (public, anon, authenticated revoked). A 23P01 overlap rolls everything back.
+  pgTAP now `plan(95)`: 9 new tests (the happy path runs as `service_role`, not postgres, so a missing grant would show).
+- finalize-drive now calls that RPC; 200 response `stats.newCells` (0 is valid; `alreadyDecided` reads `drives.new_cells`; check is `=== null`, never falsy).
+  `parseFinalizeResponse` keeps `newCells` when it is a number.
+- Recap: "New cells" tile (yellow `c.primaryText`) beside Top speed on the third row; counted drives only.
+- Results: typecheck clean, eslint clean, npm test 230/230.
+- **PS run order:** (1) `npx supabase db push --remote`, (2) `npx supabase test db --remote` (expect 95), (3) `npx supabase functions deploy finalize-drive --use-api`
+  right after step 1 (between them the OLD function still counts drives without cells; they stay without cells, no back-fill), (4) EAS preview build, (5) testlist F19.
+- **If something fails on the first real drive** (read the function logs, tag `[finalize-drive]`): `PGRST202` function not found = PostgREST schema cache is
+  stale, run `notify pgrst, 'reload schema';` in the Supabase SQL editor; deploy error resolving `'h3-js'` = set the per-function import map in
+  `supabase/config.toml` (look up the exact key in the Supabase CLI docs, do not guess); a drive stuck on "Waiting to upload" = see the logs.
+- Unverified (no Deno/Docker here): h3-js under the hosted Deno runtime, PostgREST passing `text[]` and an EWKT string to the RPC.
+- Benchmark (Node, 12 h = 43,200 points, winding route): `driveCells` about 0.28 s, whole `finalizeTrack` about 0.3 s; Supabase Edge limit is 2 s CPU per
+  request (docs, checked 2026-11-12), so there is about 4x margin before gunzip/JSON; hosted CPU may be slower than this PC.
+- **One drive tests both (if PS runs the server steps BEFORE tonight's drive):** one `db push` applies BOTH new migrations in order (3.10 + 3.3, expect 95 tests),
+  one deploy covers both. With the build that is already installed, tonight's drive covers F18 fully plus the database half of F19 (`explored_cells` rows, `drives.new_cells`
+  filled); the old app ignores the extra `newCells` field. The "New cells" TILE needs the next build.
+
 ## Spike 3.0 (map style), IN PROGRESS (2026-11-12), screen committed in 5b636df
 - Built (Sonnet): throwaway `src/app/dev/map-style.tsx` (route `mapsprint://dev/map-style`, not linked from the UI) + `src/features/dev/map-style-spike.ts` (fake fog, grids, JS building pick, height stats). Delete both after the decision. typecheck/eslint clean, npm test 206/206. Needs a new preview APK to run.
 - Answered from code and docs: `@rnmapbox/maps` 10.3.16 already pins Maps SDK 11.33 and supports Standard (`StyleImport`, `slot`), so NO upgrade and NO native change. Slots: bottom = above land/water, middle = above roads and behind 3D buildings, top = above POI labels, behind place labels. `show3dBuildings` is global on/off only; `within` cannot filter polygon buildings. A `clip` layer (SDK 11.6+, experimental) can remove 3D buildings inside a polygon, but rnmapbox has no component for it, so the spike uses a hand-written `styleJSON` that imports Standard. Mobile billing is per MAU (25,000 free); no separate Standard/3D charge on the pricing pages.
 - Finding: the rnmapbox `FillExtrusionLayer` component has NO `slot` prop in 10.3.16 (other layers do), so an own 3D layer on Standard must be declared inside the style JSON to sit under the clip layer.
 - PS on the phone (adb deep link, see plan file): fog look (Q2), 3D only in explored cells per mode (Q3), Count buildings in Bangkok vs Pathum Thani (Q4), Orbit FPS + heat 10 min (Q5), light presets on Onyx/Pearl (Q6). Then an Opus session writes the comparison table + recommendation here and ticks plan.md 3.0.
 - Untested on a device: whether Standard imports inside `styleJSON`, whether the clip layer removes the buildings, whether `belowLayerID: 'road-label'` works on Classic.
+- **Phone results, round 1 (PS, 2026-11-12; 10 screenshots in `TestResult/`, not committed):**
+  - Standard inside `styleJSON` loads fine; light presets and Tuned colours work.
+  - CLIP LOOKS LIKE IT WORKS:
+    - With Standard JSON + "Explored only: clip" (night), 3D buildings stand only inside the yellow hexes and the rest is dark and flat.
+    - Standard URL (no clip) shows 3D everywhere.
+    - Waiting for PS to confirm by eye.
+  - Building data:
+    - Bangkok (Sathorn): 12,874 buildings loaded, 12,164 extruded, 100% with a height.
+    - Pathum Thani: 4,413 loaded, 3,884 extruded, 100% with a height.
+    - "100%" probably means the tiles carry estimated heights where no real value exists.
+  - Own 3D layer:
+    - On Classic it shows everywhere and draws above the fog (expected: no clip, no slot).
+    - On Standard JSON it sits under the fog (slot middle).
+  - FPS showed 0: SPIKE BUG.
+    - rnmapbox Android only emits `DidFinishRenderingFrameFully` (`RNMBXMapView.setupEvents`), never `DidFinishRenderingFrame`.
+    - Fixed in `src/app/dev/map-style.tsx` (now counts the "fully" event). Uncommitted, so it needs the next build.
+  - Fog look: dark fog with labels readable on Standard night; the square grid is too faint to see at 0.3 opacity. Not yet the design-08/17 blueprint look (tuning for 3.4).
+  - PS by eye: Orbit smooth on both Classic and Standard 3D, phone fine after 3-5 min (room at about 24 °C; NOT tested in the car yet,
+    where the phone sits on the AC vent at 24 °C). No exact FPS: decided not worth a rebuild now; measure when 3.9 exists.
+
+### Spike 3.0 result (2026-11-12): use Mapbox STANDARD
+| | Classic (dark-v11 / light-v11, today) | Standard |
+|---|---|---|
+| Upgrade / native build | none | none (rnmapbox 10.3.16 = SDK 11.33) |
+| Fog layer order | `belowLayerID` guesses on layer names | slots: fog in `middle` = above roads, under 3D and labels |
+| Labels with fog | ok | ok (POI and place labels stay on top) |
+| 3D only in explored cells (3.9) | no: own 3D shows everywhere, over the fog | YES with a `clip` layer (style JSON) |
+| Building data (Bangkok / Pathum Thani) | same streets-v8 data: 12.2k / 3.9k extruded, all with a height | same |
+| Smoothness / heat (3-5 min, room) | smooth, cool | smooth, cool |
+| Onyx / Pearl look | close already | night / day + "Tuned" colours: close; needs tuning |
+| Cost | per MAU | per MAU, no extra for 3D |
+
+**Recommendation: Standard.** It is the only option where 3D in explored cells works, and the fog sits cleanly between roads and labels.
+
+**How 3.4 builds on it:**
+- Replace `MAP_STYLE` with one style builder, `src/features/map/map-style.ts`: `standardStyleJSON(mode, { clip })` imports
+  `mapbox://styles/mapbox/standard`.
+  - Onyx = `lightPreset: night`, Pearl = `day`, `show3dBuildings: false` on live screens, plus token colour overrides.
+- Fog = `ShapeSource` (world box with explored-cell holes from `cellsToMultiPolygon`) + `FillLayer slot="middle"`, the grid as a
+  `LineLayer` in the same slot.
+- The live HUD stays flat 2D (no 3D buildings: live 3D is premium U1.5).
+
+**How 3.9 builds on it:**
+- The replay style JSON adds the `unexplored` geojson source and a `clip` layer (`clip-layer-types: ['model']`, slot `top`).
+- Standard's 3D buildings are on, so they show only in explored cells.
+
+**Caveats:**
+- `clip` is marked EXPERIMENTAL by Mapbox: re-check after each @rnmapbox/maps or SDK upgrade.
+- rnmapbox has no ClipLayer, and its `FillExtrusionLayer` has no `slot`: anything 3D of our own goes in the style JSON.
+- Not tested: updating the clip source live through `<ShapeSource id="unexplored" existing>` (the spike rebuilt the style instead).
+- Heat in the car (sun, vent mount) is untested. The replay is short and on demand, so the risk is low. Check it in 3.9, and before
+  premium live 3D (U1.5).
+
+**Cleanup:**
+- Delete `src/app/dev/` + `src/features/dev/` when 3.4 starts (`h3-js` stays).
+- `TestResult/` is local only (screenshots); delete or git-ignore it.
 
 ## Next step
 **Decision (PS, 2026-11-12):** do NOT start the closed test yet. Build the Phase 3 core loop first (order in plan.md Phase 3:
 3.0 -> 3.3 -> 3.4 -> 3.1/3.2 -> 3.6), then account deletion + privacy policy, then 2.6. PS meanwhile starts the Play developer
 account verification and collects tester Gmails. 1.9 (trip-meter drives) continues on every drive. **3.10 is coded (Session 15 above):
-PS runs its steps + F18. Next: 3.0 map style spike on the phone (screen already built and committed, 5b636df), then 3.3.**
+PS runs its steps + F18. 3.0 DONE (Standard, see "Spike 3.0 result"). Next: 3.3 hex cells: CODE DONE (Session 16): PS runs its steps + F19. Then 3.4 fog on Standard (reuse `driveCells` for guests' local fog).**
 
 **State (2026-11-12, PS report via Claude chat):** PS ran `npx supabase db push --remote` (private-by-default migration),
 `npx supabase test db --remote`, `npx supabase functions deploy finalize-drive --use-api`, built and installed the new preview APK, and ran

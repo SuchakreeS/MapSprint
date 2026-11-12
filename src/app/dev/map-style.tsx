@@ -277,7 +277,9 @@ export default function MapStyleSpike() {
       compassEnabled={false}
       logoEnabled={false}
       attributionEnabled={false}
-      onDidFinishRenderingFrame={() => {
+      // Android only sends the "fully rendered" frame event (rnmapbox RNMBXMapView.setupEvents); the plain one never arrives,
+      // which is why the first build showed FPS 0. Count the fully rendered frames.
+      onDidFinishRenderingFrameFully={() => {
         frames.current++;
       }}>
       <Camera

@@ -66,6 +66,8 @@ export interface ServerStats {
   avgOverallKmh: number;
   /** Private top speed (plan 3.10). Only for the owner's recap and History; absent from older servers / old drives. */
   topKmh?: number | null;
+  /** Explored cells this drive added (plan 3.3). 0 is a real answer. Absent from older servers / drives counted before 3.3. */
+  newCells?: number | null;
 }
 
 export type FinalizeResult =
@@ -95,6 +97,7 @@ export function parseFinalizeResponse(body: unknown): FinalizeResult {
       avgOverallKmh: s.avgOverallKmh,
       // Optional extra field: never a reason to refuse an answer (older servers do not send it).
       ...(isNum(s.topKmh) ? { topKmh: s.topKmh } : {}),
+      ...(isNum(s.newCells) ? { newCells: s.newCells } : {}),
     },
   };
 }

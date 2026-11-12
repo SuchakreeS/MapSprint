@@ -66,6 +66,14 @@ test('parseFinalizeResponse keeps the private top speed when the server sends on
   assert.deepEqual(parseFinalizeResponse({ status: 'processed', stats: { ...stats, topKmh: 'fast' } }), { kind: 'counted', stats });
 });
 
+test('parseFinalizeResponse keeps newCells (0 included) when the server sends a number, and never refuses an answer over it', () => {
+  const stats = { distanceM: 9120, movingS: 1759, elapsedS: 2700, avgMovingKmh: 18.7, avgOverallKmh: 12.2 };
+  assert.deepEqual(parseFinalizeResponse({ status: 'processed', stats: { ...stats, newCells: 12 } }), { kind: 'counted', stats: { ...stats, newCells: 12 } });
+  assert.deepEqual(parseFinalizeResponse({ status: 'processed', stats: { ...stats, newCells: 0 } }), { kind: 'counted', stats: { ...stats, newCells: 0 } });
+  assert.deepEqual(parseFinalizeResponse({ status: 'processed', stats: { ...stats, newCells: null } }), { kind: 'counted', stats });
+  assert.deepEqual(parseFinalizeResponse({ status: 'processed', stats: { ...stats, newCells: 'many' } }), { kind: 'counted', stats });
+});
+
 test('shouldNotifyCounted: only when the driver was not just waiting on the Saving screen', () => {
   assert.equal(shouldNotifyCounted(1_000_000, 1_000_000 + 30_000), false); // counted within seconds of Finish
   assert.equal(shouldNotifyCounted(1_000_000, 1_000_000 + 10 * 60_000), true); // had to wait for signal

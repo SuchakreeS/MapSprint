@@ -146,7 +146,8 @@ Rules: no colour hex outside `src/theme`; no RN imports in `src/lib`; never edit
 **Build order (PS decision 2026-11-12), the core loop before the closed test:** 3.10 private top speed (small, first) -> 3.0 map style spike -> 3.3 hex cells
 (server, in finalize-drive) -> 3.4 blueprint fog -> 3.1 XP + 3.2 levels -> 3.6 full recap + a first set of badges.
 Then account deletion + privacy policy, then 2.6 closed test. 3.5, 3.7, 3.8, 3.9 and Phase 4 come during or after the test.
-- [ ] 3.0 Map style spike (do BEFORE 3.4; decision PS 2026-11-06): try Mapbox **Standard** style (built-in 3D buildings,
+- [x] 3.0 Map style spike (done 2026-11-12: **use Mapbox Standard**, fog in slot `middle`, 3D-only-in-explored via a `clip`
+      layer in a style JSON; details + table in handoff.md "Spike 3.0 result") (do BEFORE 3.4; decision PS 2026-11-06): try Mapbox **Standard** style (built-in 3D buildings,
       day/dusk/night light presets) vs our current style. Check on the Samsung: can the blueprint fog (3.4) be layered
       on Standard (slots / custom layers), can 3D buildings be shown only inside explored cells (unexplored = flat
       blueprint), building-height coverage in Bangkok vs Pathum Thani, FPS and phone heat with pitch ~60°. Confirm
@@ -154,6 +155,7 @@ Then account deletion + privacy policy, then 2.6 closed test. 3.5, 3.7, 3.8, 3.9
 - [ ] 3.1 XP rules (10/km, 25/new cell, smooth ×1.0–1.5, +50 first drive) — TDD in src/lib
 - [ ] 3.2 Levels: XP for next level = 100 × level^1.5
 - [ ] 3.3 H3 cells res 9 + gridPathCells; explored_cells upsert server-side
+      [code done 2026-11-12 (Session 16, uncommitted): `src/lib/cells.ts`, `finalize_counted_drive` SQL function (atomic with counting), recap tile. Tick after testlist F19.]
 - [ ] 3.4 Blueprint fog layer in Mapbox (grid fill + road outlines, explored holes)
 - [ ] 3.5 Smooth score (harsh accel > 0.3 g, brake < −0.35 g, corner > 0.4 g)
 - [ ] 3.6 Badges (10 listed in plan doc) + Drive Recap screen (10) + Share drive (11)

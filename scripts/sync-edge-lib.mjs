@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const SHARED_FILES = [
+  'cells.ts',
   'finalize.ts',
   'geo.ts',
   'live-stats.ts',

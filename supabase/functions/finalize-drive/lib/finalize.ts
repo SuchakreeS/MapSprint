@@ -3,6 +3,7 @@
 // Pure, no React Native or Deno imports: it runs in Node tests, and a copy of this file (kept identical by
 // scripts/sync-edge-lib.mjs + tests/edge-lib-sync.test.mts) runs inside the Edge Function.
 // Never trust the phone: every number that counts is computed here from the raw points.
+import { CELLS, driveCells } from './cells.ts';
 import { CLEANING, haversineMeters, msToKmh, type GpsPoint } from './geo.ts';
 import { summarize } from './live-stats.ts';
 import { simplifyRoute } from './route-art.ts';
@@ -47,6 +48,8 @@ export type FinalizeOutcome =
       stats: ServerStats;
       /** Top speed held for >= 3 s (plan 3.10), or null. Owner-only (drive_private.top_kmh): never ranked, rewarded or shared. */
       topKmh: number | null;
+      /** H3 res-9 cells explored (plan 3.3), sorted and unique. NOT trimmed by privacy zones: owner-only (explored_cells). */
+      cells: string[];
       rawPoints: number;
       /** First / last point time: written to drives.started_at / ended_at. */
       startMs: number;
@@ -211,6 +214,9 @@ export function finalizeTrack(payload: TrackPayload, row: RowTimes, zones: Zone[
   const durationS = Math.round((endMs - startMs) / 1000);
   if (s.acceptedPoints < 2) return rejected('too_few_points');
 
+  const cells = driveCells(points);
+  if (cells.length > CELLS.maxCellsPerDrive) return rejected('too_long');
+
   const clean = cleanRoute(points);
   const { start, end } = trimRange(clean, zones);
   const trimmed = start > end ? [] : clean.slice(start, end + 1);
@@ -226,6 +232,7 @@ export function finalizeTrack(payload: TrackPayload, row: RowTimes, zones: Zone[
       avgOverallKmh: round(s.avgOverallKmh, 2),
     },
     topKmh: topSpeedKmh(points),
+    cells,
     rawPoints: s.rawPoints,
     startMs,
     endMs,

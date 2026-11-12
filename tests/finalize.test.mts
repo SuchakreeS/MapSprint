@@ -13,6 +13,8 @@ import {
   TIMES_TOLERANCE_MS,
   type Zone,
 } from '../src/lib/finalize.ts';
+import { latLngToCell } from 'h3-js';
+
 import { haversineMeters, type GpsPoint } from '../src/lib/geo.ts';
 import { buildTrackPayload, TRACK_LIMITS, type TrackPayload } from '../src/lib/track-format.ts';
 
@@ -160,6 +162,8 @@ test('a normal drive is counted with plausible numbers and a simplified route', 
   assert.ok(out.routeEwkt?.startsWith('SRID=4326;LINESTRING('));
   assert.equal(out.flags.routePoints, 2); // a straight line simplifies to its two ends
   assert.ok(out.topKmh != null && Math.abs(out.topKmh - 36) < 1, `top speed ${out.topKmh}`); // plan 3.10, held for >= 3 s
+  assert.ok(out.cells.length > 0); // plan 3.3
+  assert.ok(out.cells.includes(latLngToCell(LAT0, LNG0, 9)));
 });
 
 test('stats use the WHOLE track even when the route is trimmed at home', () => {
@@ -172,6 +176,16 @@ test('stats use the WHOLE track even when the route is trimmed at home', () => {
   assert.equal(trimmed.stats.distanceM, full.stats.distanceM);
   assert.notEqual(trimmed.routeEwkt, full.routeEwkt);
   assert.ok(Number(trimmed.flags.trimmedStartPoints) > 0);
+});
+
+test('explored cells are NOT trimmed by privacy zones (only the owner can see them)', () => {
+  const pts = straightDrive(600);
+  const trimmed = fin(payloadOf(pts), rowOf(pts), [HOME]);
+  const full = fin(payloadOf(pts), rowOf(pts), []);
+  assert.equal(trimmed.kind, 'ok');
+  assert.equal(full.kind, 'ok');
+  if (trimmed.kind !== 'ok' || full.kind !== 'ok') return;
+  assert.deepEqual(trimmed.cells, full.cells);
 });
 
 test('a drive entirely inside a privacy zone is still counted, with no public route', () => {

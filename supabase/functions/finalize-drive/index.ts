@@ -4,7 +4,8 @@
 //
 // Contract with the app (parseFinalizeResponse in src/lib/upload-queue.ts):
 //   200 { status: 'processed', stats }      counted (also when asked again: idempotent). stats.topKmh (number | null, plan 3.10)
-//                                            is the PRIVATE top speed: this answer only ever goes to the drive's owner (JWT-scoped).
+//                                            is the PRIVATE top speed and stats.newCells (number | null, plan 3.3) the explored cells this
+//                                            drive added (0 is valid): this answer only ever goes to the drive's owner (JWT-scoped).
 //   200 { status: 'rejected', reason }      final, the drive will never count
 //   non-2xx                                  transient (the app retries with back-off): 401 auth, 404 drive row missing,
 //                                            500/503 anything that may work later. 400 = malformed request (final).
@@ -58,13 +59,14 @@ interface DriveRow {
   elapsed_s: number | null;
   avg_moving_kmh: number | null;
   avg_overall_kmh: number | null;
+  new_cells: number | null;
 }
-const DRIVE_COLUMNS = 'id, status, started_at, ended_at, distance_m, moving_s, elapsed_s, avg_moving_kmh, avg_overall_kmh';
+const DRIVE_COLUMNS = 'id, status, started_at, ended_at, distance_m, moving_s, elapsed_s, avg_moving_kmh, avg_overall_kmh, new_cells';
 
 /** The stored answer for a drive that is already decided (idempotent retries), or null while it is still 'uploading'. */
 async function alreadyDecided(drive: DriveRow): Promise<Response | null> {
   if (drive.status === 'processed') {
-    const { distance_m, moving_s, elapsed_s, avg_moving_kmh, avg_overall_kmh } = drive;
+    const { distance_m, moving_s, elapsed_s, avg_moving_kmh, avg_overall_kmh, new_cells } = drive;
     if (distance_m == null || moving_s == null || elapsed_s == null || avg_moving_kmh == null || avg_overall_kmh == null) {
       console.error(TAG, 'processed drive without stats', drive.id);
       return json(500, { error: 'incomplete' });
@@ -75,7 +77,7 @@ async function alreadyDecided(drive: DriveRow): Promise<Response | null> {
     const topKmh = typeof priv?.top_kmh === 'number' ? priv.top_kmh : null;
     return json(200, {
       status: 'processed',
-      stats: { distanceM: distance_m, movingS: moving_s, elapsedS: elapsed_s, avgMovingKmh: avg_moving_kmh, avgOverallKmh: avg_overall_kmh, topKmh },
+      stats: { distanceM: distance_m, movingS: moving_s, elapsedS: elapsed_s, avgMovingKmh: avg_moving_kmh, avgOverallKmh: avg_overall_kmh, topKmh, newCells: new_cells },
     });
   }
   if (drive.status === 'rejected') {
@@ -209,44 +211,38 @@ async function handle(req: Request): Promise<Response> {
   if (clashError) return json(503, { error: 'try_again' });
   if (clash && clash.length > 0) return reject(uid, driveId, path, 'overlap');
 
-  // Owner-only details first (idempotent), then the public card with a compare-and-set: only one caller can win.
-  const priv = await admin.from('drive_private').upsert(
-    { drive_id: driveId, user_id: uid, track_path: path, top_kmh: outcome.topKmh, raw_points: outcome.rawPoints, flags: outcome.flags },
-    { onConflict: 'drive_id' },
-  );
-  if (priv.error) {
-    console.error(TAG, 'could not store drive_private:', priv.error.code);
+  // One database call does it all in ONE transaction (migration 20261112130000): compare-and-set 'uploading' -> 'processed', the
+  // owner-only details, and the explored cells. A failure anywhere rolls everything back, so a counted drive never lacks its cells.
+  const { data: newCells, error: saveError } = await admin.rpc('finalize_counted_drive', {
+    p_drive_id: driveId,
+    p_user_id: uid,
+    p_started_at: startIso, // the server's times: the exclusion constraint compares these
+    p_ended_at: endIso,
+    p_distance_m: outcome.stats.distanceM,
+    p_moving_s: outcome.stats.movingS,
+    p_elapsed_s: outcome.stats.elapsedS,
+    p_avg_moving_kmh: outcome.stats.avgMovingKmh,
+    p_avg_overall_kmh: outcome.stats.avgOverallKmh,
+    p_route: outcome.routeEwkt, // trimmed at privacy zones and simplified, or null
+    p_track_path: path,
+    p_top_kmh: outcome.topKmh,
+    p_raw_points: outcome.rawPoints,
+    p_flags: outcome.flags,
+    p_cells: outcome.cells, // owner-only: NOT trimmed by privacy zones
+  });
+  if (saveError) {
+    if (saveError.code === '23P01') return reject(uid, driveId, path, 'overlap'); // lost a race with another counted drive
+    console.error(TAG, 'could not save the drive:', saveError.code); // never log cells or coordinates
     return json(503, { error: 'try_again' });
   }
-  const upd = await admin
-    .from('drives')
-    .update({
-      status: 'processed',
-      started_at: startIso, // the server's times: the exclusion constraint compares these
-      ended_at: endIso,
-      distance_m: outcome.stats.distanceM,
-      moving_s: outcome.stats.movingS,
-      elapsed_s: outcome.stats.elapsedS,
-      avg_moving_kmh: outcome.stats.avgMovingKmh,
-      avg_overall_kmh: outcome.stats.avgOverallKmh,
-      route: outcome.routeEwkt, // trimmed at privacy zones and simplified, or null
-    })
-    .eq('id', driveId)
-    .eq('user_id', uid)
-    .eq('status', 'uploading')
-    .select('id');
-  if (upd.error) {
-    if (upd.error.code === '23P01') return reject(uid, driveId, path, 'overlap'); // lost a race with another counted drive
-    console.error(TAG, 'could not save the drive:', upd.error.code);
-    return json(503, { error: 'try_again' });
-  }
-  if (!upd.data || upd.data.length === 0) {
-    // Someone else (a retry, or a second tap) decided this drive first: answer with what they stored.
+  // NULL = someone else (a retry, or a second tap) decided this drive first: answer with what they stored. 0 is a real answer
+  // (a drive over known roads), so test for null strictly, never for "falsy".
+  if (newCells === null) {
     const { data: again } = await admin.from('drives').select(DRIVE_COLUMNS).eq('id', driveId).eq('user_id', uid).maybeSingle<DriveRow>();
     const stored = again ? await alreadyDecided(again) : null;
     return stored ?? json(503, { error: 'try_again' });
   }
-  return json(200, { status: 'processed', stats: { ...outcome.stats, topKmh: outcome.topKmh } });
+  return json(200, { status: 'processed', stats: { ...outcome.stats, topKmh: outcome.topKmh, newCells } });
 }
 
 Deno.serve(async (req: Request) => {

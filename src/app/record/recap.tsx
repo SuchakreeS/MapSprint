@@ -20,7 +20,7 @@ import { useTheme } from '@/theme/use-theme';
 
 const MODE_OPTIONS = TRAVEL_MODES.map((m) => ({ value: m, label: TRAVEL_MODE_LABEL[m] }));
 
-function Tile({ label, value, unit }: { label: string; value: string; unit?: string }) {
+function Tile({ label, value, unit, valueColor }: { label: string; value: string; unit?: string; valueColor?: string }) {
   const { c, type, fonts } = useTheme();
   return (
     <View
@@ -28,7 +28,7 @@ function Tile({ label, value, unit }: { label: string; value: string; unit?: str
       accessibilityLabel={`${label} ${value}${unit ? ` ${unit}` : ''}`}
       style={[styles.tile, { backgroundColor: c.surface, borderColor: c.line }]}>
       <Text style={[type.label, { color: c.muted }]}>{label.toUpperCase()}</Text>
-      <Text style={[type.statTile, { color: c.text }]}>
+      <Text style={[type.statTile, { color: valueColor ?? c.text }]}>
         {value}
         {unit ? (
           <Text style={[type.caption, { color: c.muted, fontFamily: fonts.bodyMedium }]}>{` ${unit}`}</Text>
@@ -86,6 +86,8 @@ export default function RecapScreen() {
 
   const s = drive.summary;
   // Private top speed (3.10): this screen is owner-only. Counted drives show the server's value, others the phone's.
+  // Explored cells (plan 3.3): the server counts them, so only counted drives have the number.
+  const newCells = typeof server?.newCells === 'number' ? server.newCells : null;
   const topKmh = shownTopKmh({ counted: server != null, serverTopKmh: server?.topKmh, localTopKmh: drive.topKmh });
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: c.bg }]}>
@@ -121,10 +123,12 @@ export default function RecapScreen() {
           <Tile label="Moving avg" value={formatKmh1(server?.avgMovingKmh ?? s.avgMovingKmh)} unit="km/h" />
           <Tile label="Overall avg" value={formatKmh1(server?.avgOverallKmh ?? s.avgOverallKmh)} unit="km/h" />
         </View>
-        {topKmh != null ? (
+        {newCells != null || topKmh != null ? (
           <View style={styles.row}>
-            <Tile label="Top speed" value={formatSpeedKmh(topKmh)} unit="km/h" />
-            <View style={styles.spacer} />
+            {/* 0 is a real answer (a drive over known roads), so test for null, not for falsy. */}
+            {newCells != null ? <Tile label="New cells" value={String(newCells)} valueColor={c.primaryText} /> : null}
+            {topKmh != null ? <Tile label="Top speed" value={formatSpeedKmh(topKmh)} unit="km/h" /> : null}
+            {newCells == null || topKmh == null ? <View style={styles.spacer} /> : null}
           </View>
         ) : null}
 

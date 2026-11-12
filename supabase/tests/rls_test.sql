@@ -5,7 +5,7 @@ set local role postgres;
 create extension if not exists pgtap with schema extensions;
 set local search_path to extensions, public;
 
-select plan(86);
+select plan(95);
 
 
 -- =====================================================================
@@ -295,6 +295,38 @@ select lives_ok($$update storage.objects set name = '22222222-2222-2222-2222-222
 select is((select count(*)::int from storage.objects
            where bucket_id = 'avatars' and name = '11111111-1111-1111-1111-111111111111/avatar.jpg'),
   1, 'cannot move or overwrite someone else''s photo');
+
+-- =====================================================================
+-- 3.3: counting a drive and its explored cells, atomically  [9]
+-- =====================================================================
+set local role postgres;
+insert into public.drives (id, user_id, started_at, ended_at, status) values
+  ('d1000000-0000-0000-0000-00000000000e', '22222222-2222-2222-2222-222222222222', now() - interval '10 hours', now() - interval '9 hours', 'uploading'),
+  ('d1000000-0000-0000-0000-00000000000f', '22222222-2222-2222-2222-222222222222', now() - interval '4 hours 30 minutes', now() - interval '4 hours 10 minutes', 'uploading');
+
+-- The happy path runs as the role the Edge Function really uses, so a missing EXECUTE or table grant would show up here.
+set local role service_role;
+select is(public.finalize_counted_drive('d1000000-0000-0000-0000-00000000000e', '22222222-2222-2222-2222-222222222222', now() - interval '10 hours', now() - interval '9 hours', 1000, 600, 600, 6, 6, 'SRID=4326;LINESTRING(100.5 13.75,100.51 13.76)', 'p', 50, 10, '{}'::jsonb, array['8964a4b138fffff','8964a4ba0a3ffff']),
+  2, 'first counted drive: both cells are new');
+select is(public.finalize_counted_drive('d1000000-0000-0000-0000-00000000000e', '22222222-2222-2222-2222-222222222222', now() - interval '10 hours', now() - interval '9 hours', 1000, 600, 600, 6, 6, 'SRID=4326;LINESTRING(100.5 13.75,100.51 13.76)', 'p', 50, 10, '{}'::jsonb, array['8964a4b138fffff','8964a4ba0a3ffff']),
+  null, 'a drive that is no longer uploading is not counted twice');
+set local role postgres;
+
+select is((select status from public.drives where id = 'd1000000-0000-0000-0000-00000000000e'), 'processed', 'the drive is counted');
+select is((select new_cells from public.drives where id = 'd1000000-0000-0000-0000-00000000000e'), 2, 'drives.new_cells holds the number of new cells');
+select is((select count(*)::int from public.explored_cells where user_id = '22222222-2222-2222-2222-222222222222'), 2, 'both cells were saved for the driver');
+
+-- (the args below put ...0f at -10h..-9h, so it collides with the just-counted ...0e: any overlap proves the rollback)
+select throws_ok($$select public.finalize_counted_drive('d1000000-0000-0000-0000-00000000000f', '22222222-2222-2222-2222-222222222222', now() - interval '10 hours', now() - interval '9 hours', 1000, 600, 600, 6, 6, 'SRID=4326;LINESTRING(100.5 13.75,100.51 13.76)', 'p', 50, 10, '{}'::jsonb, array['89283082803ffff'])$$,
+  '23P01', null, 'an overlapping drive is refused');
+select is((select count(*)::int from public.explored_cells where h3_index = '89283082803ffff'), 0, 'a refused drive leaves no cells');
+select is((select count(*)::int from public.drive_private where drive_id = 'd1000000-0000-0000-0000-00000000000f'), 0, 'a refused drive leaves no private row');
+
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}';
+select throws_ok($$select public.finalize_counted_drive('d1000000-0000-0000-0000-00000000000e', '22222222-2222-2222-2222-222222222222', now() - interval '10 hours', now() - interval '9 hours', 1000, 600, 600, 6, 6, 'SRID=4326;LINESTRING(100.5 13.75,100.51 13.76)', 'p', 50, 10, '{}'::jsonb, array['89283082803ffff'])$$,
+  '42501', null, 'the app cannot call finalize_counted_drive');
+set local role postgres;
 
 -- =====================================================================
 -- PDPA: deleting the account removes everything  [3]
