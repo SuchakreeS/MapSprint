@@ -48,6 +48,11 @@ export function getDb(): SQLite.SQLiteDatabase {
       reason TEXT,
       stats TEXT
     );
+    -- 3.4 fog: the server's explored_cells, cached per account so the map works offline.
+    CREATE TABLE IF NOT EXISTS explored_cache (owner TEXT NOT NULL, h3 TEXT NOT NULL, PRIMARY KEY (owner, h3));
+    -- 3.4 fog: the H3 cells of a finished local drive, computed once (driveCells) and kept.
+    CREATE TABLE IF NOT EXISTS session_cells (session_id INTEGER NOT NULL, h3 TEXT NOT NULL, PRIMARY KEY (session_id, h3));
+    CREATE TABLE IF NOT EXISTS session_cells_done (session_id INTEGER PRIMARY KEY);
   `);
   // 2.2: which account a drive belongs to (NULL = recorded as a guest). Added to existing installs once.
   const cols = db.getAllSync<{ name: string }>('PRAGMA table_info(sessions)');
@@ -358,6 +363,65 @@ export function listUnqueuedFinishedSessions(owner: string): { id: number; start
 /** Pull-to-refresh: do not wait for the back-off, try the waiting drives now. */
 export function makeQueuedUploadsDue(): void {
   getDb().runSync("UPDATE uploads SET next_attempt_at = 0 WHERE state = 'queued'");
+}
+
+// ---- Explored cells (3.4 fog). Rules: src/features/map/explored.ts. ----
+
+/** Replace one account's cached server cells (never touches another account's rows). */
+export function replaceExploredCache(owner: string, cells: string[]): void {
+  const d = getDb();
+  d.withTransactionSync(() => {
+    d.runSync('DELETE FROM explored_cache WHERE owner = ?', owner);
+    const stmt = d.prepareSync('INSERT OR IGNORE INTO explored_cache (owner, h3) VALUES (?, ?)');
+    try {
+      for (const c of cells) stmt.executeSync(owner, c);
+    } finally {
+      stmt.finalizeSync();
+    }
+  });
+}
+
+export function getExploredCache(owner: string): string[] {
+  return getDb()
+    .getAllSync<{ h3: string }>('SELECT h3 FROM explored_cache WHERE owner = ?', owner)
+    .map((r) => r.h3);
+}
+
+/**
+ * Finished local drives whose cells the phone shows itself. Guest (owner null): all finished guest drives.
+ * Account: its finished drives that are not counted (the server has those cells) and not rejected (they explore nothing).
+ */
+export function listLocalExploreSessions(owner: string | null): number[] {
+  const rows =
+    owner == null
+      ? getDb().getAllSync<{ id: number }>('SELECT id FROM sessions WHERE owner_id IS NULL AND ended_at IS NOT NULL')
+      : getDb().getAllSync<{ id: number }>(
+          `SELECT s.id FROM sessions s LEFT JOIN uploads u ON u.session_id = s.id
+           WHERE s.owner_id = ? AND s.ended_at IS NOT NULL AND (u.state IS NULL OR u.state NOT IN ('counted', 'rejected'))`,
+          owner,
+        );
+  return rows.map((r) => r.id);
+}
+
+/** A finished drive's cells, or null when they were never computed. */
+export function getSessionCells(sessionId: number): string[] | null {
+  const d = getDb();
+  if (!d.getFirstSync('SELECT 1 FROM session_cells_done WHERE session_id = ?', sessionId)) return null;
+  return d.getAllSync<{ h3: string }>('SELECT h3 FROM session_cells WHERE session_id = ?', sessionId).map((r) => r.h3);
+}
+
+export function saveSessionCells(sessionId: number, cells: string[]): void {
+  const d = getDb();
+  d.withTransactionSync(() => {
+    d.runSync('DELETE FROM session_cells WHERE session_id = ?', sessionId);
+    const stmt = d.prepareSync('INSERT OR IGNORE INTO session_cells (session_id, h3) VALUES (?, ?)');
+    try {
+      for (const c of cells) stmt.executeSync(sessionId, c);
+    } finally {
+      stmt.finalizeSync();
+    }
+    d.runSync('INSERT OR REPLACE INTO session_cells_done (session_id) VALUES (?)', sessionId);
+  });
 }
 
 /** The driver corrected how this drive was travelled (recap). Local copy of the server change. */

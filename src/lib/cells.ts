@@ -20,40 +20,67 @@ export const CELLS = {
   maxCellsPerDrive: 20_000,
 } as const;
 
-/** The unique cells a drive explored, sorted ascending. Input order does not matter. */
-export function driveCells(input: GpsPoint[]): string[] {
-  const points = [...input].sort((a, b) => a.ts - b.ts);
+/** Adds a drive's cells one point at a time (the live HUD), with exactly the rules of `driveCells`. */
+export interface CellTracker {
+  /** Feed points in time order. Returns the cells this point added (gap fill included), in no particular order. */
+  add(p: GpsPoint): string[];
+  readonly size: number;
+  has(cell: string): boolean;
+}
+
+export function createCellTracker(): CellTracker {
   const cells = new Set<string>();
   let lastAccepted: GpsPoint | null = null;
   let lastMoving: GpsPoint | null = null;
   let lastMovingCell: string | null = null;
 
-  for (const p of points) {
-    if (p.accuracy == null || p.accuracy > CLEANING.maxAccuracyM) continue;
+  const put = (c: string, added: string[]) => {
+    if (cells.has(c)) return;
+    cells.add(c);
+    added.push(c);
+  };
 
-    let impliedKmh: number | null = null;
-    if (lastAccepted) {
-      const dt = (p.ts - lastAccepted.ts) / 1000;
-      if (dt <= 0) continue;
-      impliedKmh = msToKmh(haversineMeters(lastAccepted, p) / dt);
-      if (impliedKmh > CLEANING.maxPlausibleKmh) continue; // teleport
-    }
-    lastAccepted = p;
+  return {
+    add(p) {
+      const added: string[] = [];
+      if (p.accuracy == null || p.accuracy > CLEANING.maxAccuracyM) return added;
 
-    const kmh = p.speed != null && p.speed >= 0 ? msToKmh(p.speed) : impliedKmh;
-    if (kmh == null || kmh < CLEANING.stoppedBelowKmh) continue; // parked or drifting
-
-    const cell = latLngToCell(p.lat, p.lng, CELL_RES);
-    cells.add(cell);
-    if (lastMoving && lastMovingCell && cell !== lastMovingCell && haversineMeters(lastMoving, p) <= CELLS.maxGapFillM) {
-      try {
-        for (const c of gridPathCells(lastMovingCell, cell)) cells.add(c);
-      } catch {
-        // H3 cannot always draw a path (near a pentagon): the two cells themselves are already in.
+      let impliedKmh: number | null = null;
+      if (lastAccepted) {
+        const dt = (p.ts - lastAccepted.ts) / 1000;
+        if (dt <= 0) return added;
+        impliedKmh = msToKmh(haversineMeters(lastAccepted, p) / dt);
+        if (impliedKmh > CLEANING.maxPlausibleKmh) return added; // teleport
       }
-    }
-    lastMoving = p;
-    lastMovingCell = cell;
-  }
-  return [...cells].sort();
+      lastAccepted = p;
+
+      const kmh = p.speed != null && p.speed >= 0 ? msToKmh(p.speed) : impliedKmh;
+      if (kmh == null || kmh < CLEANING.stoppedBelowKmh) return added; // parked or drifting
+
+      const cell = latLngToCell(p.lat, p.lng, CELL_RES);
+      put(cell, added);
+      if (lastMoving && lastMovingCell && cell !== lastMovingCell && haversineMeters(lastMoving, p) <= CELLS.maxGapFillM) {
+        try {
+          for (const c of gridPathCells(lastMovingCell, cell)) put(c, added);
+        } catch {
+          // H3 cannot always draw a path (near a pentagon): the two cells themselves are already in.
+        }
+      }
+      lastMoving = p;
+      lastMovingCell = cell;
+      return added;
+    },
+    get size() {
+      return cells.size;
+    },
+    has: (c) => cells.has(c),
+  };
+}
+
+/** The unique cells a drive explored, sorted ascending. Input order does not matter. */
+export function driveCells(input: GpsPoint[]): string[] {
+  const tracker = createCellTracker();
+  const all: string[] = [];
+  for (const p of [...input].sort((a, b) => a.ts - b.ts)) all.push(...tracker.add(p));
+  return all.sort();
 }

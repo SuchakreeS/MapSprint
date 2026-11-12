@@ -1,6 +1,7 @@
 import { Camera, LocationPuck, MapView } from '@rnmapbox/maps';
+import * as Location from 'expo-location';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -13,7 +14,8 @@ import { Segmented } from '@/components/SettingsRow';
 import { Switch } from '@/components/Switch';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useVehicles } from '@/features/auth/vehicles';
-import { MAP_STYLE } from '@/features/map/map-style';
+import { useExploredCells } from '@/features/map/explored';
+import { FogLayers } from '@/features/map/FogLayers';
 import { useGpsSignal } from '@/features/recording/use-gps-signal';
 import {
   getSoundOn,
@@ -23,7 +25,9 @@ import {
   setSoundOn,
   setTravelMode,
 } from '@/features/settings/prefs';
+import { boxAround, FOG } from '@/lib/fog';
 import { needsSignalConfirm, type SignalQuality } from '@/lib/gps-signal';
+import { standardStyleJSON } from '@/lib/map-style';
 import { kindForMode, TRAVEL_MODE_LABEL, TRAVEL_MODES, type TravelMode } from '@/lib/travel-mode';
 import { carSubtitle } from '@/lib/vehicles';
 import { radius, space } from '@/theme/tokens';
@@ -52,6 +56,24 @@ export default function PreDriveScreen() {
   const [travel, setTravel] = useState<TravelMode>(() => getTravelMode(userId));
   const { signedIn, modeCars, selected, select, refresh } = useVehicles(travel);
   const vehicleKind = kindForMode(travel); // null for Other: no vehicle
+  const styleJSON = useMemo(() => standardStyleJSON(mode, c), [mode, c]);
+  const { cells: explored } = useExploredCells();
+  // Fog around where the phone last was (the map here does not move).
+  const [here, setHere] = useState<{ lat: number; lng: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    Location.getLastKnownPositionAsync()
+      .then((pos) => {
+        if (alive && pos) setHere({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      })
+      .catch(() => {
+        // No fix yet: no fog until the HUD.
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const fogBox = useMemo(() => (here ? boxAround(here.lat, here.lng, FOG.hudBoxHalfDeg) : null), [here]);
   const noun = vehicleKind === 'motorbike' ? 'motorbike' : 'car';
   const chooseTravel = (m: TravelMode) => {
     setTravel(m);
@@ -67,8 +89,9 @@ export default function PreDriveScreen() {
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <MapView
+        key={mode}
         style={styles.map}
-        styleURL={MAP_STYLE[mode]}
+        styleJSON={styleJSON}
         scaleBarEnabled={false}
         compassEnabled={false}
         logoEnabled={false}
@@ -78,6 +101,7 @@ export default function PreDriveScreen() {
         rotateEnabled={false}
         pitchEnabled={false}>
         <Camera followUserLocation followZoomLevel={15.5} />
+        {fogBox && <FogLayers cells={explored} box={fogBox} gridCenter={here} />}
         <LocationPuck pulsing={{ isEnabled: true }} />
       </MapView>
 

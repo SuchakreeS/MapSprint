@@ -157,6 +157,8 @@ Then account deletion + privacy policy, then 2.6 closed test. 3.5, 3.7, 3.8, 3.9
 - [ ] 3.3 H3 cells res 9 + gridPathCells; explored_cells upsert server-side
       [code done 2026-11-12 (Session 16, uncommitted): `src/lib/cells.ts`, `finalize_counted_drive` SQL function (atomic with counting), recap tile. Tick after testlist F19.]
 - [ ] 3.4 Blueprint fog layer in Mapbox (grid fill + road outlines, explored holes)
+      [code done 2026-11-12 (Session 17, uncommitted): fog on Map tab (+ 3D toggle, clip to explored), HUD (live holes, "+N new cells"
+      estimate), Pre-drive; hex grid of unexplored cells; spike screens deleted. Tick after testlist F20.]
 - [ ] 3.5 Smooth score (harsh accel > 0.3 g, brake < −0.35 g, corner > 0.4 g)
 - [ ] 3.6 Badges (10 listed in plan doc) + Drive Recap screen (10) + Share drive (11)
 - [ ] 3.7 Sounds (expo-audio) + voice lines (expo-speech, English)

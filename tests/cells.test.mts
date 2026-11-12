@@ -4,7 +4,7 @@ import { test } from 'node:test';
 
 import { gridDistance, latLngToCell } from 'h3-js';
 
-import { CELL_RES, CELLS, driveCells } from '../src/lib/cells.ts';
+import { CELL_RES, CELLS, createCellTracker, driveCells } from '../src/lib/cells.ts';
 import type { GpsPoint } from '../src/lib/geo.ts';
 
 const LAT0 = 13.75;
@@ -82,6 +82,50 @@ test('output is sorted and unique, whatever the input order', () => {
 
 test('points without a chip speed use the implied speed', () => {
   assert.deepEqual(driveCells(straight(600, 10, T0, LAT0, { speed: null })), driveCells(straight(600)));
+});
+
+function gapDrive(gapM: number): GpsPoint[] {
+  const first = straight(60);
+  const end = first[first.length - 1];
+  return [...first, ...straight(60, 10, T0 + 120_000, end.lat + gapM / M_PER_DEG_LAT)];
+}
+function teleportDrive(): GpsPoint[] {
+  return [
+    ...straight(120),
+    { ts: T0 + 30_500, lat: LAT0 + 0.5, lng: LNG0, speed: 10, accuracy: 5, heading: null },
+  ].sort((a, b) => a.ts - b.ts);
+}
+
+test('tracker fed the sorted points gives the same set as driveCells', () => {
+  for (const pts of [straight(600), gapDrive(1500), gapDrive(3000), teleportDrive()]) {
+    const t = createCellTracker();
+    const added: string[] = [];
+    for (const p of pts) added.push(...t.add(p));
+    const want = driveCells(pts);
+    assert.deepEqual([...new Set(added)].sort(), want);
+    assert.equal(added.length, want.length, 'every cell reported once');
+    assert.equal(t.size, want.length);
+    for (const c of want) assert.ok(t.has(c));
+  }
+});
+
+test('add returns only cells not seen before', () => {
+  const t = createCellTracker();
+  const [a, b] = straight(1);
+  assert.ok(t.add(a).length === 0 || t.size > 0);
+  t.add(b);
+  const again = { ...b, ts: b.ts + 1000 }; // same place, still "moving" chip speed
+  assert.deepEqual(t.add(again), []);
+});
+
+test('add returns gap-fill cells too', () => {
+  const pts = gapDrive(1500);
+  const firstAfterGap = pts.findIndex((p) => p.ts >= T0 + 120_000);
+  const t = createCellTracker();
+  for (const p of pts.slice(0, firstAfterGap)) t.add(p);
+  const end = pts[firstAfterGap - 1];
+  const mid = cellOf({ lat: end.lat + 750 / M_PER_DEG_LAT, lng: LNG0 });
+  assert.ok(t.add(pts[firstAfterGap]).includes(mid));
 });
 
 test('cell limits', () => {

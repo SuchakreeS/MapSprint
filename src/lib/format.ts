@@ -27,3 +27,8 @@ export function formatDuration(seconds: number): string {
 export function formatKmh1(kmh: number | null | undefined): string {
   return isUsable(kmh) ? kmh.toFixed(1) : '--';
 }
+
+/** Whole count with thousands separators: 1248 -> "1,248" (no Intl needed). */
+export function formatCount(n: number): string {
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}

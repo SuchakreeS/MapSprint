@@ -576,6 +576,26 @@ is 'background' (RN AppStateModule), so the "app on screen" skip did not block i
   one deploy covers both. With the build that is already installed, tonight's drive covers F18 fully plus the database half of F19 (`explored_cells` rows, `drives.new_cells`
   filled); the old app ignores the extra `newCells` field. The "New cells" TILE needs the next build.
 
+## Session 17 (2026-11-12, Sonnet executing the Opus plan `docs/superpowers/plans/2026-11-12-blueprint-fog.md`): 3.4 blueprint fog, CODE DONE, uncommitted, phone test F20 pending
+- `src/lib/cells.ts`: `createCellTracker()` (incremental, same rules); `driveCells` = sort + tracker (output unchanged, tested). Edge copy synced:
+  **deploy finalize-drive AFTER committing 3.4** so repo and server match.
+- `src/lib/fog.ts`: `fogFeature` (box minus explored cells, islands back as fog, cells crossing the box edge dropped), `exploredEdges`,
+  `unexploredGrid` (hex outlines of unexplored cells near the centre), `exploredAreaKm2`, `boxAround`, `needsRecentre`, `FOG`, `WORLD_BOX`.
+- `src/lib/map-style.ts`: `standardStyleJSON(mode, c, { threeD: { clip } }?)`: Standard import, night/day preset, token colours; 3D only with a clip layer.
+- `src/lib/paging.ts` `fetchAllPages` (PostgREST 1000-row cap); `src/lib/format.ts` `formatCount`.
+- `src/features/map/explored.ts`: `useExploredCells()` = server `explored_cells` (cached per owner in SQLite `explored_cache`) + local finished drives
+  not counted/rejected (guest: all guest drives); local drive cells cached in `session_cells` / `session_cells_done`. Counted pre-3.3 drives: NOT filled in.
+- `src/features/map/FogLayers.tsx` (fog fill, hex grid from zoom 13, explored edge; all slot `middle`).
+- Screens: HUD (Standard, fog box around the car, live holes from `useLiveDrive().liveCells`, "+N new cells" estimate pill), Pre-drive (fog),
+  Map tab `(tabs)/world.tsx` (card, recenter, 3D toggle with clip). `RecenterGlyph` moved to `src/components/`.
+- Deleted: spike `src/app/dev/`, `src/features/dev/`, `src/features/map/map-style.ts` (`MAP_STYLE`).
+- Results: typecheck clean, eslint clean, npm test 252/252.
+- **PS run order:** (1) commit 3.4, (2) `npx supabase db push --remote`, (3) `npx supabase test db --remote` (expect 95),
+  (4) `npx supabase functions deploy finalize-drive --use-api`, (5) EAS preview build, (6) drive: F18, F19, F20.
+- Untested on a device: LocationPuck and no-slot route layer on top of a Standard `styleJSON` map; the clip polygon as a world box with many holes;
+  fog look (opacity 0.82, grid 0.5) in both themes. Tuning values live in `FOG` (src/lib/fog.ts).
+- Later: server back-fill of cells for drives counted before 3.3; This week filter + Districts (3.8); square grid if PS prefers it.
+
 ## Spike 3.0 (map style), IN PROGRESS (2026-11-12), screen committed in 5b636df
 - Built (Sonnet): throwaway `src/app/dev/map-style.tsx` (route `mapsprint://dev/map-style`, not linked from the UI) + `src/features/dev/map-style-spike.ts` (fake fog, grids, JS building pick, height stats). Delete both after the decision. typecheck/eslint clean, npm test 206/206. Needs a new preview APK to run.
 - Answered from code and docs: `@rnmapbox/maps` 10.3.16 already pins Maps SDK 11.33 and supports Standard (`StyleImport`, `slot`), so NO upgrade and NO native change. Slots: bottom = above land/water, middle = above roads and behind 3D buildings, top = above POI labels, behind place labels. `show3dBuildings` is global on/off only; `within` cannot filter polygon buildings. A `clip` layer (SDK 11.6+, experimental) can remove 3D buildings inside a polygon, but rnmapbox has no component for it, so the spike uses a hand-written `styleJSON` that imports Standard. Mobile billing is per MAU (25,000 free); no separate Standard/3D charge on the pricing pages.
@@ -643,7 +663,7 @@ is 'background' (RN AppStateModule), so the "app on screen" skip did not block i
 **Decision (PS, 2026-11-12):** do NOT start the closed test yet. Build the Phase 3 core loop first (order in plan.md Phase 3:
 3.0 -> 3.3 -> 3.4 -> 3.1/3.2 -> 3.6), then account deletion + privacy policy, then 2.6. PS meanwhile starts the Play developer
 account verification and collects tester Gmails. 1.9 (trip-meter drives) continues on every drive. **3.10 is coded (Session 15 above):
-PS runs its steps + F18. 3.0 DONE (Standard, see "Spike 3.0 result"). Next: 3.3 hex cells: CODE DONE (Session 16): PS runs its steps + F19. Then 3.4 fog on Standard (reuse `driveCells` for guests' local fog).**
+PS runs its steps + F18. 3.0 DONE (Standard, see "Spike 3.0 result"). Next: 3.3 hex cells: CODE DONE (Session 16): PS runs its steps + F19. 3.4 fog: CODE DONE (Session 17): PS commits, runs the server steps, builds, tests F20. Then 3.1 XP + 3.2 levels.**
 
 **State (2026-11-12, PS report via Claude chat):** PS ran `npx supabase db push --remote` (private-by-default migration),
 `npx supabase test db --remote`, `npx supabase functions deploy finalize-drive --use-api`, built and installed the new preview APK, and ran

@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { formatDistanceKm, formatDuration, formatKmh1, formatSpeedKmh } from '../src/lib/format.ts';
+import { formatCount, formatDistanceKm, formatDuration, formatKmh1, formatSpeedKmh } from '../src/lib/format.ts';
 
 test('speed rounds to a whole number', () => {
   assert.equal(formatSpeedKmh(42.4), '42');
@@ -57,4 +57,11 @@ test('distance can show one decimal (HUD)', () => {
   assert.equal(formatDistanceKm(12_749, 1), '12.7');
   assert.equal(formatDistanceKm(0, 1), '0.0');
   assert.equal(formatDistanceKm(NaN, 1), '0.0');
+});
+
+test('formatCount groups thousands with commas', () => {
+  assert.equal(formatCount(0), '0');
+  assert.equal(formatCount(999), '999');
+  assert.equal(formatCount(1248), '1,248');
+  assert.equal(formatCount(1234567), '1,234,567');
 });

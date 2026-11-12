@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { getAutoPauseMs } from '@/features/settings/prefs';
+import { createCellTracker } from '@/lib/cells';
 import type { DriveSummary } from '@/lib/geo';
 import { currentSpeedKmh } from '@/lib/hud';
 import { applyEvent, createLiveStats, type PauseState } from '@/lib/live-stats';
@@ -26,6 +27,10 @@ interface LiveState {
   nowMs: number;
   /** Thinned route as `[lng, lat]`. A new array only when points were added. */
   route: RouteCoord[];
+  /** H3 cells this drive explored so far (same rule as the server, src/lib/cells.ts). A new array only when it grew. */
+  liveCells: string[];
+  /** Last GPS position, or null before the first point. */
+  lastPos: { lat: number; lng: number } | null;
 }
 
 export interface LiveDrive extends LiveState {
@@ -43,6 +48,8 @@ const INITIAL: LiveState = {
   paused: null,
   nowMs: 0,
   route: [],
+  liveCells: [],
+  lastPos: null,
 };
 
 /**
@@ -64,11 +71,14 @@ export function useLiveDrive(): LiveDrive {
         const startedAt = getSessionStartedAt(sessionId) ?? Date.now();
         const stats = createLiveStats({ autoPauseMs: getAutoPauseMs() });
         const coords: RouteCoord[] = [];
+        const tracker = createCellTracker();
+        const cells: string[] = [];
         let lastTs = 0;
         let lastEventId = 0;
 
         const tick = () => {
           const points = getPointsSince(sessionId, lastTs);
+          const cellsBefore = cells.length;
           const events = getPauseEventsSince(sessionId, lastEventId);
           let e = 0;
           for (const p of points) {
@@ -76,6 +86,7 @@ export function useLiveDrive(): LiveDrive {
             while (e < events.length && events[e].ts <= p.ts) applyEvent(stats, events[e++]);
             stats.push(p);
             appendRoutePoint(coords, p);
+            cells.push(...tracker.add(p));
             lastTs = p.ts;
           }
           while (e < events.length) applyEvent(stats, events[e++]);
@@ -96,6 +107,8 @@ export function useLiveDrive(): LiveDrive {
             paused,
             nowMs: now,
             route: points.length ? [...coords] : prev.route,
+            liveCells: cells.length > cellsBefore ? [...cells] : prev.liveCells,
+            lastPos: points.length ? { lat: points[points.length - 1].lat, lng: points[points.length - 1].lng } : prev.lastPos,
           }));
         };
 

@@ -1,7 +1,7 @@
 import { Camera, LineLayer, LocationPuck, MapView, ShapeSource } from '@rnmapbox/maps';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -11,32 +11,41 @@ import { HoldToFinishButton } from '@/components/HoldToFinishButton';
 import { HudStat } from '@/components/HudStat';
 import { PauseGlyph } from '@/components/PauseGlyph';
 import { PlayGlyph } from '@/components/PlayGlyph';
+import { RecenterGlyph } from '@/components/RecenterGlyph';
 import { SpeedGauge } from '@/components/SpeedGauge';
-import { MAP_STYLE } from '@/features/map/map-style';
+import { useExploredCells } from '@/features/map/explored';
+import { FogLayers } from '@/features/map/FogLayers';
 import { getActiveSessionId, getCurrentOwner } from '@/features/recording/db';
 import { stopRecording } from '@/features/recording/recorder';
 import { useLiveDrive } from '@/features/recording/use-live-drive';
 import { getAutoPauseMs, getKeepAwakeOn } from '@/features/settings/prefs';
+import { boxAround, FOG, needsRecentre, type Box } from '@/lib/fog';
 import { formatDistanceKm, formatDuration, formatKmh1 } from '@/lib/format';
 import { shouldPromptFinish, stoppedForMs } from '@/lib/finish-prompt';
 import { controlsLocked } from '@/lib/hud';
+import { standardStyleJSON } from '@/lib/map-style';
 import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
-
-/** Drawn crosshair for the recenter button (no SVG library needed). */
-function RecenterGlyph({ color }: { color: string }) {
-  return (
-    <View style={styles.glyph} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <View style={[styles.glyphRing, { borderColor: color }]} />
-      <View style={[styles.glyphDot, { backgroundColor: color }]} />
-    </View>
-  );
-}
 
 export default function HudScreen() {
   const { mode, c, fonts, type } = useTheme();
   const insets = useSafeAreaInsets();
-  const { ready, error, elapsedS, snapshot, speedKmh, paused, nowMs, route, pause, resume } = useLiveDrive();
+  const { ready, error, elapsedS, snapshot, speedKmh, paused, nowMs, route, liveCells, lastPos, pause, resume } = useLiveDrive();
+  const styleJSON = useMemo(() => standardStyleJSON(mode, c), [mode, c]);
+  const { cells: explored } = useExploredCells();
+  // Explored before this drive + what this drive opened so far (live, same rule as the server).
+  const shownCells = useMemo(() => {
+    const s = new Set(explored);
+    for (const cell of liveCells) s.add(cell);
+    return s;
+  }, [explored, liveCells]);
+  // Live estimate for the pill; the recap's "New cells" is the server's number.
+  const newCells = useMemo(() => liveCells.filter((cell) => !explored.has(cell)).length, [explored, liveCells]);
+  // Fog box around the car, re-centred when it leaves the inner half (keeps the fog polygon small while driving).
+  const [fogBox, setFogBox] = useState<Box | null>(null);
+  if (lastPos && (!fogBox || needsRecentre(fogBox, lastPos.lat, lastPos.lng))) {
+    setFogBox(boxAround(lastPos.lat, lastPos.lng, FOG.hudBoxHalfDeg));
+  }
   const [following, setFollowing] = useState(true);
   const [sheetHeight, setSheetHeight] = useState(0);
   const [finishError, setFinishError] = useState<string | null>(null);
@@ -76,8 +85,9 @@ export default function HudScreen() {
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <MapView
+        key={mode}
         style={styles.map}
-        styleURL={MAP_STYLE[mode]}
+        styleJSON={styleJSON}
         scaleBarEnabled={false}
         compassEnabled={false}
         logoEnabled={false}
@@ -92,6 +102,7 @@ export default function HudScreen() {
             if (!e.nativeEvent.payload.followUserLocation) setFollowing(false);
           }}
         />
+        {fogBox && <FogLayers cells={shownCells} box={fogBox} gridCenter={lastPos} />}
         {route.length >= 2 && (
           <ShapeSource
             id="drive-route"
@@ -116,6 +127,22 @@ export default function HudScreen() {
           style={[styles.lockPill, { top: insets.top + space.sm, backgroundColor: c.overlayPill }]}>
           <Text style={[type.caption, { fontFamily: fonts.bodyBold, color: c.danger }]}>
             Controls locked while moving
+          </Text>
+        </View>
+      )}
+
+      {newCells > 0 && (
+        <View
+          pointerEvents="none"
+          accessible
+          accessibilityLabel={`${newCells} new cells this drive (estimate)`}
+          style={[
+            styles.cellsPill,
+            // Below the lock pill while it shows, so the two never overlap on a narrow phone.
+            { top: insets.top + space.sm + (locked ? 40 : 0), backgroundColor: c.surface, borderColor: c.line },
+          ]}>
+          <Text style={[type.caption, { fontFamily: fonts.bodyBold, color: c.text }]}>
+            <Text style={{ color: c.primaryText }}>+{newCells}</Text> new cells
           </Text>
         </View>
       )}
@@ -235,9 +262,14 @@ const styles = StyleSheet.create({
     paddingVertical: space.sm,
     borderRadius: radius.lg,
   },
-  glyph: { width: 22, height: 22, alignItems: 'center', justifyContent: 'center' },
-  glyphRing: { position: 'absolute', width: 16, height: 16, borderRadius: 8, borderWidth: 2 },
-  glyphDot: { width: 5, height: 5, borderRadius: 3 },
+  cellsPill: {
+    position: 'absolute',
+    right: space.lg,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+  },
   sheet: {
     position: 'absolute',
     left: 0,
