@@ -134,7 +134,7 @@ export default function SavingScreen() {
         <View style={[styles.steps, { backgroundColor: c.surface, borderColor: c.line }]}>
           <StepRow title="Track cleaned" state={view.steps.cleaned} />
           <StepRow title="Speed and distance" state={view.steps.speed} />
-          <StepRow title="XP and level" state={view.steps.xp} last />
+          <StepRow title="XP and badges" state={view.steps.xp} last />
         </View>
 
         <View style={[styles.note, { backgroundColor: c.surface2, opacity: view.noSignal ? 1 : 0.75 }]}>

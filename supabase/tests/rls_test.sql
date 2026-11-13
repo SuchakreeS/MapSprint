@@ -5,7 +5,7 @@ set local role postgres;
 create extension if not exists pgtap with schema extensions;
 set local search_path to extensions, public;
 
-select plan(115);
+select plan(136);
 
 
 -- =====================================================================
@@ -340,9 +340,9 @@ insert into public.drives (id, user_id, started_at, ended_at, status) values
 
 -- The happy path runs as the role the Edge Function really uses.
 set local role service_role;
--- 100 distance + 3 new cells x 25 + 50 first drive = 225
+-- 100 distance + 3 new cells x 25 + 50 first drive + 50 First Gear badge = 275
 select is((public.finalize_counted_drive('d3000000-0000-0000-0000-000000000001', '33333333-3333-3333-3333-333333333333', '2026-11-01 08:00+07', '2026-11-01 09:00+07', 10000, 3600, 3600, 10, 10, null, 'p', 50, 10, '{}'::jsonb, array['890000000000001','890000000000002','890000000000003'], repeat('a', 64), 100, 25, 50))->>'xp_total',
-  '225', 'first drive: distance + new cells + first-drive bonus');
+  '275', 'first drive: distance + new cells + first-drive bonus + First Gear badge');
 -- Same day, one known + one new cell. The bonus is asked for again (as if two uploads raced) but must not be given twice.
 select is((public.finalize_counted_drive('d3000000-0000-0000-0000-000000000002', '33333333-3333-3333-3333-333333333333', '2026-11-01 10:00+07', '2026-11-01 11:00+07', 4000, 3600, 3600, 4, 4, null, 'p', 50, 10, '{}'::jsonb, array['890000000000001','890000000000004'], repeat('b', 64), 40, 25, 50))->>'xp_total',
   '65', 'second drive the same day: no second first-drive bonus, only the really new cell pays');
@@ -359,10 +359,10 @@ select throws_ok($$select public.finalize_counted_drive('d3000000-0000-0000-0000
 set local role postgres;
 
 select is((select array[total_xp, level] from public.profiles where id = '33333333-3333-3333-3333-333333333333'),
-  array[290, 2], 'profile total XP and level are updated (290 XP = level 2)');
-select is((select count(*)::int from public.xp_events where user_id = '33333333-3333-3333-3333-333333333333'), 5,
-  'one XP row per non-zero part (3 + 2)');
-select is((select count(*)::int from public.xp_events where user_id = '33333333-3333-3333-3333-333333333333' and day = '2026-11-01'), 5,
+  array[340, 2], 'profile total XP and level are updated (340 XP = level 2)');
+select is((select count(*)::int from public.xp_events where user_id = '33333333-3333-3333-3333-333333333333'), 6,
+  'one XP row per non-zero part (3 + 2 + the First Gear badge)');
+select is((select count(*)::int from public.xp_events where user_id = '33333333-3333-3333-3333-333333333333' and day = '2026-11-01'), 6,
   'XP rows carry the Bangkok day of the drive');
 select is((select array[xp_earned, new_cells] from public.drives where id = 'd3000000-0000-0000-0000-000000000002'),
   array[65, 1], 'drives.xp_earned and new_cells are stored');
@@ -403,6 +403,119 @@ select throws_ok($$insert into public.drives (id, user_id, started_at, ended_at,
 delete from auth.users where id = '33333333-3333-3333-3333-333333333333';
 select is((select count(*)::int from public.drive_fingerprints where user_id = '33333333-3333-3333-3333-333333333333'), 0,
   'account delete removes fingerprints');
+
+-- =====================================================================
+-- 3.6: badges, awarded in the same transaction as the drive  [21]
+--   E: first drive = 100 km over 100 new cells (3 badges at once), then weekday / weekend drives.
+--   F: seven days in a row (Streak 7).
+-- =====================================================================
+set local role postgres;
+insert into auth.users (id, email) values
+  ('55555555-5555-5555-5555-555555555555', 'e@test.com'),
+  ('66666666-6666-6666-6666-666666666666', 'f@test.com'),
+  ('77777777-7777-7777-7777-777777777777', 'g@test.com');
+
+insert into public.drives (id, user_id, started_at, ended_at, status) values
+  ('e5000000-0000-0000-0000-000000000001', '55555555-5555-5555-5555-555555555555', '2026-10-05 10:00+07', '2026-10-05 11:00+07', 'uploading'),
+  ('e5000000-0000-0000-0000-000000000002', '55555555-5555-5555-5555-555555555555', '2026-10-06 10:00+07', '2026-10-06 11:00+07', 'uploading'),
+  ('e5000000-0000-0000-0000-000000000003', '55555555-5555-5555-5555-555555555555', '2026-10-10 10:00+07', '2026-10-10 11:00+07', 'uploading'),
+  ('e5000000-0000-0000-0000-000000000004', '55555555-5555-5555-5555-555555555555', '2026-10-12 10:00+07', '2026-10-12 11:00+07', 'uploading'),
+  ('e5000000-0000-0000-0000-000000000005', '55555555-5555-5555-5555-555555555555', '2026-10-18 10:00+07', '2026-10-18 11:00+07', 'uploading');
+insert into public.drives (id, user_id, started_at, ended_at, status)
+  select format('f6000000-0000-0000-0000-%s', lpad(i::text, 12, '0'))::uuid, '66666666-6666-6666-6666-666666666666',
+         '2026-09-01 10:00+07'::timestamptz + make_interval(days => i - 1), '2026-09-01 11:00+07'::timestamptz + make_interval(days => i - 1), 'uploading'
+    from generate_series(1, 7) as i;
+insert into public.drives (id, user_id, started_at, ended_at, status)
+  select format('a7000000-0000-0000-0000-%s', lpad(i::text, 12, '0'))::uuid, '77777777-7777-7777-7777-777777777777',
+         '2026-08-01 10:00+07'::timestamptz + make_interval(days => i - 1), '2026-08-01 11:00+07'::timestamptz + make_interval(days => i - 1), 'uploading'
+    from generate_series(1, 7) as i;
+
+set local role service_role;
+-- Monday, 100 km, 100 new cells: First Gear 50 + Century 100 + Cartographer I 100 = 250 (the XP rates are 0 here on purpose)
+select is((public.finalize_counted_drive('e5000000-0000-0000-0000-000000000001', '55555555-5555-5555-5555-555555555555', '2026-10-05 10:00+07', '2026-10-05 11:00+07', 100000, 3600, 3600, 100, 100, null, 'p', 50, 10, '{}'::jsonb,
+    (select array_agg('89' || lpad(to_hex(g), 13, '0')) from generate_series(1, 100) as g), null, 0, 0, 0))->>'xp_badges',
+  '250', 'three badges at once: all three pay');
+set local role postgres;
+select is((select array_agg(b.code order by b.code) from public.user_badges ub join public.badges b on b.id = ub.badge_id where ub.user_id = '55555555-5555-5555-5555-555555555555'),
+  array['cartographer_1', 'century', 'first_gear'], 'First Gear, Century and Cartographer I were unlocked');
+select is((select array[total_xp, level] from public.profiles where id = '55555555-5555-5555-5555-555555555555'), array[250, 2], 'badge XP lands in the profile total and level');
+select is((select count(*)::int from public.xp_events where user_id = '55555555-5555-5555-5555-555555555555' and source = 'badge'), 3, 'one XP row per badge (two on the same drive do not clash)');
+select is((select xp_earned from public.drives where id = 'e5000000-0000-0000-0000-000000000001'), 250, 'drives.xp_earned includes the badge XP');
+
+set local role service_role;
+select is((public.finalize_counted_drive('e5000000-0000-0000-0000-000000000002', '55555555-5555-5555-5555-555555555555', '2026-10-06 10:00+07', '2026-10-06 11:00+07', 1000, 600, 600, 6, 6, null, 'p', 50, 10, '{}'::jsonb,
+    (select array_agg('89' || lpad(to_hex(g), 13, '0')) from generate_series(1, 5) as g), null, 0, 0, 0))->'badges',
+  '[]'::jsonb, 'a badge is never awarded twice');
+-- Sunday, 19 new cells: not enough (run BEFORE the Saturday drive, so E does not own the badge yet and this pins the 20-cell rule)
+select is((public.finalize_counted_drive('e5000000-0000-0000-0000-000000000005', '55555555-5555-5555-5555-555555555555', '2026-10-18 10:00+07', '2026-10-18 11:00+07', 1000, 600, 600, 6, 6, null, 'p', 50, 10, '{}'::jsonb,
+    (select array_agg('89' || lpad(to_hex(g), 13, '0')) from generate_series(4000, 4018) as g), null, 0, 0, 0))->'badges',
+  '[]'::jsonb, '19 new cells on a Sunday are not enough for Weekend Explorer');
+
+-- Saturday, 20 new cells: Weekend Explorer (100)
+select is((public.finalize_counted_drive('e5000000-0000-0000-0000-000000000003', '55555555-5555-5555-5555-555555555555', '2026-10-10 10:00+07', '2026-10-10 11:00+07', 1000, 600, 600, 6, 6, null, 'p', 50, 10, '{}'::jsonb,
+    (select array_agg('89' || lpad(to_hex(g), 13, '0')) from generate_series(2000, 2019) as g), null, 0, 0, 0))->>'xp_badges',
+  '100', '20 new cells on a Saturday unlock Weekend Explorer');
+-- Monday, 20 new cells: no
+select is((public.finalize_counted_drive('e5000000-0000-0000-0000-000000000004', '55555555-5555-5555-5555-555555555555', '2026-10-12 10:00+07', '2026-10-12 11:00+07', 1000, 600, 600, 6, 6, null, 'p', 50, 10, '{}'::jsonb,
+    (select array_agg('89' || lpad(to_hex(g), 13, '0')) from generate_series(3000, 3019) as g), null, 0, 0, 0))->'badges',
+  '[]'::jsonb, 'the same 20 new cells on a weekday earn nothing');
+-- F: six days in a row, then the seventh
+do $$
+begin
+  for i in 1..6 loop
+    perform public.finalize_counted_drive(format('f6000000-0000-0000-0000-%s', lpad(i::text, 12, '0'))::uuid, '66666666-6666-6666-6666-666666666666',
+      '2026-09-01 10:00+07'::timestamptz + make_interval(days => i - 1), '2026-09-01 11:00+07'::timestamptz + make_interval(days => i - 1),
+      1000, 600, 600, 6, 6, null, 'p', 50, 10, '{}'::jsonb, array[]::text[], null, 0, 0, 0);
+  end loop;
+end $$;
+set local role postgres;
+select is((select count(*)::int from public.user_badges ub join public.badges b on b.id = ub.badge_id
+           where ub.user_id = '66666666-6666-6666-6666-666666666666' and b.code = 'streak_7'), 0, 'six days in a row is not a Streak 7');
+set local role service_role;
+select is((public.finalize_counted_drive('f6000000-0000-0000-0000-000000000007', '66666666-6666-6666-6666-666666666666', '2026-09-07 10:00+07', '2026-09-07 11:00+07', 1000, 600, 600, 6, 6, null, 'p', 50, 10, '{}'::jsonb, array[]::text[], null, 0, 0, 0))->>'xp_badges',
+  '200', 'the seventh day in a row unlocks Streak 7');
+set local role postgres;
+select is((select count(*)::int from public.user_badges ub join public.badges b on b.id = ub.badge_id
+           where ub.user_id = '66666666-6666-6666-6666-666666666666' and b.code = 'streak_7'), 1, 'Streak 7 is stored once');
+
+-- G: the same seven days, but counted out of order (an old drive waiting in the upload back-off is overtaken): day 3 arrives last
+set local role service_role;
+do $$
+declare i int;
+begin
+  foreach i in array array[1, 2, 4, 5, 6, 7] loop
+    perform public.finalize_counted_drive(format('a7000000-0000-0000-0000-%s', lpad(i::text, 12, '0'))::uuid, '77777777-7777-7777-7777-777777777777',
+      '2026-08-01 10:00+07'::timestamptz + make_interval(days => i - 1), '2026-08-01 11:00+07'::timestamptz + make_interval(days => i - 1),
+      1000, 600, 600, 6, 6, null, 'p', 50, 10, '{}'::jsonb, array[]::text[], null, 0, 0, 0);
+  end loop;
+end $$;
+set local role postgres;
+select is((select count(*)::int from public.user_badges ub join public.badges b on b.id = ub.badge_id
+           where ub.user_id = '77777777-7777-7777-7777-777777777777' and b.code = 'streak_7'), 0, 'six of the seven days (day 3 missing) is not a Streak 7');
+set local role service_role;
+select is((public.finalize_counted_drive('a7000000-0000-0000-0000-000000000003', '77777777-7777-7777-7777-777777777777', '2026-08-03 10:00+07', '2026-08-03 11:00+07', 1000, 600, 600, 6, 6, null, 'p', 50, 10, '{}'::jsonb, array[]::text[], null, 0, 0, 0))->>'xp_badges',
+  '200', 'the missing day arriving last still completes the Streak 7');
+set local role postgres;
+
+select throws_ok($$insert into public.xp_events (user_id, source, amount, badge_id)
+                   select '55555555-5555-5555-5555-555555555555', 'badge', 5, id from public.badges where code = 'first_gear'$$,
+  '23505', null, 'the same badge can never pay twice');
+select throws_ok($$insert into public.xp_events (user_id, source, amount) values ('55555555-5555-5555-5555-555555555555', 'badge', 5)$$,
+  '23514', null, 'a badge XP row must name its badge');
+select is((select xp_reward from public.badges where code = 'cartographer_3'), 1000, 'badge XP values are set');
+select is((select count(*)::int from public.user_badges ub join public.badges b on b.id = ub.badge_id
+           where b.code in ('zen_driver', 'district_hunter', 'province_collector')), 0, 'the three not-yet-earnable badges are never awarded');
+
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"55555555-5555-5555-5555-555555555555","role":"authenticated"}';
+select throws_ok($$insert into public.user_badges (user_id, badge_id) select '55555555-5555-5555-5555-555555555555', id from public.badges where code = 'zen_driver'$$,
+  '42501', null, 'the app cannot give itself a badge');
+select throws_ok($$select private.award_badges('55555555-5555-5555-5555-555555555555', null, now(), 0)$$,
+  '42501', null, 'the app cannot call award_badges');
+set local role postgres;
+
+delete from auth.users where id = '55555555-5555-5555-5555-555555555555';
+select is((select count(*)::int from public.user_badges where user_id = '55555555-5555-5555-5555-555555555555'), 0, 'account delete removes badges');
 
 -- =====================================================================
 -- PDPA: deleting the account removes everything  [3]

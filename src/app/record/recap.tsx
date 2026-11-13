@@ -7,6 +7,7 @@ import { Button } from '@/components/Button';
 import { GpsCheckCard } from '@/components/GpsCheckCard';
 import { RouteArt } from '@/components/RouteArt';
 import { Segmented } from '@/components/SettingsRow';
+import { UnlockedBadges } from '@/components/UnlockedBadges';
 import { XpCard } from '@/components/XpCard';
 import { getCurrentOwner, getUpload, setSessionMode } from '@/features/recording/db';
 import { loadDrive } from '@/features/recording/drive-history';
@@ -135,6 +136,8 @@ export default function RecapScreen() {
           </View>
         ) : null}
 
+        {server?.badges && server.badges.length > 0 ? <UnlockedBadges codes={server.badges} /> : null}
+
         {server ? (
           <View style={[styles.modeCard, { backgroundColor: c.surface, borderColor: c.line }]}>
             <Segmented label="Travelled by" options={MODE_OPTIONS} value={mode} onChange={changeMode} />
@@ -145,6 +148,8 @@ export default function RecapScreen() {
             Saved on this phone. These numbers are the phone&apos;s estimate: the drive is not counted yet.
           </Text>
         ) : null}
+
+        <Button label="Share as picture" variant="secondary" onPress={() => router.push({ pathname: '/record/share', params: { id: String(drive.id) } })} />
 
         {/* Field-test aid (plan 1.9 / 1.10); decide later whether it moves behind a debug switch. */}
         <GpsCheckCard summary={s} gaps={drive.gaps} />

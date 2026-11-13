@@ -84,6 +84,7 @@ function RootStack() {
         <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
         <Stack.Screen name="record" options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="history" options={{ headerShown: false }} />
+        <Stack.Screen name="badges" options={{ headerShown: false }} />
         <Stack.Screen name="garage" options={{ headerShown: false }} />
         <Stack.Screen name="garage-car" options={{ headerShown: false }} />
         <Stack.Screen name="edit-profile" options={{ headerShown: false }} />

@@ -73,6 +73,8 @@ export interface ServerStats {
   /** The account's level and total XP right after this drive (plan 3.2). */
   level?: number;
   totalXp?: number;
+  /** Codes of the badges this drive unlocked (plan 3.6); [] = none. Absent from older servers. */
+  badges?: string[];
 }
 
 /** What the server says about this drive's XP (same shape as `DriveXp` in xp.ts). */
@@ -85,6 +87,8 @@ export interface DriveXpStats {
   capped: boolean;
   /** The drive is too old to earn XP. */
   tooOld: boolean;
+  /** XP from badges unlocked by this drive (plan 3.6), already inside `total`. Absent from older servers. */
+  badges?: number;
 }
 
 export type FinalizeResult =
@@ -99,7 +103,15 @@ function parseXp(x: unknown): DriveXpStats | null {
   const o = x as Record<string, unknown>;
   if (!isNum(o.total) || !isNum(o.distance) || !isNum(o.newCells) || !isNum(o.firstDrive)) return null;
   if (typeof o.capped !== 'boolean' || typeof o.tooOld !== 'boolean') return null;
-  return { total: o.total, distance: o.distance, newCells: o.newCells, firstDrive: o.firstDrive, capped: o.capped, tooOld: o.tooOld };
+  return {
+    total: o.total,
+    distance: o.distance,
+    newCells: o.newCells,
+    firstDrive: o.firstDrive,
+    capped: o.capped,
+    tooOld: o.tooOld,
+    ...(isNum(o.badges) ? { badges: o.badges } : {}),
+  };
 }
 
 /** Reads the finalize-drive answer. Anything unreadable means "try again later", never "counted". */
@@ -127,6 +139,7 @@ export function parseFinalizeResponse(body: unknown): FinalizeResult {
       ...(xp ? { xp } : {}),
       ...(isNum(s.level) ? { level: s.level } : {}),
       ...(isNum(s.totalXp) ? { totalXp: s.totalXp } : {}),
+      ...(Array.isArray(s.badges) ? { badges: s.badges.filter((b): b is string => typeof b === 'string') } : {}),
     },
   };
 }

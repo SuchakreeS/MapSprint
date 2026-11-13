@@ -168,6 +168,10 @@ Then account deletion + privacy policy, then 2.6 closed test. 3.5, 3.7, 3.8, 3.9
       [2026-11-13 PS look decision: dark = original night map + solid yellow edge with glow (zoom-scaled); 3D buildings lighter grey in dark. Tick after testlist F20 + F22.]
 - [ ] 3.5 Smooth score (harsh accel > 0.3 g, brake < −0.35 g, corner > 0.4 g)
 - [ ] 3.6 Badges (10 listed in plan doc) + Drive Recap screen (10) + Share drive (11)
+      DECIDED (PS 2026-11-13): badge XP First Gear 50, Century 100, Cartographer I/II/III 100/300/1000, Weekend Explorer 100, Streak 7 200, Zen 150, District 200, Province 300
+      (one-time, never capped). 7 badges earnable now; Zen / District / Province = "Coming soon" (need 3.5 / 3.8). Share = a picture card (Save to photos + share sheet),
+      start/finish 300 m hidden by default; "Post to feed" + title + visibility picker MOVED to 4.2 (after privacy zones).
+      [Sonnet 2026-11-13: server (migration 20261113130000_badges.sql, pgTAP 136), Badges screen, Profile row, recap badges, share picture DONE in code; needs a NATIVE build. Tick after testlist F23 + F24.]
 - [ ] 3.7 Sounds (expo-audio) + voice lines (expo-speech, English)
 - [ ] 3.8 Explore map (17) + Districts (18) with OSM boundaries for 4 launch provinces
 - [ ] 3.9 3D drive replay (FREE, PS decision 2026-11-06): on the Drive Recap, a camera flyover along the route in 3D

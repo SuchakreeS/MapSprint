@@ -6,7 +6,9 @@
 //   200 { status: 'processed', stats }      counted (also when asked again: idempotent). stats.topKmh (number | null, plan 3.10)
 //                                            is the PRIVATE top speed and stats.newCells (number | null, plan 3.3) the explored cells this
 //                                            drive added (0 is valid): this answer only ever goes to the drive's owner (JWT-scoped).
-//                                            stats.xp { total, distance, newCells, firstDrive, capped, tooOld } (plan 3.1), stats.level
+//                                            stats.xp { total, distance, newCells, firstDrive, capped, tooOld, badges } (plan 3.1; badges = XP from
+//                                            badges unlocked by this drive, already in total), stats.badges (codes of those badges, plan 3.6),
+//                                            stats.level
 //                                            and stats.totalXp (plan 3.2, the account after this drive): absent for drives counted
 //                                            before XP existed.
 //   200 { status: 'rejected', reason }      final, the drive will never count
@@ -85,11 +87,17 @@ async function sha256Hex(text: string): Promise<string> {
 /** XP part of the stored answer for an already counted drive, or {} when it was counted before XP existed. */
 async function storedXp(drive: DriveRow, uid: string, flags: Record<string, unknown>): Promise<Record<string, unknown> | null> {
   if (drive.xp_earned == null) return {};
-  const [events, profile] = await Promise.all([
+  const [events, profile, unlocked] = await Promise.all([
     admin.from('xp_events').select('source, amount').eq('drive_id', drive.id),
     admin.from('profiles').select('total_xp, level').eq('id', uid).maybeSingle(),
+    admin.from('user_badges').select('badges(code)').eq('drive_id', drive.id).eq('user_id', uid),
   ]);
-  if (events.error || profile.error) return null;
+  if (events.error || profile.error || unlocked.error) return null;
+  // The embedded badge is one object (PostgREST many-to-one); accept an array too.
+  const badgeCodes: string[] = (unlocked.data ?? []).flatMap((row: { badges: unknown }) => {
+    const b = Array.isArray(row.badges) ? row.badges : [row.badges];
+    return b.map((x) => (x as { code?: unknown } | null)?.code).filter((c): c is string => typeof c === 'string');
+  });
   const part = (src: string) => (events.data ?? []).filter((e) => e.source === src).reduce((sum, e) => sum + (e.amount ?? 0), 0);
   return {
     xp: {
@@ -99,7 +107,9 @@ async function storedXp(drive: DriveRow, uid: string, flags: Record<string, unkn
       firstDrive: part('first_drive'),
       capped: flags.xpCapped === true,
       tooOld: flags.xpTooOld === true,
+      badges: part('badge'),
     },
+    badges: badgeCodes,
     ...(isNum(profile.data?.level) ? { level: profile.data.level } : {}),
     ...(isNum(profile.data?.total_xp) ? { totalXp: profile.data.total_xp } : {}),
   };
@@ -343,7 +353,9 @@ async function handle(req: Request): Promise<Response> {
         firstDrive: r.xp_first_drive,
         capped: xp.capped,
         tooOld: xp.tooOld,
+        badges: isNum(r.xp_badges) ? r.xp_badges : 0,
       },
+      badges: (Array.isArray(r.badges) ? r.badges : []).map((b: { code?: unknown }) => b.code).filter((c: unknown) => typeof c === 'string'),
       ...(isNum(r.level) ? { level: r.level } : {}),
       ...(isNum(r.total_xp) ? { totalXp: r.total_xp } : {}),
     },

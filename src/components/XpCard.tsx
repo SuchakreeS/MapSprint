@@ -68,6 +68,7 @@ export function XpCard({ xp, totalXp }: { xp: DriveXpStats; totalXp: number | un
         <Row label="Distance" value={`+${formatCount(xp.distance)}`} />
         <Row label="New cells" value={`+${formatCount(xp.newCells)}`} />
         {xp.firstDrive > 0 ? <Row label="First drive today" value={`+${formatCount(xp.firstDrive)}`} /> : null}
+        {xp.badges != null && xp.badges > 0 ? <Row label="Badges" value={`+${formatCount(xp.badges)}`} /> : null}
       </View>
       {xp.capped ? <Text style={[type.caption, { color: c.muted }]}>Daily distance XP limit reached.</Text> : null}
       {xp.tooOld ? <Text style={[type.caption, { color: c.muted }]}>Drives older than 60 days earn no XP.</Text> : null}

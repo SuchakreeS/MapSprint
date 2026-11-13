@@ -7,6 +7,7 @@ import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { Header } from '@/components/Header';
 import { LevelBar } from '@/components/LevelBar';
+import { ProfileBadges } from '@/components/ProfileBadges';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useAvatarUrl } from '@/features/auth/avatar-photo';
 import { formatCount } from '@/lib/format';
@@ -85,6 +86,8 @@ export default function ProfileTab() {
             <LevelBar fraction={progress.fraction} />
           </View>
         ) : null}
+
+        {!guest ? <ProfileBadges /> : null}
 
         {!guest && <Button label="Edit profile" variant="secondary" onPress={() => router.push('/edit-profile')} />}
         <Button label="Drive history" variant="secondary" onPress={() => router.push('/history')} />

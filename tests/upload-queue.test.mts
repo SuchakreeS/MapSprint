@@ -108,3 +108,18 @@ test('rejectReasonText turns server reasons into short sentences, unknown reason
   assert.match(rejectReasonText('too_long'), /too long/i);
   assert.match(rejectReasonText('something-new'), /couldn't be checked|could not be checked/i);
 });
+
+test('parseFinalizeResponse keeps badge XP and the unlocked badge codes (plan 3.6), drops anything malformed, never refuses the answer', () => {
+  const stats = { distanceM: 9120, movingS: 1759, elapsedS: 2700, avgMovingKmh: 18.7, avgOverallKmh: 12.2 };
+  const xp = { total: 275, distance: 75, newCells: 50, firstDrive: 50, capped: false, tooOld: false };
+  const got = parseFinalizeResponse({ status: 'processed', stats: { ...stats, xp: { ...xp, badges: 100 }, badges: ['first_gear', 'century'] } });
+  assert.deepEqual(got, { kind: 'counted', stats: { ...stats, xp: { ...xp, badges: 100 }, badges: ['first_gear', 'century'] } });
+  // No badges key (older server): the XP is kept without it.
+  assert.deepEqual(parseFinalizeResponse({ status: 'processed', stats: { ...stats, xp } }), { kind: 'counted', stats: { ...stats, xp } });
+  // Bad values are dropped.
+  assert.deepEqual(parseFinalizeResponse({ status: 'processed', stats: { ...stats, xp: { ...xp, badges: 'lots' }, badges: ['ok', 5, null] } }),
+    { kind: 'counted', stats: { ...stats, xp, badges: ['ok'] } });
+  assert.deepEqual(parseFinalizeResponse({ status: 'processed', stats: { ...stats, badges: 'first_gear' } }), { kind: 'counted', stats });
+  // An empty list is a real answer (no badge this drive).
+  assert.deepEqual(parseFinalizeResponse({ status: 'processed', stats: { ...stats, badges: [] } }), { kind: 'counted', stats: { ...stats, badges: [] } });
+});

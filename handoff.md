@@ -749,7 +749,39 @@ PS tested the three dark styles on the phone and chose **original Night + the Du
   still night light, 3D only). If that is still not enough: switch `lightPreset` to `dusk` while 3D is on (`src/lib/map-style.ts`, when `on`).
 - NOT checked on phone: dark 3D buildings now clearly visible against the ground (and not too bright / not washed out); the yellow edge + glow with the night look on Map tab / Pre-drive / HUD at city and street zoom; Pearl (incl. 3D) unchanged. Testlist F22 rewritten.
 
+## Session 22 (2026-11-13, Sonnet + Opus advisor): 3.6 badges, recap badges, Badges screen, share as picture. CODE DONE, uncommitted
+Plan file: ~/.claude/plans/bro-now-that-we-shiny-ullman.md. PS decisions: badge XP First Gear 50, Century 100, Cartographer I/II/III 100/300/1000, Weekend Explorer 100, Streak 7 200,
+Zen Driver 150, District Hunter 200, Province Collector 300 (one-time, never capped); Zen / District / Province show "Coming soon" (need 3.5 / 3.8); Share = a picture card
+(Save to photos + Share sheet), "Post to feed" waits for Phase 4; the picture hides the first/last 300 m of the route by default.
+- **Part A, server** (`supabase/migrations/20261113130000_badges.sql`): XP values + design wording on `badges`; `xp_events.badge_id` (FK on delete RESTRICT, check: badge_id set exactly when
+  source='badge'), unique index `(drive_id, source)` now excludes 'badge', unique `(user_id, badge_id) where source='badge'`; `private.award_badges(user, drive, started_at, new_cells)`
+  (service_role only): First Gear (>= 1 counted drive), Century (>= 100 km total), Cartographer I/II/III (>= 100 / 1,000 / 10,000 cells), Weekend Explorer (>= 20 NEW cells on a Bangkok Saturday/Sunday),
+  Streak 7 (7 distinct Bangkok days inside ANY 7-day window containing this drive's day: drives can be counted out of order because `pickNext` lets newer drives overtake an old one in back-off).
+  `finalize_counted_drive` CREATE OR REPLACE with the SAME signature and return type (no deploy race); badge XP joins `xp_earned`, `total_xp`, `level`; returns `xp_badges` and `badges: [{code, xp}]`.
+  A drive older than 60 days still unlocks badges (one-time, nothing to farm).
+- finalize-drive: `stats.xp.badges` (badge XP, inside `total`), `stats.badges` (codes); the already-decided path rebuilds both from `xp_events` + `user_badges`. `upload-queue.ts` parser keeps both (tests); `npm run sync:edge` run.
+- **pgTAP 136 PASS locally** (Docker: `npx supabase db reset` then `npx supabase test db`; the local DB was stale before). 21 new tests (3 badges at once, no second award, weekend 19 vs 20 cells, streak in and out of order, app can't write
+  `user_badges` / call `award_badges`, account delete removes badges). Running it caught a real bug (`array || 'text'` is read as an array literal: now `array_append`). Four old XP expectations moved because First Gear (+50) now lands on a user's first drive.
+- **Opus advisor reviewed Part A**: no blockers. Fixed from the review: the 19-cell weekend test ran after the badge was already owned (reordered), Streak 7 out-of-order, FK `restrict`.
+- **Part B, app**: `src/lib/badges.ts` (catalogue, `badgeProgress`, `currentStreak`, `formatBadgeDate`, `unlockedCount`; 7 tests), `src/features/game/use-badges.ts` (own `user_badges` + cells count + distance + days, cached per account, always filtered by user id),
+  `BadgeMark`, `/badges` screen (design 22: x of 10, unlocked with date, locked with meter, "Coming soon"; guests see `LockedFeature`), Profile row "BADGES · x OF 10" + See all, recap "BADGES UNLOCKED" cards + "Badges +N" row in the XP card,
+  Saving step renamed "XP and badges". Left out on purpose: Smooth tile, Signature label (3.5), Share to feed (4.2).
+- **Part C, share picture** (NEW NATIVE LIBS: `react-native-view-shot`, `expo-sharing`, `expo-media-library` => this needs a NATIVE EAS build): `src/lib/share-card.ts` (`trimRouteEnds`, 300 m, 6 tests), `src/app/record/share.tsx` (card = title, date, route, distance, time, +XP / level, this drive's badges, wordmark;
+  "Hide start and finish" switch on by default; Save to photos via `MediaLibrary.Asset.create`; Share… via `Sharing.shareAsync`; works for guests; never top speed), recap button "Share as picture".
+  APIs were read from the installed SDK 58 typings (the default `expo-media-library` export is the NEW API, `Asset.create`, `requestPermissionsAsync(writeOnly)`).
+  **Permissions:** plugin configured with `granularPermissions: []`, `photosPermission: false`; `android.blockedPermissions` = READ_EXTERNAL_STORAGE + READ_MEDIA_VISUAL_USER_SELECTED. `npx expo config --type prebuild` shows only
+  WRITE_EXTERNAL_STORAGE added (needed on Android <= 12 only), no READ_MEDIA_*. On Android 13+ the module needs no permission to write (`hasWritePermissions()` is false there).
+- Results: typecheck clean, eslint clean, npm test 295/295, pgTAP 136/136 (local), expo config OK.
+- **Known / for the privacy policy (5.2):** `user_badges` stays readable by every signed-in user (incl. `drive_id`), as designed; the shared picture is made on the phone and never uploaded; `drive_fingerprints` (Session 20).
+- **Heads-up for the first drive after deploy:** badges look at the account's WHOLE history, so PS's next drive may unlock several at once (First Gear, plus Century and/or Cartographer if his totals already qualify): hundreds of XP.
+  That is badge XP from existing history; per-drive XP is still not back-filled.
+- **PS RUN ORDER:** (1) commit (suggest 2: `feat(badges): ...` and `feat(share): ...`); (2) `npx supabase db push --remote`; (3) `npx supabase functions deploy finalize-drive --use-api` soon after (until then the recap's XP total includes badge XP but the
+  breakdown has no Badges row); (4) `npx supabase test db --remote` (expect 136); (5) regenerate types from the cloud: `npx supabase gen types typescript --project-id gwcutbwcmxcwpgndaphi > src/features/sync/database.types.ts`;
+  (6) NATIVE EAS build (`npm install -g eas-cli` once, then `eas build --profile preview -p android`); (7) testlist F23 + F24 (+ F21, F22).
+- UNVERIFIED on a device: `captureRef` of the card; `Asset.create` with no explicit permission on Android 13+ (the permission request is wrapped in try/catch, a failed save shows "Could not save... try Share"); `requestPermissionsAsync` with an empty permission list.
+
 ## Next step
+**UPDATE (Session 22): 3.6 badges + share picture are coded; see "Session 22" above for the run order and tests (F23, F24). The older state below is history.**
 **CURRENT STATE (2026-11-13, end of session 20b):** PS is waiting for the EAS preview build (Sessions 18-20b, JS + already-deployed server). Cloud: xp_levels migration pushed,
 finalize-drive v5 deployed, pgTAP 115 pass. Git: Sessions 18-20b are NOT committed yet (suggested 2 commits: `feat(map): dusk fog look ...` and `feat(xp): ...`).
 When the APK is installed PS runs testlist **F21 (XP and levels)** and **F22 (dark map style test)**. Then, in this order:
