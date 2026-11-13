@@ -10,8 +10,10 @@ import {
   exploredEdges,
   fogFeature,
   fogShapes,
+  fogStyleFor,
   needsRecentre,
   unexploredGrid,
+  zoomWidth,
   type Box,
   type LngLat,
 } from '../src/lib/fog.ts';
@@ -141,4 +143,52 @@ test('fogShapes gives the same fog and edges as the single functions', () => {
   const s = fogShapes(cells, box);
   assert.deepEqual(s.fog, fogFeature(cells, box));
   assert.deepEqual(s.edges, exploredEdges(cells, box));
+});
+
+// ---------------------------------------------------------------- the fog look per theme (PS, 2026-11-13)
+test('light fog is exactly the original look', () => {
+  const s = fogStyleFor('light');
+  assert.equal(s.opacity, 0.82);
+  assert.equal(s.glow, null);
+  assert.deepEqual(s.grid, { color: 'muted', opacity: 0.5, width: 0.7 });
+  assert.deepEqual(s.edge, { color: 'primary', width: 1.5, opacity: 0.8 });
+});
+
+test('dark fog keeps the original night fog and grid, but the edge is solid, glows and scales with zoom', () => {
+  const d = fogStyleFor('dark');
+  const l = fogStyleFor('light');
+  assert.equal(d.opacity, l.opacity);
+  assert.deepEqual(d.grid, l.grid);
+  assert.equal(d.edge.color, 'primary');
+  assert.equal(d.edge.opacity, 1);
+  assert.ok(d.glow);
+  assert.equal(d.glow.color, 'primary');
+  assert.equal(d.glow.blur, 4);
+  assert.equal(d.glow.opacity, 0.35);
+});
+
+test('edge and glow widths: wider zoomed out, 2.4 / 9 px at street zoom, never fatter than at the smallest zoom', () => {
+  const { edge, glow } = fogStyleFor('dark');
+  assert.ok(Array.isArray(edge.width) && glow && Array.isArray(glow.width));
+  for (const stops of [edge.width, glow.width]) {
+    const zooms = stops.map(([z]) => z);
+    assert.deepEqual(zooms, [...zooms].sort((x, y) => x - y), 'zoom stops ascend');
+    const atCity = stops.find(([z]) => z >= 10 && z <= 11) ?? stops[0];
+    const atStreet = stops[stops.length - 1];
+    assert.ok(atCity[1] >= atStreet[1], 'not thinner zoomed out');
+    assert.ok(stops.every(([, w]) => w <= stops[0][1]), 'never fatter than at the smallest zoom');
+  }
+  assert.equal(edge.width[edge.width.length - 1][1], 2.4);
+  assert.equal(glow.width[glow.width.length - 1][1], 9);
+});
+
+test('zoomWidth: a plain number stays a number, stops become a Mapbox interpolate expression', () => {
+  assert.equal(zoomWidth(1.5), 1.5);
+  assert.deepEqual(
+    zoomWidth([
+      [10, 3],
+      [16, 2],
+    ]),
+    ['interpolate', ['linear'], ['zoom'], 10, 3, 16, 2],
+  );
 });

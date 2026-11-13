@@ -4,12 +4,12 @@ import { test } from 'node:test';
 
 import { standardStyleJSON } from '../src/lib/map-style.ts';
 
-const COLORS = { bg: '#000001', surface: '#000002', surface2: '#000003', gold: '#000004' };
+const COLORS = { bg: '#000001', surface: '#000002', surface2: '#000003', gold: '#000004', mapBuildings3d: '#000005' };
 const CLIP: GeoJSON.Feature = { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [0, 0] } };
 const parse = (s: string) => JSON.parse(s);
 
-test('dark is dusk by default, light is day, both import Standard', () => {
-  for (const [mode, preset] of [['dark', 'dusk'], ['light', 'day']] as const) {
+test('dark is night, light is day, both import Standard', () => {
+  for (const [mode, preset] of [['dark', 'night'], ['light', 'day']] as const) {
     const s = parse(standardStyleJSON(mode, COLORS));
     assert.equal(s.version, 8);
     assert.equal(s.imports[0].url, 'mapbox://styles/mapbox/standard');
@@ -17,13 +17,12 @@ test('dark is dusk by default, light is day, both import Standard', () => {
   }
 });
 
-test('map look: dark is night for the test looks A and old, light stays day for every look', () => {
-  const preset = (mode: 'dark' | 'light', look: 'dusk' | 'night-tint' | 'night') =>
-    parse(standardStyleJSON(mode, COLORS, { look })).imports[0].config.lightPreset;
-  assert.equal(preset('dark', 'dusk'), 'dusk');
-  assert.equal(preset('dark', 'night-tint'), 'night');
-  assert.equal(preset('dark', 'night'), 'night');
-  for (const look of ['dusk', 'night-tint', 'night'] as const) assert.equal(preset('light', look), 'day');
+test('3D buildings use their own lighter colour (they vanish into the night ground in surface2); flat maps keep surface2', () => {
+  const flat = parse(standardStyleJSON('dark', COLORS)).imports[0].config;
+  assert.equal(flat.colorBuildings, COLORS.surface2);
+  const threeD = parse(standardStyleJSON('dark', COLORS, { threeD: { clip: CLIP } })).imports[0].config;
+  assert.equal(threeD.colorBuildings, COLORS.mapBuildings3d);
+  assert.equal(threeD.colorLand, COLORS.surface); // nothing else changes in 3D
 });
 
 test('flat by default: no 3D and no clip layer', () => {

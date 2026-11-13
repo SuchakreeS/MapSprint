@@ -3,7 +3,6 @@
 import { cellArea, cellsToMultiPolygon, cellToBoundary, cellToLatLng, gridDisk, latLngToCell } from 'h3-js';
 
 import { CELL_RES } from './cells.ts';
-import type { MapLook } from './map-look.ts';
 
 export type LngLat = [number, number];
 export interface Box {
@@ -21,8 +20,6 @@ type ColourToken = 'primary' | 'gold' | 'muted';
 export interface FogStyle {
   /** Fog fill opacity (the fog colour is always `c.bg`): roads stay faintly visible underneath (the "road outlines"). */
   opacity: number;
-  /** Option A: explored cells tinted with this colour (a FillLayer under the edge). null = none. */
-  exploredFill: { color: ColourToken; opacity: number } | null;
   /** Hex outlines of the unexplored cells. */
   grid: { color: ColourToken; opacity: number; width: number };
   /** Line around the explored area. */
@@ -31,17 +28,17 @@ export interface FogStyle {
   glow: { color: ColourToken; width: Width; blur: number; opacity: number } | null;
 }
 
-// Light (Pearl) and the old dark look. Light must stay exactly like this.
+// Light (Pearl): the original look. It must stay exactly like this.
 const FOG_STYLE_LIGHT: FogStyle = {
   opacity: 0.82,
-  exploredFill: null,
   grid: { color: 'muted', opacity: 0.5, width: 0.7 },
   edge: { color: 'primary', width: 1.5, opacity: 0.8 },
   glow: null,
 };
 
-// Dark (Onyx), PS feedback 2026-11-13: the explored area was almost invisible under a near-black fog.
-// Edge and glow widths are wider zoomed out (city level, zoom 10-11) and settle at 2.4 / 9 px from street zoom.
+// Dark (Onyx), PS decision 2026-11-13 after testing three looks on the phone: the original night map, fog and grid, but the
+// explored edge from the "Dusk" test: a solid yellow line over a soft glow. The explored area was almost invisible under the
+// near-black fog, worst at city level (zoom 10-11), so both widths are larger zoomed out and settle at 2.4 / 9 px from zoom 15.
 const DARK_EDGE: FogStyle['edge'] = {
   color: 'primary',
   opacity: 1,
@@ -65,22 +62,12 @@ const DARK_GLOW: NonNullable<FogStyle['glow']> = {
     [18, 9],
   ],
 };
-const DARK_GRID: FogStyle['grid'] = { color: 'gold', opacity: 0.3, width: 0.7 };
 
 export const FOG = {
-  /** Per theme and map look (src/lib/map-look.ts, temporary switch). Pearl ignores the look. */
+  /** Per theme. */
   styles: {
     light: FOG_STYLE_LIGHT,
-    /** B "Dusk reveal" (default; the lighter base map is in map-style.ts): denser fog, glowing edge, gold grid. */
-    dusk: { opacity: 0.9, exploredFill: null, grid: DARK_GRID, edge: DARK_EDGE, glow: DARK_GLOW } satisfies FogStyle,
-    /** A "Night + tint" (fallback): night base, old fog, explored cells tinted, same edge, glow and grid as B. */
-    nightTint: {
-      opacity: 0.82,
-      exploredFill: { color: 'primary', opacity: 0.09 },
-      grid: DARK_GRID,
-      edge: DARK_EDGE,
-      glow: DARK_GLOW,
-    } satisfies FogStyle,
+    dark: { ...FOG_STYLE_LIGHT, edge: DARK_EDGE, glow: DARK_GLOW } satisfies FogStyle,
   },
   /** HUD / Pre-drive: fog box of +- this many degrees (about 16 km) around the car. */
   hudBoxHalfDeg: 0.15,
@@ -90,11 +77,9 @@ export const FOG = {
   gridMinZoom: 13,
 } as const;
 
-/** The fog look for a theme and map look. Light and the old "night" look are the original values. */
-export function fogStyleFor(mode: 'dark' | 'light', look: MapLook): FogStyle {
-  if (mode === 'light') return FOG.styles.light;
-  if (look === 'dusk') return FOG.styles.dusk;
-  return look === 'night-tint' ? FOG.styles.nightTint : FOG.styles.light;
+/** The fog look for a theme. */
+export function fogStyleFor(mode: 'dark' | 'light'): FogStyle {
+  return FOG.styles[mode];
 }
 
 /** A Mapbox line-width value: a number as is, stops as a zoom interpolation. */
@@ -167,8 +152,6 @@ function inRing([x, y]: LngLat, ring: LngLat[]): boolean {
 export interface FogShapes {
   fog: GeoJSON.Feature<GeoJSON.MultiPolygon>;
   edges: GeoJSON.FeatureCollection<GeoJSON.LineString>;
-  /** The explored areas themselves (for the optional tint, option A). */
-  explored: GeoJSON.Feature<GeoJSON.MultiPolygon>;
 }
 
 /**
@@ -206,7 +189,6 @@ export function fogShapes(cells: Iterable<string>, b: Box): FogShapes {
       geometry: { type: 'MultiPolygon', coordinates: [main, ...islands.map((i) => [i.ring, ...i.holes])] },
     },
     edges: { type: 'FeatureCollection', features: edges },
-    explored: { type: 'Feature', properties: {}, geometry: { type: 'MultiPolygon', coordinates: polys } },
   };
 }
 

@@ -1,7 +1,6 @@
 // Small local preferences (expo-sqlite key-value store, survives app restarts).
 import Storage from 'expo-sqlite/kv-store';
 
-import { parseMapLook, type MapLook } from '@/lib/map-look';
 import { autoPauseMsFor, parseAutoPauseMin, parseTheme, type AutoPauseMin, type ThemeChoice } from '@/lib/recording-settings';
 import { parseTravelMode, type TravelMode } from '@/lib/travel-mode';
 import { normaliseKind, type Car, type VehicleKind } from '@/lib/vehicles';
@@ -68,11 +67,6 @@ export const getAutoPauseMs = (): number => autoPauseMsFor(getAutoPauseOn(), get
 
 export const getKeepAwakeOn = (): boolean => Storage.getItemSync(KEEP_AWAKE) !== '0';
 export const setKeepAwakeOn = (on: boolean) => Storage.setItemSync(KEEP_AWAKE, on ? '1' : '0');
-
-// TEMPORARY (2026-11-13): "Map style (test)" for comparing the dark fog looks on the phone. Remove with src/lib/map-look.ts.
-const MAP_LOOK = 'pref.mapLook';
-export const getMapLook = (): MapLook => parseMapLook(Storage.getItemSync(MAP_LOOK));
-export const setMapLook = (l: MapLook) => Storage.setItemSync(MAP_LOOK, l);
 
 /** Locked-phone "Finish this drive?" notification (default on). */
 export const getFinishReminderOn = (): boolean => Storage.getItemSync(FINISH_REMINDER) !== '0';

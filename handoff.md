@@ -699,7 +699,7 @@ Plan (approved by PS): ~/.claude/plans/bro-now-that-we-shiny-ullman.md. Rules ar
   - RUN ORDER for PS afterwards: commit, `db push --remote`, `test db --remote`, `functions deploy finalize-drive --use-api` RIGHT AFTER the push (the old function calls the dropped signature), EAS build, F21.
 - Until the server half exists the app shows no XP card, and the Profile card shows Level 1 / 0 XP (profiles defaults).
 
-## Session 20 (2026-11-13, Opus): 3.1/3.2 SERVER HALF, code done (uncommitted). pgTAP NOT RUN (no Docker daemon here)
+## Session 20 (2026-11-13, Opus): 3.1/3.2 SERVER HALF, code done and DEPLOYED (uncommitted in git). pgTAP 115/115 PASS (PS ran it on Docker, cloud)
 - Migration `supabase/migrations/20261113120000_xp_levels.sql`:
   - `xp_events.day` (Bangkok day of the DRIVE start; default + backfill), unique `(drive_id, source)` (non-null drive), partial unique `(user_id, day) where source='first_drive'`.
   - `drive_fingerprints (user_id, hash sha256 hex, drive_id set null, PK (user_id, hash))`: RLS on, no anon/authenticated grants. Outlives a deleted drive, cascades with the account.
@@ -732,9 +732,31 @@ Plan (approved by PS): ~/.claude/plans/bro-now-that-we-shiny-ullman.md. Rules ar
 - `src/features/sync/database.types.ts` regenerated from the CLOUD (`npx supabase gen types typescript --project-id gwcutbwcmxcwpgndaphi > src/features/sync/database.types.ts`,
   works without Docker): now has `drive_fingerprints`, `xp_events.day`, `drive_xp_context`, new `finalize_counted_drive`. Cleaner formatting, so the diff is large.
 - Results: typecheck clean, eslint clean, npm test 285/285.
+- Build gotcha (2026-11-13): `npx eas-cli@latest build` fails with `npm error code ECOMPROMISED / Lock compromised` (npm 11.6 npx lock times out while
+  unpacking the big eas-cli on Windows, even after deleting the `_npx` cache folder). Fix: `npm install -g eas-cli`, then `eas build --profile preview -p android`.
+  PS's EAS preview build with Sessions 18-20b is running.
+
+## Session 21 (2026-11-13, Sonnet): map style decided, temporary switch REMOVED, 3D buildings lighter (JS only, uncommitted)
+PS tested the three dark styles on the phone and chose **original Night + the Dusk edge** (solid yellow line, glow underneath, widths that scale with zoom). He also found the
+3D buildings in dark mode almost invisible (surface2 #1E1E1E under night light = same black as the ground) and chose a lighter neutral grey.
+- `src/lib/fog.ts`: `FOG.styles` = `{ light, dark }` (dark = the original light values + `DARK_EDGE` + `DARK_GLOW`); `fogStyleFor(mode)`; option A's `exploredFill` and `fogShapes().explored` removed.
+  Dark fog stays 0.82, grid stays muted 0.5 / 0.7 px (= the old night look); edge `c.primary` opacity 1, 3.4 px at zoom 9 -> 2.4 px from zoom 15; glow 12 -> 9 px, blur 4, opacity 0.35.
+- `src/lib/map-style.ts`: night/day again (no dusk); `colorBuildings` = new token `mapBuildings3d` ONLY while 3D is on (flat map keeps surface2). Token `mapBuildings3d`: dark `#5A5A5A`, light `#EEEBE4` (= surface2, Pearl 3D unchanged).
+- REMOVED the temporary switch: `src/lib/map-look.ts`, `src/features/map/use-map-look.ts`, `tests/map-look.test.mts`, the Settings row + caption, `getMapLook/setMapLook` (an old `pref.mapLook` value may sit in the kv store, harmless),
+  the `look` plumbing in `FogLayers`, Map tab, HUD, Pre-drive.
+- Results: typecheck clean, eslint clean, npm test 281/281 (fog +4 style tests, map-style: 3D building colour test).
+- NOT checked on phone: dark 3D buildings now clearly grey against the ground (and not too bright / not washed out); the yellow edge + glow with the night look on Map tab / Pre-drive / HUD at city and street zoom; Pearl (incl. 3D) unchanged. Testlist F22 rewritten.
 
 ## Next step
-**Decision (PS, 2026-11-12):** do NOT start the closed test yet. Build the Phase 3 core loop first (order in plan.md Phase 3:
+**CURRENT STATE (2026-11-13, end of session 20b):** PS is waiting for the EAS preview build (Sessions 18-20b, JS + already-deployed server). Cloud: xp_levels migration pushed,
+finalize-drive v5 deployed, pgTAP 115 pass. Git: Sessions 18-20b are NOT committed yet (suggested 2 commits: `feat(map): dusk fog look ...` and `feat(xp): ...`).
+When the APK is installed PS runs testlist **F21 (XP and levels)** and **F22 (dark map style test)**. Then, in this order:
+1. DONE (Session 21): PS chose Night + the Dusk edge; the temporary map style switch is removed. Needs a new EAS build for F22 (JS only).
+2. Tick plan.md 3.1, 3.2 (after F21), 3.3 (F19) and 3.4 (F20) when their testlists pass.
+3. Next build task: **3.6 full recap + first badges** (badges are where `xp_reward` gets real values; seed has all 0), then account deletion + privacy policy (mention: route hashes kept after a drive is deleted), then 2.6 closed test.
+Open: code review of the XP phase was not run yet (CLAUDE.md asks for one at the end of each phase).
+
+**Older decision (PS, 2026-11-12):** do NOT start the closed test yet. Build the Phase 3 core loop first (order in plan.md Phase 3:
 3.0 -> 3.3 -> 3.4 -> 3.1/3.2 -> 3.6), then account deletion + privacy policy, then 2.6. PS meanwhile starts the Play developer
 account verification and collects tester Gmails. 1.9 (trip-meter drives) continues on every drive. **3.10 is coded (Session 15 above):
 PS runs its steps + F18. 3.0 DONE (Standard, see "Spike 3.0 result"). Next: 3.3 hex cells: CODE DONE (Session 16): PS runs its steps + F19. 3.4 fog: CODE DONE (Session 17): PS commits, runs the server steps, builds, tests F20. Then 3.1 XP + 3.2 levels.**

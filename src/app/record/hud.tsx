@@ -16,7 +16,6 @@ import { RecenterGlyph } from '@/components/RecenterGlyph';
 import { SpeedGauge } from '@/components/SpeedGauge';
 import { useExploredCells } from '@/features/map/explored';
 import { FogLayers } from '@/features/map/FogLayers';
-import { useMapLook } from '@/features/map/use-map-look';
 import { getActiveSessionId, getCurrentOwner } from '@/features/recording/db';
 import { stopRecording } from '@/features/recording/recorder';
 import { useLiveDrive } from '@/features/recording/use-live-drive';
@@ -34,8 +33,7 @@ export default function HudScreen() {
   const { mode, c, fonts, type } = useTheme();
   const insets = useSafeAreaInsets();
   const { ready, error, elapsedS, snapshot, speedKmh, paused, nowMs, route, liveCells, lastPos, pause, resume } = useLiveDrive();
-  const look = useMapLook(); // TEMPORARY map style test (Settings)
-  const styleJSON = useMemo(() => standardStyleJSON(mode, c, { look }), [mode, c, look]);
+  const styleJSON = useMemo(() => standardStyleJSON(mode, c), [mode, c]);
   const { cells: explored } = useExploredCells();
   // Live estimate for the pill; the recap's "New cells" is the server's number.
   const newCells = useMemo(() => liveCells.filter((cell) => !explored.has(cell)).length, [explored, liveCells]);
@@ -88,7 +86,7 @@ export default function HudScreen() {
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <MapView
-        key={`${mode}-${look}`}
+        key={mode}
         style={styles.map}
         styleJSON={styleJSON}
         scaleBarEnabled={false}
@@ -105,7 +103,7 @@ export default function HudScreen() {
             if (!e.nativeEvent.payload.followUserLocation) setFollowing(false);
           }}
         />
-        {fogBox && <FogLayers cells={shownCells} box={fogBox} gridCell={gridCell} look={look} />}
+        {fogBox && <FogLayers cells={shownCells} box={fogBox} gridCell={gridCell} />}
         {route.length >= 2 && (
           <ShapeSource
             id="drive-route"
