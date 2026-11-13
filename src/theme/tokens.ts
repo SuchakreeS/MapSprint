@@ -24,7 +24,10 @@ export interface Palette {
   overlayPill: string;
   /** Wide "explored road" band behind the route on the welcome art (design 01). */
   explored: string;
-  /** 3D buildings on the Map tab: lighter than `surface2`, which the night lighting turns near-black (PS, 2026-11-13). */
+  /**
+   * 3D buildings on the Map tab (only while 3D is on). Mapbox's night light dims every colour heavily, so the dark value is
+   * deliberately bright: #1E1E1E and then #5A5A5A both still vanished into the ground on the phone (PS, 2026-11-13).
+   */
   mapBuildings3d: string;
   /** Level bar LEDs (design 10 / 20): segments 1-5, 6-9 and 10-12 when lit. */
   ledLow: string;
@@ -51,7 +54,7 @@ export const palettes: Record<Mode, Palette> = {
     scrim: 'rgba(0,0,0,0.72)',
     overlayPill: 'rgba(10,10,10,0.9)',
     explored: '#1A1A1A',
-    mapBuildings3d: '#5A5A5A',
+    mapBuildings3d: '#D8D4CA',
     ledLow: '#E8E6E1',
     ledMid: '#FFC20E',
     ledHigh: '#FF453A',

@@ -745,7 +745,9 @@ PS tested the three dark styles on the phone and chose **original Night + the Du
 - REMOVED the temporary switch: `src/lib/map-look.ts`, `src/features/map/use-map-look.ts`, `tests/map-look.test.mts`, the Settings row + caption, `getMapLook/setMapLook` (an old `pref.mapLook` value may sit in the kv store, harmless),
   the `look` plumbing in `FogLayers`, Map tab, HUD, Pre-drive.
 - Results: typecheck clean, eslint clean, npm test 281/281 (fog +4 style tests, map-style: 3D building colour test).
-- NOT checked on phone: dark 3D buildings now clearly grey against the ground (and not too bright / not washed out); the yellow edge + glow with the night look on Map tab / Pre-drive / HUD at city and street zoom; Pearl (incl. 3D) unchanged. Testlist F22 rewritten.
+- Follow-up (PS, 2026-11-13, on the new build): #5A5A5A was STILL too dark (the night preset dims every colour), so dark `mapBuildings3d` is now **#D8D4CA** (warm off-white,
+  still night light, 3D only). If that is still not enough: switch `lightPreset` to `dusk` while 3D is on (`src/lib/map-style.ts`, when `on`).
+- NOT checked on phone: dark 3D buildings now clearly visible against the ground (and not too bright / not washed out); the yellow edge + glow with the night look on Map tab / Pre-drive / HUD at city and street zoom; Pearl (incl. 3D) unchanged. Testlist F22 rewritten.
 
 ## Next step
 **CURRENT STATE (2026-11-13, end of session 20b):** PS is waiting for the EAS preview build (Sessions 18-20b, JS + already-deployed server). Cloud: xp_levels migration pushed,
