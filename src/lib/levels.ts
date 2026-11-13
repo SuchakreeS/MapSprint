@@ -43,3 +43,11 @@ export function litSegments(fraction: number): number {
   if (!Number.isFinite(fraction) || fraction <= 0) return 0;
   return Math.min(LED_SEGMENTS, Math.floor(fraction * LED_SEGMENTS));
 }
+
+/** The drive that earned `earned` XP and left the account at `totalXp` crossed into a new level: from -> to. Null otherwise. */
+export function levelUp(totalXp: number, earned: number): { from: number; to: number } | null {
+  if (!Number.isFinite(totalXp) || !Number.isFinite(earned) || earned <= 0) return null;
+  const to = levelForXp(totalXp);
+  const from = levelForXp(totalXp - earned);
+  return to > from ? { from, to } : null;
+}

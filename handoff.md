@@ -721,6 +721,17 @@ Plan (approved by PS): ~/.claude/plans/bro-now-that-we-shiny-ullman.md. Rules ar
 - **PS RUN ORDER:** (1) **MANDATORY:** start Docker Desktop, `npx supabase test db` locally (expect 115; this SQL has never run anywhere yet); (2) commit; (3) `npx supabase db push --remote`;
   (4) `npx supabase functions deploy finalize-drive --use-api` IMMEDIATELY after (the old deployed function calls the dropped signature: uploads fail with 503 and retry until it is deployed);
   (5) `npx supabase test db --remote` (expect 115); (6) EAS preview build; (7) testlist F21 (plus the map-look checks from Session 18).
+- **DONE by PS (2026-11-13):** db push --remote, functions deploy (finalize-drive v5), test db --remote **115 PASS**. Claude checked the cloud read-only (MCP): migration
+  applied, one `finalize_counted_drive` with the new signature, level checkpoints 1,1,2,2,3,3,4, app blocked from the new functions/table, trigger present, 0 stuck uploads.
+
+## Session 20b (2026-11-13, Opus): small extras for the same build (JS only, uncommitted)
+- Recap level-up: `levelUp(totalXp, earned)` in `src/lib/levels.ts` (test-first); `XpCard` shows the design's up arrow in the Level pill and "Level up! You reached level N."
+  (or "Level up! 3 → 5") only when the drive crossed a level.
+- Saving screen (09): third step "XP and level" (`SavingView.steps.xp`, done with the others when counted; tests updated); subtitle "adding up your XP" like the design.
+  Badges are not mentioned (3.6).
+- `src/features/sync/database.types.ts` regenerated from the CLOUD (`npx supabase gen types typescript --project-id gwcutbwcmxcwpgndaphi > src/features/sync/database.types.ts`,
+  works without Docker): now has `drive_fingerprints`, `xp_events.day`, `drive_xp_context`, new `finalize_counted_drive`. Cleaner formatting, so the diff is large.
+- Results: typecheck clean, eslint clean, npm test 285/285.
 
 ## Next step
 **Decision (PS, 2026-11-12):** do NOT start the closed test yet. Build the Phase 3 core loop first (order in plan.md Phase 3:

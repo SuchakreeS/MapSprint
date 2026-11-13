@@ -13,7 +13,8 @@ export type StepState = 'waiting' | 'working' | 'done';
 export interface SavingView {
   percent: number;
   label: 'uploading' | 'checking' | 'done';
-  steps: { cleaned: StepState; speed: StepState };
+  /** xp = "XP and level": worked out in the same server call as speed and distance (plan 3.1). */
+  steps: { cleaned: StepState; speed: StepState; xp: StepState };
   /** wait = keep showing; counted = open the recap; rejected = say why; local = nothing to count, open the local recap. */
   outcome: 'wait' | 'counted' | 'rejected' | 'local';
   noSignal: boolean;
@@ -30,14 +31,14 @@ export function savingView(
 ): SavingView {
   const state = row?.state ?? 'queued';
   if (state === 'counted') {
-    return { percent: 100, label: 'done', steps: { cleaned: 'done', speed: 'done' }, outcome: 'counted', noSignal: false };
+    return { percent: 100, label: 'done', steps: { cleaned: 'done', speed: 'done', xp: 'done' }, outcome: 'counted', noSignal: false };
   }
   if (state === 'rejected') {
     const local = row?.reason != null && NOTHING_TO_COUNT.includes(row.reason);
     return {
       percent: 100,
       label: 'done',
-      steps: { cleaned: 'waiting', speed: 'waiting' },
+      steps: { cleaned: 'waiting', speed: 'waiting', xp: 'waiting' },
       outcome: local ? 'local' : 'rejected',
       noSignal: false,
     };
@@ -47,7 +48,7 @@ export function savingView(
   return {
     percent: uploading ? PHASE_PERCENT[uploading] : 8,
     label: checking ? 'checking' : 'uploading',
-    steps: { cleaned: checking ? 'working' : 'waiting', speed: 'waiting' },
+    steps: { cleaned: checking ? 'working' : 'waiting', speed: 'waiting', xp: 'waiting' },
     outcome: 'wait',
     noSignal: sinceStartMs >= NO_SIGNAL_AFTER_MS,
   };

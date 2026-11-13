@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { levelForXp, levelProgress, litSegments, xpToNext } from '../src/lib/levels.ts';
+import { levelForXp, levelProgress, levelUp, litSegments, xpToNext } from '../src/lib/levels.ts';
 
 test('xpToNext = round(100 * L^1.5)', () => {
   assert.equal(xpToNext(1), 100);
@@ -49,4 +49,12 @@ test('litSegments: how many of the 12 LED segments are on', () => {
   assert.equal(litSegments(-1), 0);
   assert.equal(litSegments(Number.NaN), 0);
   assert.equal(litSegments(5), 12);
+});
+
+test('levelUp: the level before and after a drive, only when the drive crossed a level', () => {
+  assert.deepEqual(levelUp(120, 50), { from: 1, to: 2 }); // 70 -> 120 crosses 100
+  assert.equal(levelUp(90, 50), null); // 40 -> 90, still level 1
+  assert.deepEqual(levelUp(903, 903), { from: 1, to: 4 }); // several levels at once
+  assert.equal(levelUp(500, 0), null);
+  assert.equal(levelUp(Number.NaN, 50), null);
 });

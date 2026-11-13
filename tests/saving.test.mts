@@ -21,10 +21,10 @@ test('the ring label says uploading until the server is checking, then checking,
   assert.equal(savingView(row('counted'), null, 1000).label, 'done');
 });
 
-test('the two real steps (track cleaned, speed and distance) are done only when counted', () => {
-  assert.deepEqual(savingView(row('uploading'), 'track', 1000).steps, { cleaned: 'waiting', speed: 'waiting' });
-  assert.deepEqual(savingView(row('uploading'), 'server', 1000).steps, { cleaned: 'working', speed: 'waiting' });
-  assert.deepEqual(savingView(row('counted'), null, 1000).steps, { cleaned: 'done', speed: 'done' });
+test('the three real steps (track cleaned, speed and distance, XP) are done only when counted', () => {
+  assert.deepEqual(savingView(row('uploading'), 'track', 1000).steps, { cleaned: 'waiting', speed: 'waiting', xp: 'waiting' });
+  assert.deepEqual(savingView(row('uploading'), 'server', 1000).steps, { cleaned: 'working', speed: 'waiting', xp: 'waiting' });
+  assert.deepEqual(savingView(row('counted'), null, 1000).steps, { cleaned: 'done', speed: 'done', xp: 'done' });
 });
 
 test('outcome: wait while queued or uploading, counted, rejected', () => {

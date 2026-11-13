@@ -127,13 +127,14 @@ export default function SavingScreen() {
             {view.outcome === 'rejected' ? "Couldn't count this drive" : 'Saving your drive'}
           </Text>
           <Text style={[type.body, { color: c.muted, textAlign: 'center' }]}>
-            {view.outcome === 'rejected' ? rejectReasonText(row?.reason) : 'Checking your track and adding up your numbers.'}
+            {view.outcome === 'rejected' ? rejectReasonText(row?.reason) : 'Checking your track and adding up your XP.'}
           </Text>
         </View>
 
         <View style={[styles.steps, { backgroundColor: c.surface, borderColor: c.line }]}>
           <StepRow title="Track cleaned" state={view.steps.cleaned} />
-          <StepRow title="Speed and distance" state={view.steps.speed} last />
+          <StepRow title="Speed and distance" state={view.steps.speed} />
+          <StepRow title="XP and level" state={view.steps.xp} last />
         </View>
 
         <View style={[styles.note, { backgroundColor: c.surface2, opacity: view.noSignal ? 1 : 0.75 }]}>

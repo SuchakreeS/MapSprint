@@ -1,9 +1,10 @@
 // XP card on the drive recap (design 10): "+N XP", level pill, 12-LED bar, breakdown. Server numbers only (counted drives).
-// The smooth bonus row stays hidden until 3.5; no fake data.
+// The smooth bonus row stays hidden until 3.5; no fake data. A drive that crossed a level shows the up arrow (design) and a line.
 import { StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 import { formatCount } from '@/lib/format';
-import { levelProgress } from '@/lib/levels';
+import { levelProgress, levelUp } from '@/lib/levels';
 import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 import type { DriveXpStats } from '@/lib/upload-queue';
@@ -23,10 +24,11 @@ function Row({ label, value }: { label: string; value: string }) {
 export function XpCard({ xp, totalXp }: { xp: DriveXpStats; totalXp: number | undefined }) {
   const { c, type, fonts } = useTheme();
   const progress = totalXp != null ? levelProgress(totalXp) : null;
+  const up = totalXp != null ? levelUp(totalXp, xp.total) : null;
   return (
     <View
       accessible
-      accessibilityLabel={`${xp.total} XP earned${progress ? `, level ${progress.level}` : ''}`}
+      accessibilityLabel={`${xp.total} XP earned${up ? `, level up to ${up.to}` : progress ? `, level ${progress.level}` : ''}`}
       style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
       <View style={styles.head}>
         <View style={styles.big}>
@@ -35,10 +37,21 @@ export function XpCard({ xp, totalXp }: { xp: DriveXpStats; totalXp: number | un
         </View>
         {progress ? (
           <View style={[styles.pill, { backgroundColor: c.accentFill }]}>
+            {up ? (
+              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={c.onAccent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M12 19V5" />
+                <Path d="M5 12l7-7 7 7" />
+              </Svg>
+            ) : null}
             <Text style={{ color: c.onAccent, fontFamily: fonts.bodyBold, fontSize: 14 }}>{`Level ${progress.level}`}</Text>
           </View>
         ) : null}
       </View>
+      {up ? (
+        <Text style={[type.small, { color: c.text, fontFamily: fonts.bodyBold }]}>
+          {up.to - up.from > 1 ? `Level up! ${up.from} → ${up.to}` : `Level up! You reached level ${up.to}.`}
+        </Text>
+      ) : null}
       {progress ? (
         <View style={styles.bar}>
           <LevelBar fraction={progress.fraction} />
@@ -66,7 +79,7 @@ const styles = StyleSheet.create({
   card: { padding: space.lg, borderRadius: radius.lg, borderWidth: 1, gap: space.md },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md },
   big: { flexDirection: 'row', alignItems: 'baseline' },
-  pill: { height: 36, paddingHorizontal: 14, borderRadius: 18, justifyContent: 'center' },
+  pill: { height: 36, paddingHorizontal: 14, borderRadius: 18, flexDirection: 'row', alignItems: 'center', gap: 6 },
   bar: { gap: space.sm },
   line: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 28 },
   divider: { height: 1 },
