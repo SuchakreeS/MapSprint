@@ -5,7 +5,7 @@ set local role postgres;
 create extension if not exists pgtap with schema extensions;
 set local search_path to extensions, public;
 
-select plan(136);
+select plan(140);
 
 
 -- =====================================================================
@@ -329,7 +329,7 @@ select throws_ok($$select public.finalize_counted_drive('d1000000-0000-0000-0000
 set local role postgres;
 
 -- =====================================================================
--- 3.1 / 3.2: XP, levels and the anti-cheat gates  [20]
+-- 3.1 / 3.2: XP, levels and the anti-cheat gates  [22]
 --   C counts two drives on the same Bangkok day (2026-11-01), then tries the first route again.
 -- =====================================================================
 set local role postgres;
@@ -399,13 +399,26 @@ select throws_ok($$insert into public.drives (id, user_id, started_at, ended_at,
 select throws_ok($$insert into public.drives (id, user_id, started_at, ended_at, status)
                   values ('d4000000-0000-0000-0000-000000000020', '44444444-4444-4444-4444-444444444444', now() - interval '30 days', now() - interval '29 days', 'uploading')$$,
   '23505', null, 'retrying an existing upload at the limit still gets "already exists", never 429');
+-- The same limit for the role the app really uses (column grants + RLS + the SECURITY INVOKER trigger).
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"44444444-4444-4444-4444-444444444444","role":"authenticated"}';
+select throws_ok($$insert into public.drives (id, started_at, ended_at)
+                  values (gen_random_uuid(), now() - interval '50 days', now() - interval '49 days')$$,
+  'PT429', null, 'the app itself gets 429 at the limit');
+set local role postgres;
+-- Rows the app gave up on (permanent failure after the row was inserted) stay 'uploading' forever: they must not block for good.
+update public.drives set created_at = now() - interval '2 days'
+ where user_id = '44444444-4444-4444-4444-444444444444' and status = 'uploading';
+select lives_ok($$insert into public.drives (id, user_id, started_at, ended_at, status)
+                  values (gen_random_uuid(), '44444444-4444-4444-4444-444444444444', now() - interval '60 days', now() - interval '59 days', 'uploading')$$,
+  'uploads stuck for more than a day no longer count toward the limit');
 
 delete from auth.users where id = '33333333-3333-3333-3333-333333333333';
 select is((select count(*)::int from public.drive_fingerprints where user_id = '33333333-3333-3333-3333-333333333333'), 0,
   'account delete removes fingerprints');
 
 -- =====================================================================
--- 3.6: badges, awarded in the same transaction as the drive  [21]
+-- 3.6: badges, awarded in the same transaction as the drive  [23]
 --   E: first drive = 100 km over 100 new cells (3 badges at once), then weekday / weekend drives.
 --   F: seven days in a row (Streak 7).
 -- =====================================================================
@@ -413,7 +426,8 @@ set local role postgres;
 insert into auth.users (id, email) values
   ('55555555-5555-5555-5555-555555555555', 'e@test.com'),
   ('66666666-6666-6666-6666-666666666666', 'f@test.com'),
-  ('77777777-7777-7777-7777-777777777777', 'g@test.com');
+  ('77777777-7777-7777-7777-777777777777', 'g@test.com'),
+  ('88888888-8888-8888-8888-888888888888', 'h@test.com');
 
 insert into public.drives (id, user_id, started_at, ended_at, status) values
   ('e5000000-0000-0000-0000-000000000001', '55555555-5555-5555-5555-555555555555', '2026-10-05 10:00+07', '2026-10-05 11:00+07', 'uploading'),
@@ -425,6 +439,9 @@ insert into public.drives (id, user_id, started_at, ended_at, status)
   select format('f6000000-0000-0000-0000-%s', lpad(i::text, 12, '0'))::uuid, '66666666-6666-6666-6666-666666666666',
          '2026-09-01 10:00+07'::timestamptz + make_interval(days => i - 1), '2026-09-01 11:00+07'::timestamptz + make_interval(days => i - 1), 'uploading'
     from generate_series(1, 7) as i;
+insert into public.drives (id, user_id, started_at, ended_at, status) values
+  ('b8000000-0000-0000-0000-000000000001', '88888888-8888-8888-8888-888888888888', '2026-07-01 08:00+07', '2026-07-01 09:00+07', 'uploading'),
+  ('b8000000-0000-0000-0000-000000000002', '88888888-8888-8888-8888-888888888888', '2026-07-01 10:00+07', '2026-07-01 11:00+07', 'uploading');
 insert into public.drives (id, user_id, started_at, ended_at, status)
   select format('a7000000-0000-0000-0000-%s', lpad(i::text, 12, '0'))::uuid, '77777777-7777-7777-7777-777777777777',
          '2026-08-01 10:00+07'::timestamptz + make_interval(days => i - 1), '2026-08-01 11:00+07'::timestamptz + make_interval(days => i - 1), 'uploading'
@@ -496,6 +513,16 @@ set local role service_role;
 select is((public.finalize_counted_drive('a7000000-0000-0000-0000-000000000003', '77777777-7777-7777-7777-777777777777', '2026-08-03 10:00+07', '2026-08-03 11:00+07', 1000, 600, 600, 6, 6, null, 'p', 50, 10, '{}'::jsonb, array[]::text[], null, 0, 0, 0))->>'xp_badges',
   '200', 'the missing day arriving last still completes the Streak 7');
 set local role postgres;
+
+-- H: the daily distance cap is enforced by the database too (concurrent calls cannot dodge it): 1,400 earned, then 500 asked, 100 given.
+set local role service_role;
+select public.finalize_counted_drive('b8000000-0000-0000-0000-000000000001', '88888888-8888-8888-8888-888888888888', '2026-07-01 08:00+07', '2026-07-01 09:00+07', 140000, 3600, 3600, 140, 140, null, 'p', 50, 10, '{}'::jsonb, array[]::text[], null, 1400, 0, 0);
+select is((public.finalize_counted_drive('b8000000-0000-0000-0000-000000000002', '88888888-8888-8888-8888-888888888888', '2026-07-01 10:00+07', '2026-07-01 11:00+07', 50000, 3600, 3600, 50, 50, null, 'p', 50, 10, '{}'::jsonb, array[]::text[], null, 500, 0, 0))->>'xp_distance',
+  '100', 'distance XP is clamped by the database to what is left of the day''s 1,500');
+set local role postgres;
+select is((select array[(flags->>'xpCapped')::text, (select sum(amount)::text from public.xp_events where user_id = '88888888-8888-8888-8888-888888888888' and source = 'distance')]
+           from public.drive_private where drive_id = 'b8000000-0000-0000-0000-000000000002'),
+  array['true', '1500'], 'the capped drive is flagged and the day holds exactly 1,500 distance XP');
 
 select throws_ok($$insert into public.xp_events (user_id, source, amount, badge_id)
                    select '55555555-5555-5555-5555-555555555555', 'badge', 5, id from public.badges where code = 'first_gear'$$,

@@ -291,12 +291,14 @@ async function handle(req: Request): Promise<Response> {
     return json(503, { error: 'try_again' });
   }
   const known = Number((ctx as Record<string, unknown>).known_cells);
+  // Fail closed: an unreadable "distance XP today" counts as the cap already reached (the database clamps it again anyway).
+  const today = Number((ctx as Record<string, unknown>).distance_xp_today);
   const xp = computeDriveXp({
     distanceM: outcome.stats.distanceM,
     totalCells: outcome.cells.length,
     newCells: outcome.cells.length - (Number.isFinite(known) ? known : outcome.cells.length),
     firstOfDay: (ctx as Record<string, unknown>).first_drive_taken === false,
-    distanceXpToday: Number((ctx as Record<string, unknown>).distance_xp_today),
+    distanceXpToday: Number.isFinite(today) ? today : XP.dailyDistanceCap,
     startedAtMs: outcome.startMs,
     nowMs: Date.now(),
   });
@@ -348,10 +350,11 @@ async function handle(req: Request): Promise<Response> {
       newCells,
       xp: {
         total: r.xp_total,
-        distance: xp.distance,
+        // The database clamps the distance XP to the day's cap under a per-user lock (concurrent calls): use its numbers.
+        distance: isNum(r.xp_distance) ? r.xp_distance : xp.distance,
         newCells: r.xp_new_cells,
         firstDrive: r.xp_first_drive,
-        capped: xp.capped,
+        capped: typeof r.xp_capped === 'boolean' ? r.xp_capped || xp.capped : xp.capped,
         tooOld: xp.tooOld,
         badges: isNum(r.xp_badges) ? r.xp_badges : 0,
       },

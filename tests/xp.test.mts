@@ -87,3 +87,12 @@ test('fingerprintInput: 4-decimal rounding, repeats dropped, no time; null for t
   // A parked "drive" (a few spots) has no fingerprint, so two of them on different days are not called duplicates.
   assert.equal(fingerprintInput(line.slice(0, XP.fingerprintMinPoints - 1)), null);
 });
+
+// The database enforces the same cap (supabase/migrations/20261113130000_badges.sql, private.xp_daily_distance_cap): keep them equal.
+test('the SQL daily distance cap matches XP.dailyDistanceCap', async () => {
+  const { readFileSync } = await import('node:fs');
+  const sql = readFileSync(new URL('../supabase/migrations/20261113130000_badges.sql', import.meta.url), 'utf8');
+  const m = /function private\.xp_daily_distance_cap\(\)[\s\S]*?\$\$ select (\d+) \$\$/.exec(sql);
+  assert.ok(m, 'cap function not found in the migration');
+  assert.equal(Number(m[1]), XP.dailyDistanceCap);
+});

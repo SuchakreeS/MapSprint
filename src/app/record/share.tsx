@@ -1,14 +1,14 @@
 // Share drive as a picture (plan 3.6, design 11 without the feed parts). The card below is rendered on the phone, captured as a
 // PNG and then saved to the photos or handed to the Android share sheet. Nothing is uploaded. Posting to the feed (title, who can
 // see it) comes with the Feed in Phase 4, after privacy zones.
-// Privacy: the first and last 300 m of the route are hidden by default (home / work), see src/lib/share-card.ts.
+// Privacy: nothing within 300 m of the start or the finish is drawn by default (home / work), see src/lib/share-card.ts.
 // Never shown: top speed (plan 3.10).
 import { router, useLocalSearchParams } from 'expo-router';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import { useMemo, useRef, useState, type ComponentRef } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { captureRef } from 'react-native-view-shot';
+import { captureRef, releaseCapture } from 'react-native-view-shot';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BadgeMark } from '@/components/BadgeMark';
@@ -30,8 +30,10 @@ import { useTheme } from '@/theme/use-theme';
 export default function ShareScreen() {
   const { c, type, fonts } = useTheme();
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const [drive] = useState(() => (id ? loadDrive(Number(id)) : null));
-  const [upload] = useState(() => (id ? getUpload(Number(id)) : null));
+  const sessionId = Number(id);
+  const validId = Number.isInteger(sessionId) && sessionId > 0;
+  const [drive] = useState(() => (validId ? loadDrive(sessionId) : null));
+  const [upload] = useState(() => (validId ? getUpload(sessionId) : null));
   const server = upload?.state === 'counted' ? upload.stats : null;
   const [hideEnds, setHideEnds] = useState(true);
   const [busy, setBusy] = useState<'save' | 'share' | null>(null);
@@ -59,8 +61,9 @@ export default function ShareScreen() {
   const save = async () => {
     setBusy('save');
     setNote(null);
+    let uri: string | null = null;
     try {
-      const uri = await capture();
+      uri = await capture();
       try {
         // Write-only: asks for nothing on Android 13+, and never for read access to the user's photos.
         await MediaLibrary.requestPermissionsAsync(true, ['photo']);
@@ -72,6 +75,7 @@ export default function ShareScreen() {
     } catch {
       setNote('Could not save the picture. Try Share… and save it from there.');
     } finally {
+      if (uri) releaseCapture(uri); // the photo library keeps its own copy; remove the temp file
       setBusy(null);
     }
   };
@@ -79,16 +83,18 @@ export default function ShareScreen() {
   const share = async () => {
     setBusy('share');
     setNote(null);
+    let uri: string | null = null;
     try {
       if (!(await Sharing.isAvailableAsync())) {
         setNote('Sharing is not available on this phone. Use Save to photos.');
         return;
       }
-      const uri = await capture();
+      uri = await capture();
       await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your drive' });
     } catch {
       setNote('Could not open the share menu. Try Save to photos.');
     } finally {
+      if (uri) releaseCapture(uri); // shareAsync resolves when the share sheet closes
       setBusy(null);
     }
   };
@@ -153,7 +159,7 @@ export default function ShareScreen() {
         <View style={[styles.option, { backgroundColor: c.surface, borderColor: c.line }]}>
           <Switch
             label="Hide start and finish"
-            caption={`Cuts the first and last ${SHARE_HIDE_ENDS_M} m off the route in the picture.`}
+            caption={`Leaves out everything within ${SHARE_HIDE_ENDS_M} m of where you started and finished.`}
             value={hideEnds}
             onValueChange={setHideEnds}
           />

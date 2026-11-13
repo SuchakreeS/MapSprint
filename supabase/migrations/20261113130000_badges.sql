@@ -97,10 +97,44 @@ $$;
 revoke execute on function private.award_badges(uuid, uuid, timestamptz, int) from public, anon, authenticated;
 grant execute on function private.award_badges(uuid, uuid, timestamptz, int) to service_role;
 
+-- ============ review fixes (code review 2026-11-13) ============
+-- (1) The 20-open-uploads limit counted stuck rows forever: the app gives up on a drive after its row was inserted when the track
+--     upload or finalize-drive fails permanently, and that row stays 'uploading' (nothing cleans it up). 20 of those and every new
+--     drive got 429 forever, silently. Only rows created in the last day count now (a normal upload finishes in seconds).
+create or replace function private.drives_limit_open_uploads() returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if new.status = 'uploading' and (
+    select count(*) from public.drives
+     where user_id = new.user_id and status = 'uploading' and id <> new.id
+       and created_at > now() - interval '1 day'
+  ) >= 20 then
+    raise exception 'too many drives waiting to be counted' using errcode = 'PT429';
+  end if;
+  return new;
+end;
+$$;
+revoke execute on function private.drives_limit_open_uploads() from public, anon, authenticated;
+
+-- (2) The daily distance XP cap was applied by the Edge Function from a value read BEFORE the save, so several finalize calls
+--     at the same time (a hand-made client, up to 20 open drives) could each see "nothing earned today" and dodge the cap.
+--     finalize_counted_drive now locks the user's profile row first (one finalization per user at a time) and clamps the
+--     distance XP itself. Same value as XP.dailyDistanceCap in src/lib/xp.ts (tests/xp.test.mts checks they match).
+create function private.xp_daily_distance_cap() returns int
+language sql immutable
+set search_path = ''
+as $$ select 1500 $$;
+revoke execute on function private.xp_daily_distance_cap() from public, anon, authenticated;
+grant execute on function private.xp_daily_distance_cap() to service_role;
+
 -- ============ finalize_counted_drive: same signature and return type, plus badges ============
 -- (create or replace: no drop, so the deployed Edge Function keeps working during the push; it just ignores the new keys.)
 -- New: step 4b awards badges after the cells; their XP joins xp_earned, profiles.total_xp and level.
--- Returns { new_cells, xp_new_cells, xp_first_drive, xp_badges, badges: [{code, xp}], xp_total, total_xp, level }.
+-- Review fix: the user's profile row is locked first (finalizations of one user run one at a time) and the distance XP is
+-- clamped here to what is left of the Bangkok day's cap, so concurrent calls cannot dodge it.
+-- Returns { new_cells, xp_distance, xp_capped, xp_new_cells, xp_first_drive, xp_badges, badges: [{code, xp}], xp_total, total_xp, level }.
 create or replace function public.finalize_counted_drive(
   p_drive_id uuid,
   p_user_id uuid,
@@ -136,10 +170,16 @@ declare
   v_total int;
   v_profile_total int;
   v_level int;
+  v_today int;
+  v_xp_distance int;
+  v_capped boolean := false;
 begin
   if coalesce(p_xp_distance, 0) < 0 or coalesce(p_xp_per_new_cell, 0) < 0 or coalesce(p_xp_first_drive, 0) < 0 then
     raise exception 'negative xp' using errcode = '22023';
   end if;
+
+  -- One finalization per user at a time: the daily cap, known cells and badges below all read this user's earlier results.
+  perform 1 from public.profiles where id = p_user_id for update;
 
   update public.drives
      set status = 'processed',
@@ -183,9 +223,18 @@ begin
 
   v_xp_cells := v_new * coalesce(p_xp_per_new_cell, 0);
 
-  if coalesce(p_xp_distance, 0) > 0 then
+  -- Distance XP: never more than what is left of today's cap (read under the lock above).
+  select coalesce(sum(amount), 0) into v_today
+    from public.xp_events where user_id = p_user_id and source = 'distance' and day = v_day;
+  v_xp_distance := least(coalesce(p_xp_distance, 0), greatest(0, private.xp_daily_distance_cap() - v_today));
+  v_capped := v_xp_distance < coalesce(p_xp_distance, 0);
+  if v_capped then
+    update public.drive_private set flags = flags || '{"xpCapped": true}'::jsonb where drive_id = p_drive_id;
+  end if;
+
+  if v_xp_distance > 0 then
     insert into public.xp_events (user_id, drive_id, source, amount, day)
-    values (p_user_id, p_drive_id, 'distance', p_xp_distance, v_day);
+    values (p_user_id, p_drive_id, 'distance', v_xp_distance, v_day);
   end if;
   if v_xp_cells > 0 then
     insert into public.xp_events (user_id, drive_id, source, amount, day)
@@ -204,7 +253,7 @@ begin
   v_badges := private.award_badges(p_user_id, p_drive_id, p_started_at, v_new);
   select coalesce(sum((b ->> 'xp')::int), 0) into v_xp_badges from jsonb_array_elements(v_badges) as b;
 
-  v_total := coalesce(p_xp_distance, 0) + v_xp_cells + v_xp_first + v_xp_badges;
+  v_total := v_xp_distance + v_xp_cells + v_xp_first + v_xp_badges;
 
   update public.drives set new_cells = v_new, xp_earned = v_total where id = p_drive_id;
 
@@ -216,6 +265,8 @@ begin
 
   return jsonb_build_object(
     'new_cells', v_new,
+    'xp_distance', v_xp_distance,
+    'xp_capped', v_capped,
     'xp_new_cells', v_xp_cells,
     'xp_first_drive', v_xp_first,
     'xp_badges', v_xp_badges,

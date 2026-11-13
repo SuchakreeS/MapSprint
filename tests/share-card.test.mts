@@ -52,3 +52,27 @@ test('a route with fewer than two points left after the trim is empty', () => {
   // 700 m route, points only every 350 m: after trimming 300 m each side only the middle point (350 m) is left.
   assert.deepEqual(trimRouteEnds(line(700, 3), 300), []);
 });
+
+test('a jittery or looping start (parked, car park ramp) is still hidden: the first kept point is >= 300 m from the start in a straight line', () => {
+  // 600 m of path circling within 40 m of the door, then 2 km straight north.
+  const start: RouteCoord = [100.5, 13.75];
+  const loop: RouteCoord[] = Array.from({ length: 60 }, (_, i) => {
+    const a = (i / 60) * 2 * Math.PI * 4; // four laps
+    return [start[0] + (40 / 108_000) * Math.cos(a), start[1] + (40 / M_PER_DEG_LAT) * Math.sin(a)] as RouteCoord;
+  });
+  const away = line(2000, 201).map(([lng, lat]) => [lng, lat] as RouteCoord);
+  const route = [start, ...loop, ...away];
+  const out = trimRouteEnds(route, 300);
+  assert.ok(out.length >= 2);
+  assert.ok(metresFrom(start, out[0]) >= 300 - 1e-6, `first kept point is ${metresFrom(start, out[0]).toFixed(0)} m from the door`);
+  for (const p of out) assert.ok(metresFrom(start, p) >= 300 - 1e-6, 'no kept point is near the start');
+});
+
+test('a jittery finish is hidden the same way', () => {
+  const route = line(2000, 201);
+  const end = route[route.length - 1];
+  const jitter: RouteCoord[] = Array.from({ length: 40 }, (_, i) => [end[0] + (i % 2 ? 1 : -1) * 0.0002, end[1] + (i % 3) * 0.0001] as RouteCoord);
+  const out = trimRouteEnds([...route, ...jitter, end], 300);
+  assert.ok(out.length >= 2);
+  for (const p of out) assert.ok(metresFrom(p, end) >= 300 - 1e-6, 'no kept point is near the finish');
+});

@@ -157,7 +157,7 @@ Then account deletion + privacy policy, then 2.6 closed test. 3.5, 3.7, 3.8, 3.9
       drive of the Bangkok day (my addition: drive >= 1 km); distance XP capped at 1,500/day (new cells and bonus never capped); smooth x1.0 until 3.5;
       same for every mode; NO back-fill (everyone starts at level 1); shown on the recap + Profile only (not HUD/History). Gates: (a) duplicate track
       fingerprint -> rejected `duplicate`, (b) max 20 open uploads per user, (c) drives older than 60 days earn 0 XP. Plan file: ~/.claude/plans/bro-now-that-we-shiny-ullman.md
-      [Sonnet 2026-11-13: pure rules xp.ts + levels.ts, parser, XP card, Profile level card DONE. Opus 2026-11-13: migration 20261113120000_xp_levels.sql + finalize-drive DONE in code (pgTAP 115 not yet run). Tick 3.1 + 3.2 after testlist F21.]
+      [Sonnet 2026-11-13: pure rules xp.ts + levels.ts, parser, XP card, Profile level card DONE. Opus 2026-11-13: migration 20261113120000_xp_levels.sql + finalize-drive DONE in code (pgTAP passed on the cloud 2026-11-13). Tick 3.1 + 3.2 after testlist F21.]
 - [ ] 3.2 Levels: XP for next level = 100 × level^1.5
       [done in code 2026-11-13 with 3.1: `src/lib/levels.ts` + SQL `private.level_for_xp` (same checkpoints, pgTAP), recap Level pill + level-up line, Profile level card. Tick after testlist F21.]
 - [ ] 3.3 H3 cells res 9 + gridPathCells; explored_cells upsert server-side
@@ -171,7 +171,7 @@ Then account deletion + privacy policy, then 2.6 closed test. 3.5, 3.7, 3.8, 3.9
       DECIDED (PS 2026-11-13): badge XP First Gear 50, Century 100, Cartographer I/II/III 100/300/1000, Weekend Explorer 100, Streak 7 200, Zen 150, District 200, Province 300
       (one-time, never capped). 7 badges earnable now; Zen / District / Province = "Coming soon" (need 3.5 / 3.8). Share = a picture card (Save to photos + share sheet),
       start/finish 300 m hidden by default; "Post to feed" + title + visibility picker MOVED to 4.2 (after privacy zones).
-      [Sonnet 2026-11-13: server (migration 20261113130000_badges.sql, pgTAP 136), Badges screen, Profile row, recap badges, share picture DONE in code; needs a NATIVE build. Tick after testlist F23 + F24.]
+      [Sonnet 2026-11-13, code-reviewed + fixed (Session 23), migration PUSHED + finalize-drive v6 deployed 2026-11-13: server (migration 20261113130000_badges.sql, pgTAP 140 local), Badges screen, Profile row, recap badges, share picture DONE in code; needs a NATIVE build. Tick after testlist F23 + F24.]
 - [ ] 3.7 Sounds (expo-audio) + voice lines (expo-speech, English)
 - [ ] 3.8 Explore map (17) + Districts (18) with OSM boundaries for 4 launch provinces
 - [ ] 3.9 3D drive replay (FREE, PS decision 2026-11-06): on the Drive Recap, a camera flyover along the route in 3D

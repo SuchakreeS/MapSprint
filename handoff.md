@@ -776,12 +776,43 @@ Zen Driver 150, District Hunter 200, Province Collector 300 (one-time, never cap
 - **Heads-up for the first drive after deploy:** badges look at the account's WHOLE history, so PS's next drive may unlock several at once (First Gear, plus Century and/or Cartographer if his totals already qualify): hundreds of XP.
   That is badge XP from existing history; per-drive XP is still not back-filled.
 - **PS RUN ORDER:** (1) commit (suggest 2: `feat(badges): ...` and `feat(share): ...`); (2) `npx supabase db push --remote`; (3) `npx supabase functions deploy finalize-drive --use-api` soon after (until then the recap's XP total includes badge XP but the
-  breakdown has no Badges row); (4) `npx supabase test db --remote` (expect 136); (5) regenerate types from the cloud: `npx supabase gen types typescript --project-id gwcutbwcmxcwpgndaphi > src/features/sync/database.types.ts`;
+  breakdown has no Badges row); (4) `npx supabase test db --remote` (expect 140, see Session 23); (5) regenerate types from the cloud: `npx supabase gen types typescript --project-id gwcutbwcmxcwpgndaphi > src/features/sync/database.types.ts`;
   (6) NATIVE EAS build (`npm install -g eas-cli` once, then `eas build --profile preview -p android`); (7) testlist F23 + F24 (+ F21, F22).
 - UNVERIFIED on a device: `captureRef` of the card; `Asset.create` with no explicit permission on Android 13+ (the permission request is wrapped in try/catch, a failed save shows "Could not save... try Share"); `requestPermissionsAsync` with an empty permission list.
 
+## Session 23 (2026-11-13, Opus): independent code review of Phase 3 (4ebaa46..47ad51e) + fixes, uncommitted
+Reviewer verdict: "With fixes", no Critical. Strengths noted: one atomic transaction, tight grants, safe migration order, old/new app-server compatibility, top speed kept private.
+Fixed (all in the NOT-yet-pushed `20261113130000_badges.sql` + app):
+- **I1 open-upload limit never expired**: rows the app gives up on after inserting them (permanent track-upload / finalize failure, `upload-runner.ts` ~144/157) stay `uploading`
+  forever; 20 of them = every new drive 429 forever, silently. `private.drives_limit_open_uploads` (CREATE OR REPLACE) now only counts rows created in the last day. pgTAP: stale rows no longer block.
+  (A real cleanup of stuck `uploading` rows is still open: pg_cron or account deletion work.)
+- **I2 daily distance cap dodgeable by concurrent finalize calls** (a hand-made client): `finalize_counted_drive` now locks the user's profile row first (`for update`, one finalization per user at a time)
+  and clamps the distance XP in SQL to what is left of the Bangkok day (`private.xp_daily_distance_cap()` = 1500, a Node test checks it equals `XP.dailyDistanceCap`); flags `xpCapped` when clamped;
+  returns `xp_distance` + `xp_capped`, which finalize-drive now uses. The lock also closes the known-cells race. Edge: an unreadable "distance XP today" now counts as the cap reached (fail closed).
+- **I3 share picture trimmed by path length only**: jitter while parked or a car park ramp could spend 300 m of path next to the door. `trimRouteEnds` now also requires >= 300 m STRAIGHT-LINE
+  distance from the start and from the finish (2 new tests: looping start, jittery finish). Switch caption updated.
+- Minor: authenticated-role pgTAP test for the upload limit (PT429 through RLS + column grants); share screen deletes its temp PNG (`releaseCapture`) and ignores a bad `id`; plan.md stale text.
+- Results: pgTAP **140/140** (local, after `db reset`), npm test 298/298, typecheck + eslint clean, edge type-check OK.
+Deferred (noted, not fixed): a retried (already-decided) answer returns the account's CURRENT level/total, so a late retry could show a wrong "Level up!" line; drives counted before the XP
+migration have no fingerprint (a hand-made delete + re-upload within 60 days could earn per-drive XP once); `use-badges` pages through every counted drive on each focus (move to an RPC aggregate
+later); `badges.cache.<uid>` + `explored_cache` stay on the phone after sign-out (handle with account deletion); plan-level: phone-supplied timestamps let a cheater backdate up to 60 days of
+daily caps (if XP ever feeds public rankings, also cap per upload day).
+**Run order unchanged** except: `npx supabase test db --remote` now expects **140**.
+
 ## Next step
-**UPDATE (Session 22): 3.6 badges + share picture are coded; see "Session 22" above for the run order and tests (F23, F24). The older state below is history.**
+**CURRENT STATE (2026-11-13, end of Session 23):**
+- Code: Phase 3 core loop is coded and code-reviewed: dark map look (S18/S21), XP + levels (S19/S20), badges + share picture (S22), review fixes (S23). Sessions 22-23 + the review fixes are
+  NOT committed yet (working tree: share, share-card, finalize-drive, badges migration, rls_test, tests, regenerated database.types.ts, docs).
+- Cloud (checked read-only by Claude via MCP, 2026-11-13): all 13 migrations applied incl. `20261113130000_badges` WITH the Session 23 fixes (cap clamp in SQL, 1-day upload-limit expiry);
+  badge XP set (Cartographer III = 1000); the app cannot execute `private.award_badges`; finalize-drive deployed as **v6**; 0 stuck uploads; 0 badges awarded so far.
+  `database.types.ts` regenerated by PS from the cloud. `npx supabase test db --remote` (expect 140) NOT reported yet by PS (local run: 140/140).
+- PS is now building the NATIVE EAS preview APK (new libs: view-shot, sharing, media-library; use `eas build --profile preview -p android` with the global eas-cli).
+- When it is installed: testlist **F21** (XP), **F22** (dark map), **F23** (badges; expect several badges at once on the first drive), **F24** (share picture). Then tick 3.1, 3.2, 3.3 (F19), 3.4 (F20 + F22), 3.6.
+- Next build task after the phone tests: **account deletion** (Opus: Edge Function removing account, drives, cells, XP, badges, fingerprints, track files, avatars; clear `badges.cache.<uid>` +
+  `explored_cache` on the phone) + **privacy policy draft** (mention: speed recorded, top speed private, route hashes kept after a drive is deleted, badges visible to signed-in users, share
+  picture made on the phone), then 2.6 closed test. Also open: a cleanup for drives stuck in `uploading` (pg_cron), the deferred review minors in Session 23.
+
+**Older state (Session 22 / 20b), history:**
 **CURRENT STATE (2026-11-13, end of session 20b):** PS is waiting for the EAS preview build (Sessions 18-20b, JS + already-deployed server). Cloud: xp_levels migration pushed,
 finalize-drive v5 deployed, pgTAP 115 pass. Git: Sessions 18-20b are NOT committed yet (suggested 2 commits: `feat(map): dusk fog look ...` and `feat(xp): ...`).
 When the APK is installed PS runs testlist **F21 (XP and levels)** and **F22 (dark map style test)**. Then, in this order:

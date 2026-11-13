@@ -527,6 +527,7 @@ export type Database = {
       xp_events: {
         Row: {
           amount: number
+          badge_id: number | null
           created_at: string
           day: string
           drive_id: string | null
@@ -536,6 +537,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          badge_id?: number | null
           created_at?: string
           day?: string
           drive_id?: string | null
@@ -545,6 +547,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          badge_id?: number | null
           created_at?: string
           day?: string
           drive_id?: string | null
@@ -553,6 +556,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "xp_events_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "xp_events_drive_id_fkey"
             columns: ["drive_id"]
