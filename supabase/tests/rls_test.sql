@@ -5,7 +5,7 @@ set local role postgres;
 create extension if not exists pgtap with schema extensions;
 set local search_path to extensions, public;
 
-select plan(95);
+select plan(115);
 
 
 -- =====================================================================
@@ -306,9 +306,9 @@ insert into public.drives (id, user_id, started_at, ended_at, status) values
 
 -- The happy path runs as the role the Edge Function really uses, so a missing EXECUTE or table grant would show up here.
 set local role service_role;
-select is(public.finalize_counted_drive('d1000000-0000-0000-0000-00000000000e', '22222222-2222-2222-2222-222222222222', now() - interval '10 hours', now() - interval '9 hours', 1000, 600, 600, 6, 6, 'SRID=4326;LINESTRING(100.5 13.75,100.51 13.76)', 'p', 50, 10, '{}'::jsonb, array['8964a4b138fffff','8964a4ba0a3ffff']),
-  2, 'first counted drive: both cells are new');
-select is(public.finalize_counted_drive('d1000000-0000-0000-0000-00000000000e', '22222222-2222-2222-2222-222222222222', now() - interval '10 hours', now() - interval '9 hours', 1000, 600, 600, 6, 6, 'SRID=4326;LINESTRING(100.5 13.75,100.51 13.76)', 'p', 50, 10, '{}'::jsonb, array['8964a4b138fffff','8964a4ba0a3ffff']),
+select is((public.finalize_counted_drive('d1000000-0000-0000-0000-00000000000e', '22222222-2222-2222-2222-222222222222', now() - interval '10 hours', now() - interval '9 hours', 1000, 600, 600, 6, 6, 'SRID=4326;LINESTRING(100.5 13.75,100.51 13.76)', 'p', 50, 10, '{}'::jsonb, array['8964a4b138fffff','8964a4ba0a3ffff'], null, 0, 0, 0))->>'new_cells',
+  '2', 'first counted drive: both cells are new');
+select is((public.finalize_counted_drive('d1000000-0000-0000-0000-00000000000e', '22222222-2222-2222-2222-222222222222', now() - interval '10 hours', now() - interval '9 hours', 1000, 600, 600, 6, 6, 'SRID=4326;LINESTRING(100.5 13.75,100.51 13.76)', 'p', 50, 10, '{}'::jsonb, array['8964a4b138fffff','8964a4ba0a3ffff'], null, 0, 0, 0))::text,
   null, 'a drive that is no longer uploading is not counted twice');
 set local role postgres;
 
@@ -317,16 +317,92 @@ select is((select new_cells from public.drives where id = 'd1000000-0000-0000-00
 select is((select count(*)::int from public.explored_cells where user_id = '22222222-2222-2222-2222-222222222222'), 2, 'both cells were saved for the driver');
 
 -- (the args below put ...0f at -10h..-9h, so it collides with the just-counted ...0e: any overlap proves the rollback)
-select throws_ok($$select public.finalize_counted_drive('d1000000-0000-0000-0000-00000000000f', '22222222-2222-2222-2222-222222222222', now() - interval '10 hours', now() - interval '9 hours', 1000, 600, 600, 6, 6, 'SRID=4326;LINESTRING(100.5 13.75,100.51 13.76)', 'p', 50, 10, '{}'::jsonb, array['89283082803ffff'])$$,
+select throws_ok($$select public.finalize_counted_drive('d1000000-0000-0000-0000-00000000000f', '22222222-2222-2222-2222-222222222222', now() - interval '10 hours', now() - interval '9 hours', 1000, 600, 600, 6, 6, 'SRID=4326;LINESTRING(100.5 13.75,100.51 13.76)', 'p', 50, 10, '{}'::jsonb, array['89283082803ffff'], null, 0, 0, 0)$$,
   '23P01', null, 'an overlapping drive is refused');
 select is((select count(*)::int from public.explored_cells where h3_index = '89283082803ffff'), 0, 'a refused drive leaves no cells');
 select is((select count(*)::int from public.drive_private where drive_id = 'd1000000-0000-0000-0000-00000000000f'), 0, 'a refused drive leaves no private row');
 
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}';
-select throws_ok($$select public.finalize_counted_drive('d1000000-0000-0000-0000-00000000000e', '22222222-2222-2222-2222-222222222222', now() - interval '10 hours', now() - interval '9 hours', 1000, 600, 600, 6, 6, 'SRID=4326;LINESTRING(100.5 13.75,100.51 13.76)', 'p', 50, 10, '{}'::jsonb, array['89283082803ffff'])$$,
+select throws_ok($$select public.finalize_counted_drive('d1000000-0000-0000-0000-00000000000e', '22222222-2222-2222-2222-222222222222', now() - interval '10 hours', now() - interval '9 hours', 1000, 600, 600, 6, 6, 'SRID=4326;LINESTRING(100.5 13.75,100.51 13.76)', 'p', 50, 10, '{}'::jsonb, array['89283082803ffff'], null, 0, 0, 0)$$,
   '42501', null, 'the app cannot call finalize_counted_drive');
 set local role postgres;
+
+-- =====================================================================
+-- 3.1 / 3.2: XP, levels and the anti-cheat gates  [20]
+--   C counts two drives on the same Bangkok day (2026-11-01), then tries the first route again.
+-- =====================================================================
+set local role postgres;
+insert into public.drives (id, user_id, started_at, ended_at, status) values
+  ('d3000000-0000-0000-0000-000000000001', '33333333-3333-3333-3333-333333333333', '2026-11-01 08:00+07', '2026-11-01 09:00+07', 'uploading'),
+  ('d3000000-0000-0000-0000-000000000002', '33333333-3333-3333-3333-333333333333', '2026-11-01 10:00+07', '2026-11-01 11:00+07', 'uploading'),
+  ('d3000000-0000-0000-0000-000000000003', '33333333-3333-3333-3333-333333333333', '2026-11-02 10:00+07', '2026-11-02 11:00+07', 'uploading');
+
+-- The happy path runs as the role the Edge Function really uses.
+set local role service_role;
+-- 100 distance + 3 new cells x 25 + 50 first drive = 225
+select is((public.finalize_counted_drive('d3000000-0000-0000-0000-000000000001', '33333333-3333-3333-3333-333333333333', '2026-11-01 08:00+07', '2026-11-01 09:00+07', 10000, 3600, 3600, 10, 10, null, 'p', 50, 10, '{}'::jsonb, array['890000000000001','890000000000002','890000000000003'], repeat('a', 64), 100, 25, 50))->>'xp_total',
+  '225', 'first drive: distance + new cells + first-drive bonus');
+-- Same day, one known + one new cell. The bonus is asked for again (as if two uploads raced) but must not be given twice.
+select is((public.finalize_counted_drive('d3000000-0000-0000-0000-000000000002', '33333333-3333-3333-3333-333333333333', '2026-11-01 10:00+07', '2026-11-01 11:00+07', 4000, 3600, 3600, 4, 4, null, 'p', 50, 10, '{}'::jsonb, array['890000000000001','890000000000004'], repeat('b', 64), 40, 25, 50))->>'xp_total',
+  '65', 'second drive the same day: no second first-drive bonus, only the really new cell pays');
+select is(public.drive_xp_context('33333333-3333-3333-3333-333333333333', '2026-11-01 20:00+07', array['890000000000001','890000000000009']),
+  jsonb_build_object('known_cells', 1, 'distance_xp_today', 140, 'first_drive_taken', true),
+  'drive_xp_context: known cells, distance XP today, bonus taken');
+select is(public.drive_xp_context('33333333-3333-3333-3333-333333333333', '2026-11-02 08:00+07', array['890000000000009']),
+  jsonb_build_object('known_cells', 0, 'distance_xp_today', 0, 'first_drive_taken', false),
+  'drive_xp_context: a new Bangkok day starts from zero');
+select throws_ok($$select public.finalize_counted_drive('d3000000-0000-0000-0000-000000000003', '33333333-3333-3333-3333-333333333333', '2026-11-02 10:00+07', '2026-11-02 11:00+07', 10000, 3600, 3600, 10, 10, null, 'p', 50, 10, '{}'::jsonb, array['890000000000005'], repeat('a', 64), 100, 25, 50)$$,
+  'MSDUP', null, 'the same route uploaded again is refused');
+select throws_ok($$select public.finalize_counted_drive('d3000000-0000-0000-0000-000000000003', '33333333-3333-3333-3333-333333333333', '2026-11-02 10:00+07', '2026-11-02 11:00+07', 10000, 3600, 3600, 10, 10, null, 'p', 50, 10, '{}'::jsonb, array['890000000000005'], repeat('c', 64), -5, 25, 50)$$,
+  '22023', null, 'negative XP is refused');
+set local role postgres;
+
+select is((select array[total_xp, level] from public.profiles where id = '33333333-3333-3333-3333-333333333333'),
+  array[290, 2], 'profile total XP and level are updated (290 XP = level 2)');
+select is((select count(*)::int from public.xp_events where user_id = '33333333-3333-3333-3333-333333333333'), 5,
+  'one XP row per non-zero part (3 + 2)');
+select is((select count(*)::int from public.xp_events where user_id = '33333333-3333-3333-3333-333333333333' and day = '2026-11-01'), 5,
+  'XP rows carry the Bangkok day of the drive');
+select is((select array[xp_earned, new_cells] from public.drives where id = 'd3000000-0000-0000-0000-000000000002'),
+  array[65, 1], 'drives.xp_earned and new_cells are stored');
+select is((select status from public.drives where id = 'd3000000-0000-0000-0000-000000000003'), 'uploading',
+  'a refused duplicate rolls everything back');
+select is((select count(*)::int from public.explored_cells where h3_index = '890000000000005'), 0, 'a refused duplicate leaves no cells');
+
+select is(array[private.level_for_xp(0), private.level_for_xp(99), private.level_for_xp(100), private.level_for_xp(382),
+                private.level_for_xp(383), private.level_for_xp(902), private.level_for_xp(903)],
+  array[1, 1, 2, 2, 3, 3, 4], 'level checkpoints match src/lib/levels.ts');
+
+-- Deleting a drive keeps its fingerprint (otherwise delete + re-upload would farm XP again).
+delete from public.drives where id = 'd3000000-0000-0000-0000-000000000001';
+select is((select count(*)::int from public.drive_fingerprints where hash = repeat('a', 64)), 1, 'the fingerprint outlives the deleted drive');
+
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}';
+select throws_ok($$select public.drive_xp_context('33333333-3333-3333-3333-333333333333', now(), array['890000000000001'])$$,
+  '42501', null, 'the app cannot call drive_xp_context');
+select throws_ok('select * from public.drive_fingerprints', '42501', null, 'the app cannot read fingerprints');
+set local role postgres;
+
+-- Gate (b): at most 20 drives waiting to be counted (D has none before this).
+insert into public.drives (id, user_id, started_at, ended_at, status)
+  select gen_random_uuid(), '44444444-4444-4444-4444-444444444444', now() - make_interval(days => g + 1), now() - make_interval(days => g), 'uploading'
+    from generate_series(1, 19) as g;
+select lives_ok($$insert into public.drives (id, user_id, started_at, ended_at, status)
+                  values ('d4000000-0000-0000-0000-000000000020', '44444444-4444-4444-4444-444444444444', now() - interval '30 days', now() - interval '29 days', 'uploading')$$,
+  'the 20th open upload is allowed');
+select throws_ok($$insert into public.drives (id, user_id, started_at, ended_at, status)
+                  values (gen_random_uuid(), '44444444-4444-4444-4444-444444444444', now() - interval '40 days', now() - interval '39 days', 'uploading')$$,
+  'PT429', null, 'the 21st open upload waits (HTTP 429)');
+-- The app re-inserts a drive's row on every retry and treats 23505 as "already done": at the limit that must still be 23505.
+select throws_ok($$insert into public.drives (id, user_id, started_at, ended_at, status)
+                  values ('d4000000-0000-0000-0000-000000000020', '44444444-4444-4444-4444-444444444444', now() - interval '30 days', now() - interval '29 days', 'uploading')$$,
+  '23505', null, 'retrying an existing upload at the limit still gets "already exists", never 429');
+
+delete from auth.users where id = '33333333-3333-3333-3333-333333333333';
+select is((select count(*)::int from public.drive_fingerprints where user_id = '33333333-3333-3333-3333-333333333333'), 0,
+  'account delete removes fingerprints');
 
 -- =====================================================================
 -- PDPA: deleting the account removes everything  [3]

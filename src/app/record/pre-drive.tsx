@@ -17,6 +17,7 @@ import { useAuth } from '@/features/auth/auth-provider';
 import { useVehicles } from '@/features/auth/vehicles';
 import { useExploredCells } from '@/features/map/explored';
 import { FogLayers } from '@/features/map/FogLayers';
+import { useMapLook } from '@/features/map/use-map-look';
 import { useGpsSignal } from '@/features/recording/use-gps-signal';
 import {
   getSoundOn,
@@ -58,7 +59,8 @@ export default function PreDriveScreen() {
   const [travel, setTravel] = useState<TravelMode>(() => getTravelMode(userId));
   const { signedIn, modeCars, selected, select, refresh } = useVehicles(travel);
   const vehicleKind = kindForMode(travel); // null for Other: no vehicle
-  const styleJSON = useMemo(() => standardStyleJSON(mode, c), [mode, c]);
+  const look = useMapLook(); // TEMPORARY map style test (Settings)
+  const styleJSON = useMemo(() => standardStyleJSON(mode, c, { look }), [mode, c, look]);
   const { cells: explored } = useExploredCells();
   // Fog around where the phone last was (the map here does not move).
   const [here, setHere] = useState<{ lat: number; lng: number } | null>(null);
@@ -91,7 +93,7 @@ export default function PreDriveScreen() {
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <MapView
-        key={mode}
+        key={`${mode}-${look}`}
         style={styles.map}
         styleJSON={styleJSON}
         scaleBarEnabled={false}
@@ -103,7 +105,14 @@ export default function PreDriveScreen() {
         rotateEnabled={false}
         pitchEnabled={false}>
         <Camera followUserLocation followZoomLevel={15.5} />
-        {fogBox && <FogLayers cells={explored} box={fogBox} gridCell={here ? latLngToCell(here.lat, here.lng, CELL_RES) : null} />}
+        {fogBox && (
+          <FogLayers
+            cells={explored}
+            box={fogBox}
+            gridCell={here ? latLngToCell(here.lat, here.lng, CELL_RES) : null}
+            look={look}
+          />
+        )}
         <LocationPuck pulsing={{ isEnabled: true }} />
       </MapView>
 

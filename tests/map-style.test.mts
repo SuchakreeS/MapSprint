@@ -8,13 +8,22 @@ const COLORS = { bg: '#000001', surface: '#000002', surface2: '#000003', gold: '
 const CLIP: GeoJSON.Feature = { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [0, 0] } };
 const parse = (s: string) => JSON.parse(s);
 
-test('dark is night, light is day, both import Standard', () => {
-  for (const [mode, preset] of [['dark', 'night'], ['light', 'day']] as const) {
+test('dark is dusk by default, light is day, both import Standard', () => {
+  for (const [mode, preset] of [['dark', 'dusk'], ['light', 'day']] as const) {
     const s = parse(standardStyleJSON(mode, COLORS));
     assert.equal(s.version, 8);
     assert.equal(s.imports[0].url, 'mapbox://styles/mapbox/standard');
     assert.equal(s.imports[0].config.lightPreset, preset);
   }
+});
+
+test('map look: dark is night for the test looks A and old, light stays day for every look', () => {
+  const preset = (mode: 'dark' | 'light', look: 'dusk' | 'night-tint' | 'night') =>
+    parse(standardStyleJSON(mode, COLORS, { look })).imports[0].config.lightPreset;
+  assert.equal(preset('dark', 'dusk'), 'dusk');
+  assert.equal(preset('dark', 'night-tint'), 'night');
+  assert.equal(preset('dark', 'night'), 'night');
+  for (const look of ['dusk', 'night-tint', 'night'] as const) assert.equal(preset('light', look), 'day');
 });
 
 test('flat by default: no 3D and no clip layer', () => {

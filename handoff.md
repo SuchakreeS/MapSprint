@@ -667,6 +667,61 @@ is 'background' (RN AppStateModule), so the "app on screen" skip did not block i
 - Delete `src/app/dev/` + `src/features/dev/` when 3.4 starts (`h3-js` stays).
 - `TestResult/` is local only (screenshots); delete or git-ignore it.
 
+## Session 18 (2026-11-13, Sonnet): dark-mode fog contrast, CODE DONE, uncommitted, JS only (needs a new EAS build, no OTA)
+PS feedback: in Onyx the explored area was almost invisible (night base + near-black fog), worst at city zoom. Pearl untouched. PS chose B "Dusk reveal", A as fallback.
+- `src/lib/fog.ts`: `FOG.styles` per theme/look (`FogStyle`: fog opacity, optional explored fill, grid, edge, glow; colours are token NAMES, resolved in `FogLayers`), `fogStyleFor(mode, look)`, `zoomWidth` (stops -> Mapbox interpolate). `fogShapes` now also returns `explored` (polygons, for A's tint). `FOG.opacity` is gone.
+  - Light (Pearl) and the old "night" look = the original values exactly (0.82, grid muted 0.5, edge primary 1.5 @0.8, no glow); tested.
+  - B dusk: fog `c.bg` 0.90, solid `c.primary` edge opacity 1, width 3.4 px at zoom 9 -> 2.4 px from zoom 15; glow under it (same shape, 12 -> 9 px, blur 4, opacity 0.35); grid `c.gold` 0.3.
+  - A night+tint: fog 0.82, explored cells filled `c.primary` 0.09 (slot middle, under the edge), same edge, glow, grid as B.
+- `src/lib/map-style.ts`: `standardStyleJSON(mode, c, { look, threeD })`; dark = `dusk` for B, `night` for A and old; light always `day`. The existing token colour overrides ("Tuned") are unchanged and apply to both presets. How dusk looks with them is UNSEEN (labels readable? any purple/blue cast?).
+- `FogLayers` takes a `look` prop; glow is its own `ShapeSource` (children of a ShapeSource must be elements) drawn before the edge. Memo kept; no per-second fog JSON re-send (inputs unchanged); HUD still uses `cellsNearBox`.
+- **TEMPORARY switch, remove after PS decides:** Settings > Preferences > "Map style (test, temporary)": Dusk (B, default) / Night+tint (A) / Night (old). Files: `src/lib/map-look.ts` (+ `tests/map-look.test.mts`), `getMapLook`/`setMapLook` in `prefs.ts`, `src/features/map/use-map-look.ts` (re-reads on focus so the Map tab follows Settings), `look` plumbing in `world.tsx`, `hud.tsx`, `pre-drive.tsx`, the row in `settings/index.tsx`. Every spot is commented TEMPORARY.
+- Results: typecheck clean, eslint clean, npm test 263/263 (8 new in map-look.test.mts, 1 changed in map-style.test.mts). Not committed.
+- NOT checked on phone. To check (new EAS build, then same spot each time): Dusk / Night+tint / Night, each zoomed in (street, ~15-16) and zoomed out to city level (~10-11), on the Map tab; also HUD and Pre-drive; day and night driving. Look at: can you see the explored area at city zoom, is the yellow edge clean (not fat zoomed in), labels readable on dusk, no purple cast, hex grid visible but quiet, glow not muddy, Pearl looks exactly as before, HUD stays smooth. Switching the setting then opening the Map tab should change it at once.
+- Risks: `lineWidth` interpolate expression + `lineBlur` + the clip/3D path are untested on a device; the explored fill is a second big polygon layer (watch HUD smoothness with option A).
+
+## Session 19 (2026-11-13, Sonnet): 3.1 XP + 3.2 levels, APP HALF DONE, server half HANDED TO OPUS (uncommitted)
+Plan (approved by PS): ~/.claude/plans/bro-now-that-we-shiny-ullman.md. Rules are in plan.md 3.1.
+- DONE (steps 1, 2, 5, 6; test-first): `src/lib/xp.ts` (`XP` constants, `bangkokDay`, `computeDriveXp`, `fingerprintInput`; added to `SHARED_FILES`, `npm run sync:edge` run),
+  `src/lib/levels.ts` (`xpToNext`, `levelForXp`, `levelProgress`, `litSegments`; checkpoints 0->1, 100->2, 383->3, 903->4 for pgTAP),
+  `ServerStats` + `parseFinalizeResponse` keep optional `xp` (`DriveXpStats`), `level`, `totalXp`; `rejectReasonText('duplicate')`,
+  `fetchProfile` also selects `level, total_xp` (`CachedProfile` optional fields), tokens `ledLow/Mid/High`, `LevelBar`, `XpCard` (recap, above the tiles, only when the
+  server sent `xp`), Profile level card (refreshes on focus). testlist F21 added. Own addition: the first-drive bonus needs a drive of >= 1 km (`firstDriveMinM`).
+- Results: typecheck clean, eslint clean, npm test 282/282 (incl. edge-lib-sync).
+- **OPUS TO DO (security-sensitive, CLAUDE.md): plan steps 3 + 4.**
+  - Migration: `xp_events.day`, unique `(drive_id, source)` and partial unique `(user_id, day)` where `source='first_drive'`, `drive_fingerprints` (survives drive delete, cascades with the account),
+    `private.level_for_xp`, `known_cell_count(uuid, text[])` (service_role only), BEFORE INSERT trigger capping open `uploading` drives at 20, re-create `finalize_counted_drive`
+    with the fingerprint + XP params (one transaction: drive, cells, fingerprint, xp_events, drives.xp_earned, profiles.total_xp/level; returns jsonb); pgTAP ~15 tests, update `plan(95)`.
+  - finalize-drive: fingerprint = SHA-256 of `fingerprintInput(cleanRoute)` (needs the cleaned route or the fingerprint text on the `ok` outcome of `finalizeTrack`, then `npm run sync:edge`);
+    `known_cell_count`, today's distance XP + first-of-day from `xp_events` by `bangkokDay(startMs)`; `computeDriveXp`; map the duplicate error to
+    `reject('duplicate')` (add `duplicate` to `RejectReason` in finalize.ts and `REASONS` in index.ts); response `stats.xp`, `stats.level`, `stats.totalXp` (shape = `DriveXpStats`); rebuild
+    them on the already-decided path from `xp_events` + `profiles`.
+  - RUN ORDER for PS afterwards: commit, `db push --remote`, `test db --remote`, `functions deploy finalize-drive --use-api` RIGHT AFTER the push (the old function calls the dropped signature), EAS build, F21.
+- Until the server half exists the app shows no XP card, and the Profile card shows Level 1 / 0 XP (profiles defaults).
+
+## Session 20 (2026-11-13, Opus): 3.1/3.2 SERVER HALF, code done (uncommitted). pgTAP NOT RUN (no Docker daemon here)
+- Migration `supabase/migrations/20261113120000_xp_levels.sql`:
+  - `xp_events.day` (Bangkok day of the DRIVE start; default + backfill), unique `(drive_id, source)` (non-null drive), partial unique `(user_id, day) where source='first_drive'`.
+  - `drive_fingerprints (user_id, hash sha256 hex, drive_id set null, PK (user_id, hash))`: RLS on, no anon/authenticated grants. Outlives a deleted drive, cascades with the account.
+  - `private.level_for_xp(bigint)` (same checkpoints as levels.ts), `public.drive_xp_context(uid, started_at, cells)` -> `{known_cells, distance_xp_today, first_drive_taken}` (service_role only).
+  - Gate (b): trigger `drives_limit_open_uploads` (SECURITY INVOKER, excludes the row itself so the app's retry still gets 23505; 21st `uploading` row -> SQLSTATE `PT429` = HTTP 429 via PostgREST, which the app's `classifyFailure` treats as transient, so the drive waits, never lost).
+  - `finalize_counted_drive` DROPPED and re-created with `p_fingerprint, p_xp_distance, p_xp_per_new_cell, p_xp_first_drive`, returns jsonb
+    `{new_cells, xp_new_cells, xp_first_drive, xp_total, total_xp, level}`. Fingerprint clash -> `MSDUP` (whole transaction rolls back). New-cell XP = exact `v_new * per_cell`
+    (always matches the tile). First-drive bonus `on conflict do nothing` (never fails a drive). Negative XP -> 22023.
+- pgTAP `supabase/tests/rls_test.sql`: plan 95 -> **115**. 3.3 calls moved to the new signature; new XP section [20] (totals, no 2nd bonus same day, context, duplicate refused + rolled back,
+  negative XP, level checkpoints, fingerprint outlives drive, app can't call context / read fingerprints, 20th upload ok / 21st PT429 / a retried existing row at the limit still gets 23505, account delete removes fingerprints).
+- `src/lib/finalize.ts`: `RejectReason` + `'duplicate'`; `ok` outcome has `fingerprint` = `fingerprintInput(cleanRoute)` (whole cleaned route, not zone-trimmed, no times). 2 tests.
+- `finalize-drive/index.ts`: `drive_xp_context` -> `computeDriveXp` -> SHA-256 -> RPC; `MSDUP` -> reject `duplicate`; flags get `xpCapped`/`xpTooOld` (so retries can rebuild them); response
+  `stats.xp/level/totalXp`; already-decided path rebuilds them from `xp_events` + `profiles` (`{}` when `xp_earned` is null = counted before XP). Type-checked with tsc + a Deno shim
+  (only a pre-existing DOM-typing nit in `gunzipCapped`, which runs fine on Deno).
+- Results: typecheck clean, eslint clean, npm test 284/284 (edge-lib-sync included). `database.types.ts` NOT regenerated (app doesn't call the new functions).
+- Accepted/known: two drives of one user finalized at the same instant can both read the same known cells / today's distance XP (uploads are sequential, so rare); the 20-upload
+  limit is soft under a concurrent insert race; a fingerprint is beaten by editing one point (then it is just a farm of known roads at 5 XP/km, capped 1,500/day).
+  PDPA: `drive_fingerprints` is a one-way hash of the route, kept after a drive is deleted (anti-farming), deleted with the account: **mention in the privacy policy (5.2)**.
+- **PS RUN ORDER:** (1) **MANDATORY:** start Docker Desktop, `npx supabase test db` locally (expect 115; this SQL has never run anywhere yet); (2) commit; (3) `npx supabase db push --remote`;
+  (4) `npx supabase functions deploy finalize-drive --use-api` IMMEDIATELY after (the old deployed function calls the dropped signature: uploads fail with 503 and retry until it is deployed);
+  (5) `npx supabase test db --remote` (expect 115); (6) EAS preview build; (7) testlist F21 (plus the map-look checks from Session 18).
+
 ## Next step
 **Decision (PS, 2026-11-12):** do NOT start the closed test yet. Build the Phase 3 core loop first (order in plan.md Phase 3:
 3.0 -> 3.3 -> 3.4 -> 3.1/3.2 -> 3.6), then account deletion + privacy policy, then 2.6. PS meanwhile starts the Play developer

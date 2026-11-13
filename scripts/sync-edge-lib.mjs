@@ -17,6 +17,7 @@ export const SHARED_FILES = [
   'travel-mode.ts',
   'upload-queue.ts',
   'vehicles.ts',
+  'xp.ts',
 ];
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');

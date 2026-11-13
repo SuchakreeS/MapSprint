@@ -24,6 +24,10 @@ export interface Palette {
   overlayPill: string;
   /** Wide "explored road" band behind the route on the welcome art (design 01). */
   explored: string;
+  /** Level bar LEDs (design 10 / 20): segments 1-5, 6-9 and 10-12 when lit. */
+  ledLow: string;
+  ledMid: string;
+  ledHigh: string;
 }
 
 export const palettes: Record<Mode, Palette> = {
@@ -45,6 +49,9 @@ export const palettes: Record<Mode, Palette> = {
     scrim: 'rgba(0,0,0,0.72)',
     overlayPill: 'rgba(10,10,10,0.9)',
     explored: '#1A1A1A',
+    ledLow: '#E8E6E1',
+    ledMid: '#FFC20E',
+    ledHigh: '#FF453A',
   },
   light: {
     bg: '#F5F3EE',
@@ -64,6 +71,9 @@ export const palettes: Record<Mode, Palette> = {
     scrim: 'rgba(14,14,14,0.55)',
     overlayPill: 'rgba(10,10,10,0.9)',
     explored: '#E6E2D9',
+    ledLow: '#3A3A3A',
+    ledMid: '#B58100',
+    ledHigh: '#C62828',
   },
 };
 

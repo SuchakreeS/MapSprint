@@ -74,6 +74,22 @@ test('parseFinalizeResponse keeps newCells (0 included) when the server sends a 
   assert.deepEqual(parseFinalizeResponse({ status: 'processed', stats: { ...stats, newCells: 'many' } }), { kind: 'counted', stats });
 });
 
+test('parseFinalizeResponse keeps XP, level and total XP when the server sends them (plan 3.1), and never refuses an answer over them', () => {
+  const stats = { distanceM: 9120, movingS: 1759, elapsedS: 2700, avgMovingKmh: 18.7, avgOverallKmh: 12.2 };
+  const xp = { total: 175, distance: 75, newCells: 50, firstDrive: 50, capped: false, tooOld: false };
+  assert.deepEqual(parseFinalizeResponse({ status: 'processed', stats: { ...stats, xp, level: 3, totalXp: 400 } }), {
+    kind: 'counted',
+    stats: { ...stats, xp, level: 3, totalXp: 400 },
+  });
+  // A broken xp object is dropped, the rest of the answer still counts.
+  assert.deepEqual(parseFinalizeResponse({ status: 'processed', stats: { ...stats, xp: { total: 'lots' }, level: 'x', totalXp: null } }), { kind: 'counted', stats });
+  assert.deepEqual(parseFinalizeResponse({ status: 'processed', stats: { ...stats, xp: { ...xp, capped: 'yes' } } }), { kind: 'counted', stats });
+});
+
+test('rejectReasonText knows the duplicate reason', () => {
+  assert.equal(rejectReasonText('duplicate'), 'This drive was already counted.');
+});
+
 test('shouldNotifyCounted: only when the driver was not just waiting on the Saving screen', () => {
   assert.equal(shouldNotifyCounted(1_000_000, 1_000_000 + 30_000), false); // counted within seconds of Finish
   assert.equal(shouldNotifyCounted(1_000_000, 1_000_000 + 10 * 60_000), true); // had to wait for signal

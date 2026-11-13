@@ -303,3 +303,29 @@ test('flags carry only counters and booleans (they are stored as JSON next to th
   if (out.kind !== 'ok') return;
   for (const v of Object.values(out.flags)) assert.ok(typeof v === 'number' || typeof v === 'boolean');
 });
+
+// ---------------------------------------------------------------- 3.1 gate (a): duplicate fingerprint
+test('the fingerprint is the same for the same route uploaded again with shifted times, and differs for another route', () => {
+  const pts = straightDrive(600);
+  const a = fin(payloadOf(pts), rowOf(pts), []);
+  assert.equal(a.kind, 'ok');
+  if (a.kind !== 'ok') return;
+  assert.ok(a.fingerprint && a.fingerprint.length > 0);
+
+  const shift = 3 * 86_400_000;
+  const moved = pts.map((p) => ({ ...p, ts: p.ts - shift }));
+  const b = fin(payloadOf(moved), rowOf(moved), []);
+  assert.equal(b.kind === 'ok' && b.fingerprint, a.fingerprint);
+
+  const other = straightDrive(600, 12);
+  const c = fin(payloadOf(other), rowOf(other), []);
+  assert.notEqual(c.kind === 'ok' && c.fingerprint, a.fingerprint);
+});
+
+test('a privacy zone does not change the fingerprint (it is built from the whole cleaned route)', () => {
+  const pts = straightDrive(600);
+  const plain = fin(payloadOf(pts), rowOf(pts), []);
+  const zoned = fin(payloadOf(pts), rowOf(pts), [{ lat: LAT0, lng: LNG0, radiusM: 300 }]);
+  assert.ok(plain.kind === 'ok' && zoned.kind === 'ok');
+  if (plain.kind === 'ok' && zoned.kind === 'ok') assert.equal(zoned.fingerprint, plain.fingerprint);
+});

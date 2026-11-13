@@ -11,9 +11,18 @@ import type { RouteCoord } from './route-line.ts';
 import { topSpeedKmh } from './top-speed.ts';
 import { payloadToPoints, TRACK_LIMITS, type TrackPayload } from './track-format.ts';
 import type { ServerStats } from './upload-queue.ts';
+import { fingerprintInput } from './xp.ts';
 
 /** Why a drive is not counted. Keys match REJECT_TEXT in upload-queue.ts (what the app shows). */
-export type RejectReason = 'overlap' | 'times_mismatch' | 'unreadable' | 'too_long' | 'too_few_points' | 'invalid';
+export type RejectReason =
+  | 'overlap'
+  | 'times_mismatch'
+  | 'unreadable'
+  | 'too_long'
+  | 'too_few_points'
+  | 'invalid'
+  /** The same route was already counted for this account (plan 3.1 gate a: no XP farming by delete + upload again). */
+  | 'duplicate';
 
 /** The row's start/end may differ from the track's first/last point by at most this much. */
 export const TIMES_TOLERANCE_MS = 120_000;
@@ -56,6 +65,11 @@ export type FinalizeOutcome =
       endMs: number;
       /** EWKT LineString of the trimmed, simplified route, or null when nothing public is left. */
       routeEwkt: string | null;
+      /**
+       * Text to hash (SHA-256 in the Edge Function) for the duplicate check: the WHOLE cleaned route (not zone-trimmed), rounded,
+       * without times (xp.ts fingerprintInput). Null for a route too short to be a fingerprint. Never stored as text.
+       */
+      fingerprint: string | null;
       /** Counters and booleans only: stored as JSON in drive_private.flags (owner-only). */
       flags: Record<string, number | boolean>;
     };
@@ -237,6 +251,7 @@ export function finalizeTrack(payload: TrackPayload, row: RowTimes, zones: Zone[
     startMs,
     endMs,
     routeEwkt: routeToEwkt(route),
+    fingerprint: fingerprintInput(clean),
     flags: {
       rawPoints: s.rawPoints,
       acceptedPoints: s.acceptedPoints,

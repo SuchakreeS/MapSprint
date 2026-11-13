@@ -68,6 +68,23 @@ export interface ServerStats {
   topKmh?: number | null;
   /** Explored cells this drive added (plan 3.3). 0 is a real answer. Absent from older servers / drives counted before 3.3. */
   newCells?: number | null;
+  /** XP this drive earned, by part (plan 3.1). Absent from older servers / drives counted before XP existed. */
+  xp?: DriveXpStats;
+  /** The account's level and total XP right after this drive (plan 3.2). */
+  level?: number;
+  totalXp?: number;
+}
+
+/** What the server says about this drive's XP (same shape as `DriveXp` in xp.ts). */
+export interface DriveXpStats {
+  total: number;
+  distance: number;
+  newCells: number;
+  firstDrive: number;
+  /** The daily distance cap cut this drive's distance XP. */
+  capped: boolean;
+  /** The drive is too old to earn XP. */
+  tooOld: boolean;
 }
 
 export type FinalizeResult =
@@ -76,6 +93,14 @@ export type FinalizeResult =
   | { kind: 'retry' };
 
 const isNum = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
+
+function parseXp(x: unknown): DriveXpStats | null {
+  if (typeof x !== 'object' || x === null) return null;
+  const o = x as Record<string, unknown>;
+  if (!isNum(o.total) || !isNum(o.distance) || !isNum(o.newCells) || !isNum(o.firstDrive)) return null;
+  if (typeof o.capped !== 'boolean' || typeof o.tooOld !== 'boolean') return null;
+  return { total: o.total, distance: o.distance, newCells: o.newCells, firstDrive: o.firstDrive, capped: o.capped, tooOld: o.tooOld };
+}
 
 /** Reads the finalize-drive answer. Anything unreadable means "try again later", never "counted". */
 export function parseFinalizeResponse(body: unknown): FinalizeResult {
@@ -87,6 +112,7 @@ export function parseFinalizeResponse(body: unknown): FinalizeResult {
   if (!s || !isNum(s.distanceM) || !isNum(s.movingS) || !isNum(s.elapsedS) || !isNum(s.avgMovingKmh) || !isNum(s.avgOverallKmh)) {
     return { kind: 'retry' };
   }
+  const xp = parseXp(s.xp);
   return {
     kind: 'counted',
     stats: {
@@ -98,6 +124,9 @@ export function parseFinalizeResponse(body: unknown): FinalizeResult {
       // Optional extra field: never a reason to refuse an answer (older servers do not send it).
       ...(isNum(s.topKmh) ? { topKmh: s.topKmh } : {}),
       ...(isNum(s.newCells) ? { newCells: s.newCells } : {}),
+      ...(xp ? { xp } : {}),
+      ...(isNum(s.level) ? { level: s.level } : {}),
+      ...(isNum(s.totalXp) ? { totalXp: s.totalXp } : {}),
     },
   };
 }
@@ -127,6 +156,7 @@ const REJECT_TEXT: Record<string, string> = {
   too_long: 'This drive is too long to count.',
   too_few_points: 'There were too few good GPS points.',
   invalid: 'The track did not pass the checks.',
+  duplicate: 'This drive was already counted.',
 };
 
 export function rejectReasonText(reason: string | null | undefined): string {

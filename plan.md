@@ -153,6 +153,11 @@ Then account deletion + privacy policy, then 2.6 closed test. 3.5, 3.7, 3.8, 3.9
       blueprint), building-height coverage in Bangkok vs Pathum Thani, FPS and phone heat with pitch ~60°. Confirm
       Mapbox mobile billing is per MAU (3D should not add cost). Record the result in handoff.md, then pick the style.
 - [ ] 3.1 XP rules (10/km, 25/new cell, smooth ×1.0–1.5, +50 first drive) — TDD in src/lib
+      DECIDED (PS 2026-11-13): 10 XP/km on new ground, 5 XP/km on known cells (split by the share of known cells); 25 XP per new cell; +50 first
+      drive of the Bangkok day (my addition: drive >= 1 km); distance XP capped at 1,500/day (new cells and bonus never capped); smooth x1.0 until 3.5;
+      same for every mode; NO back-fill (everyone starts at level 1); shown on the recap + Profile only (not HUD/History). Gates: (a) duplicate track
+      fingerprint -> rejected `duplicate`, (b) max 20 open uploads per user, (c) drives older than 60 days earn 0 XP. Plan file: ~/.claude/plans/bro-now-that-we-shiny-ullman.md
+      [Sonnet 2026-11-13: pure rules xp.ts + levels.ts, parser, XP card, Profile level card DONE. Opus 2026-11-13: migration 20261113120000_xp_levels.sql + finalize-drive DONE in code (pgTAP 115 not yet run). Tick 3.1 + 3.2 after testlist F21.]
 - [ ] 3.2 Levels: XP for next level = 100 × level^1.5
 - [ ] 3.3 H3 cells res 9 + gridPathCells; explored_cells upsert server-side
       [code done 2026-11-12 (Session 16, uncommitted): `src/lib/cells.ts`, `finalize_counted_drive` SQL function (atomic with counting), recap tile. Tick after testlist F19.]

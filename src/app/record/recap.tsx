@@ -7,6 +7,7 @@ import { Button } from '@/components/Button';
 import { GpsCheckCard } from '@/components/GpsCheckCard';
 import { RouteArt } from '@/components/RouteArt';
 import { Segmented } from '@/components/SettingsRow';
+import { XpCard } from '@/components/XpCard';
 import { getCurrentOwner, getUpload, setSessionMode } from '@/features/recording/db';
 import { loadDrive } from '@/features/recording/drive-history';
 import { getSelectedVehicleId, readCachedCars } from '@/features/settings/prefs';
@@ -114,6 +115,8 @@ export default function RecapScreen() {
         <View style={[styles.map, { backgroundColor: c.bg, borderColor: c.line }]}>
           <RouteArt coords={drive.route} height={176} thickness={4} glow markers grid="fine" padding={16} />
         </View>
+
+        {server?.xp ? <XpCard xp={server.xp} totalXp={server.totalXp} /> : null}
 
         <View style={styles.row}>
           <Tile label="Distance" value={formatDistanceKm(server?.distanceM ?? s.distanceM)} unit="km" />

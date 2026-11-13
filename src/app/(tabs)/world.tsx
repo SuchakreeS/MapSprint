@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RecenterGlyph } from '@/components/RecenterGlyph';
 import { useExploredCells } from '@/features/map/explored';
 import { FogLayers } from '@/features/map/FogLayers';
+import { useMapLook } from '@/features/map/use-map-look';
 import { CELL_RES } from '@/lib/cells';
 import { exploredAreaKm2, fogFeature, WORLD_BOX } from '@/lib/fog';
 import { formatCount } from '@/lib/format';
@@ -39,9 +40,10 @@ export default function MapTab() {
   useFocusEffect(refresh);
 
   // 3D: the clip polygon (= the fog) lives inside the style JSON, so the style is rebuilt when the cells change.
+  const look = useMapLook(); // TEMPORARY map style test (Settings)
   const styleJSON = useMemo(
-    () => standardStyleJSON(mode, c, threeD ? { threeD: { clip: fogFeature(cells, WORLD_BOX) } } : undefined),
-    [mode, c, threeD, cells],
+    () => standardStyleJSON(mode, c, { look, ...(threeD ? { threeD: { clip: fogFeature(cells, WORLD_BOX) } } : {}) }),
+    [mode, c, look, threeD, cells],
   );
   const area = useMemo(() => exploredAreaKm2(cells), [cells]);
   const count = cells.size;
@@ -49,7 +51,7 @@ export default function MapTab() {
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <MapView
-        key={`${mode}-${threeD ? `3d-${count}` : 'flat'}`}
+        key={`${mode}-${look}-${threeD ? `3d-${count}` : 'flat'}`}
         style={styles.fill}
         styleJSON={styleJSON}
         scaleBarEnabled={false}
@@ -71,7 +73,7 @@ export default function MapTab() {
             if (!e.nativeEvent.payload.followUserLocation) setFollowing(false);
           }}
         />
-        <FogLayers cells={cells} box={WORLD_BOX} gridCell={gridCell} />
+        <FogLayers cells={cells} box={WORLD_BOX} gridCell={gridCell} look={look} />
         <LocationPuck pulsing={{ isEnabled: true }} />
       </MapView>
 

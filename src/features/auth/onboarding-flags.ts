@@ -20,6 +20,9 @@ export interface CachedProfile {
   username: string | null;
   display_name: string | null;
   avatar_url: string | null;
+  /** Server-owned (plan 3.1 / 3.2). Missing in caches written before XP existed. */
+  level?: number;
+  total_xp?: number;
 }
 
 /** Last profile seen from the server, so the app opens offline without bouncing to onboarding. */
